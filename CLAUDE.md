@@ -9,7 +9,7 @@ The architecture is designed to be reusable: the Level Engine, Monetization Plug
 ## Stack
 
 ```
-  Mobile Game:    Expo ~52 + react-native-skia (Android first, iOS after)
+  Mobile Game:    Expo ~54 + react-native-skia (Android first, iOS after)
   Level Engine:   TypeScript pure — zero native deps, testable with Jest
   Calibrator:     Next.js 14 + HTML5 Canvas (dev tool, localhost:3001)
   Monetization:   AdMob (rewarded ads) + RevenueCat (IAP)
@@ -265,6 +265,7 @@ Every PR **must** have a description in this format:
 - **IRenderer interface drift**: if `SkiaRenderer` and `CanvasRenderer` diverge, the browser calibration no longer matches mobile behavior — tests must cover both renderers
 - **registerEntities order**: entity types must be registered before the engine generates any level — call `registerEntities()` at app startup, before navigation
 - **EAS Update scope**: OTA updates only work for JS/TS/assets changes. Adding a new native module (e.g. a new Expo SDK feature) requires a full EAS Build + store submission
+- **Metro bundle requires dist/**: `apps/game` imports `@si/*` packages via `"main": "dist/index.js"`. If `dist/` doesn't exist, Metro crashes at bundle time. Always run `npm run build` from the monorepo root before `npx expo start`
 
 ## Deploy
 
