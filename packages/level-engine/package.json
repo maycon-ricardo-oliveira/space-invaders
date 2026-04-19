@@ -1,0 +1,14 @@
+{
+  "name": "@si/level-engine",
+  "version": "0.1.0",
+  "private": true,
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc --build",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "clean": "rm -rf dist .tsbuildinfo"
+  },
+  "devDependencies": {}
+}
