@@ -1,0 +1,8 @@
+{
+  "files": [],
+  "references": [
+    { "path": "packages/level-engine" },
+    { "path": "packages/monetization-plugin" },
+    { "path": "packages/analytics-plugin" }
+  ]
+}
