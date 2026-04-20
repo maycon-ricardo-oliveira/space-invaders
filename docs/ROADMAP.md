@@ -9,7 +9,7 @@
 | Sprint | Feature | Status | PR | Notes |
 |--------|---------|--------|-----|-------|
 | 1 | Monorepo setup + dev environment | ✅ Done | bootstrap | npm workspaces, TypeScript, Jest, ESLint, Prettier, Expo ~54 scaffold, Next.js 14 scaffold |
-| 2 | Level Engine | 🚧 In Progress (PR #1) | — | LevelEngine, CurveCalibratorStrategy, EntityRegistry, types |
+| 2 | Level Engine | ✅ Done (PR #3) | — | LevelEngine, CurveCalibratorStrategy, EntityRegistry, types |
 | 3 | Game MVP | ⏳ Todo | — | SkiaRenderer, GameScreen, StoryModeScreen, registerEntities |
 | 4 | Calibrator MVP | ⏳ Todo | — | CanvasRenderer, MapEditor, CalibrationPanel, levels.json export |
 | 5 | Survival Mode | ⏳ Todo | — | SurvivalModeScreen, procedural generation, adaptive difficulty |
