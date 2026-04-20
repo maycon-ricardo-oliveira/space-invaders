@@ -22,5 +22,9 @@
     "prettier": "^3.2.5",
     "ts-jest": "^29.2.0",
     "typescript": "^5.4.5"
+  },
+  "dependencies": {
+    "react-dom": "19.1.0",
+    "react-native-web": "^0.21.0"
   }
 }
