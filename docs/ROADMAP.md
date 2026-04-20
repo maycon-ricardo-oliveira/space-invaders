@@ -8,7 +8,7 @@
 
 | Sprint | Feature | Status | PR | Notes |
 |--------|---------|--------|-----|-------|
-| 1 | Monorepo setup + dev environment | ⏳ Todo | — | npm workspaces, TypeScript, Jest, ESLint, Prettier, Expo scaffold, Next.js scaffold |
+| 1 | Monorepo setup + dev environment | ✅ Done | bootstrap | npm workspaces, TypeScript, Jest, ESLint, Prettier, Expo ~54 scaffold, Next.js 14 scaffold |
 | 2 | Level Engine | ⏳ Todo | — | LevelEngine, CurveCalibratorStrategy, EntityRegistry, types |
 | 3 | Game MVP | ⏳ Todo | — | SkiaRenderer, GameScreen, StoryModeScreen, registerEntities |
 | 4 | Calibrator MVP | ⏳ Todo | — | CanvasRenderer, MapEditor, CalibrationPanel, levels.json export |
