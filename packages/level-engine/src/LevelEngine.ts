@@ -52,7 +52,7 @@ export class LevelEngine implements ILevelEngine {
         id: `story-${levelIndex}`,
         style: storyStyle(levelIndex),
         difficultyScore,
-        entities: [],
+        entities: [], // populated by the MapEditor in Sprint 4; loaded from levels.json at runtime
         params,
       }
     }
@@ -62,7 +62,7 @@ export class LevelEngine implements ILevelEngine {
       id: `survival-${Date.now()}`,
       style,
       difficultyScore,
-      entities: [],
+      entities: [], // populated by the MapEditor in Sprint 4; loaded from levels.json at runtime
       params,
     }
   }
