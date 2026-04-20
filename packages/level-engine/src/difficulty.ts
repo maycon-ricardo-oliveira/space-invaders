@@ -26,5 +26,5 @@ export function computeDifficultyScore(request: LevelRequest): number {
   const kdScore = Math.min(kd * 5, 100)
   const timeScore = Math.min((averageSurvivalTime / 120) * 100, 100)
 
-  return Math.min((kdScore + timeScore) / 2, 100)
+  return Math.max(0, Math.min((kdScore + timeScore) / 2, 100))
 }

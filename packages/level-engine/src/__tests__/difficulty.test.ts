@@ -83,5 +83,18 @@ describe('computeDifficultyScore', () => {
       }
       expect(computeDifficultyScore(req)).toBe(100)
     })
+
+    it('clamps score to 0 for negative input values', () => {
+      const req: LevelRequest = {
+        mode: 'survival',
+        playerStats: {
+          level: 1,
+          killsThisSession: 0,
+          deathsThisSession: 0,
+          averageSurvivalTime: -10,
+        },
+      }
+      expect(computeDifficultyScore(req)).toBe(0)
+    })
   })
 })
