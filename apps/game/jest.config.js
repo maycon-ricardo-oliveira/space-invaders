@@ -8,7 +8,7 @@ module.exports = {
     '!src/**/*.test.{ts,tsx}',
   ],
   transformIgnorePatterns: [
-    'node_modules/(?!(jest-expo|expo|@expo|@shopify/react-native-skia|react-native|@react-native)/)',
+    '/node_modules/(?!(.pnpm|jest-expo|expo|@expo|expo-modules-core|@shopify/react-native-skia|react-native|@react-native|@react-native-community))',
   ],
   moduleNameMapper: {
     '^@si/level-engine$': '<rootDir>/../../packages/level-engine/src/index.ts',
