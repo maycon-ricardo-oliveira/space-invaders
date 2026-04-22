@@ -56,4 +56,34 @@ describe('CalibratorClient', () => {
     fireEvent.click(getByRole('button', { name: 'Save' }))
     expect(jest.mocked(saveLevels)).toHaveBeenCalledWith(initialLevels)
   })
+
+  it('switches levels when the dropdown changes', () => {
+    const { getByRole } = render(<CalibratorClient initialLevels={initialLevels} />)
+    const select = getByRole('combobox')
+    fireEvent.change(select, { target: { value: '5' } })
+    expect((select as HTMLSelectElement).value).toBe('5')
+  })
+
+  it('places an entity on the grid when a cell is clicked with a tool selected', () => {
+    const { getByText, getAllByRole } = render(<CalibratorClient initialLevels={initialLevels} />)
+    fireEvent.click(getByText('Basic Enemy'))
+    const gridCells = getAllByRole('button').filter((b) =>
+      b.getAttribute('aria-label')?.startsWith('cell ')
+    )
+    fireEvent.click(gridCells[0])
+    fireEvent.click(gridCells[0])
+  })
+
+  it('updates levels when slider changes and Save sends updated levels', () => {
+    const { getByLabelText, getByRole } = render(<CalibratorClient initialLevels={initialLevels} />)
+    fireEvent.change(getByLabelText('Number of Enemies'), { target: { value: '18' } })
+    fireEvent.click(getByRole('button', { name: 'Save' }))
+    expect(jest.mocked(saveLevels)).toHaveBeenCalledWith(
+      expect.arrayContaining([
+        expect.objectContaining({
+          params: expect.objectContaining({ numberOfEnemies: 18 }),
+        }),
+      ])
+    )
+  })
 })

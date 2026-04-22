@@ -23,6 +23,7 @@ export function CalibratorClient({ initialLevels }: Props) {
   const [levelIndex, setLevelIndex] = useState(0)
   const [selectedEntityTypeId, setSelectedEntityTypeId] = useState<string | null>(null)
   const [selectedEntityIndex, setSelectedEntityIndex] = useState<number | null>(null)
+  const [saveError, setSaveError] = useState<string | null>(null)
 
   const current = levels[levelIndex]
 
@@ -82,10 +83,16 @@ export function CalibratorClient({ initialLevels }: Props) {
         <button
           aria-label="Save"
           style={{ marginTop: 16, padding: '8px 20px', background: '#4CAF50', color: '#fff', border: 'none', cursor: 'pointer' }}
-          onClick={() => { saveLevels(levels).catch((err) => console.error('Failed to save levels:', err)) }}
+          onClick={() => {
+            setSaveError(null)
+            saveLevels(levels).catch((err) => setSaveError(String(err)))
+          }}
         >
           Save
         </button>
+        {saveError && (
+          <p style={{ color: '#ff4444', marginTop: 8, fontSize: 12 }}>{saveError}</p>
+        )}
       </div>
 
       {/* Center — map grid */}
@@ -105,7 +112,7 @@ export function CalibratorClient({ initialLevels }: Props) {
           selectedId={selectedEntityTypeId}
           onSelect={setSelectedEntityTypeId}
         />
-        <PropertiesPanel entity={selectedEntity} onChange={() => {}} />
+        <PropertiesPanel entity={selectedEntity} />
       </div>
     </div>
   )

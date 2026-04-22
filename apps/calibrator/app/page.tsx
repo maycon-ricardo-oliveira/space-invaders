@@ -9,12 +9,11 @@ export default function Page() {
   const initialLevels =
     stored.length > 0
       ? stored
-      : Array.from({ length: TOTAL_LEVELS }, (_, i) =>
-          new LevelEngine(new CurveCalibratorStrategy()).generate({
-            mode: 'story',
-            levelIndex: i,
-            totalLevels: TOTAL_LEVELS,
-          }),
-        )
+      : (() => {
+          const engine = new LevelEngine(new CurveCalibratorStrategy())
+          return Array.from({ length: TOTAL_LEVELS }, (_, i) =>
+            engine.generate({ mode: 'story', levelIndex: i, totalLevels: TOTAL_LEVELS })
+          )
+        })()
   return <CalibratorClient initialLevels={initialLevels} />
 }

@@ -2,7 +2,6 @@ import type { EntityPlacement } from '@si/level-engine'
 
 interface Props {
   entity: EntityPlacement | null
-  onChange: (updated: EntityPlacement) => void
 }
 
 export function PropertiesPanel({ entity }: Props) {
