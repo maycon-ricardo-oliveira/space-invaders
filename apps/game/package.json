@@ -18,7 +18,9 @@
     "react-native": "0.81.5"
   },
   "devDependencies": {
+    "@testing-library/react-native": "^12.7.2",
     "@types/react": "~19.1.0",
+    "jest-expo": "~54.0.0",
     "typescript": "~5.9.2"
   },
   "private": true
