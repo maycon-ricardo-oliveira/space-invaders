@@ -29,6 +29,7 @@ describe('CanvasRenderer', () => {
     const ctx = makeCtx()
     const renderer = new CanvasRenderer(ctx)
     renderer.drawSprite({ source: 'basic-enemy', width: 32, height: 32 }, 50, 60, 32, 32)
+    expect(ctx.fillStyle).toBe('#888')
     expect(ctx.fillRect).toHaveBeenCalledWith(50, 60, 32, 32)
   })
 })
