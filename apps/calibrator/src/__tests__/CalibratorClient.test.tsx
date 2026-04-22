@@ -1,6 +1,7 @@
 import { render, fireEvent } from '@testing-library/react'
 import { CalibratorClient } from '../CalibratorClient'
 import type { LevelDefinition } from '@si/level-engine'
+import { saveLevels } from '../../app/actions'
 
 jest.mock('../../app/actions', () => ({
   saveLevels: jest.fn().mockResolvedValue(undefined),
@@ -51,9 +52,8 @@ describe('CalibratorClient', () => {
   })
 
   it('calls saveLevels when Save button is clicked', () => {
-    const { saveLevels } = require('../../app/actions')
     const { getByRole } = render(<CalibratorClient initialLevels={initialLevels} />)
     fireEvent.click(getByRole('button', { name: 'Save' }))
-    expect(saveLevels).toHaveBeenCalledWith(initialLevels)
+    expect(jest.mocked(saveLevels)).toHaveBeenCalledWith(initialLevels)
   })
 })

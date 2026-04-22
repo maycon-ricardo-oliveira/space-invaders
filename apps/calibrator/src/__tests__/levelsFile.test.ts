@@ -36,6 +36,7 @@ describe('readLevels', () => {
 
   it('parses and returns levels when file exists', () => {
     mockFs.existsSync.mockReturnValue(true)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     mockFs.readFileSync.mockReturnValue(JSON.stringify([sampleLevel]) as any)
     expect(readLevels()).toEqual([sampleLevel])
   })

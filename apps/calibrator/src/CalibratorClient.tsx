@@ -8,8 +8,6 @@ import { Grid } from './MapEditor/Grid'
 import { PropertiesPanel } from './MapEditor/PropertiesPanel'
 import { saveLevels } from '../app/actions'
 
-const TOTAL_LEVELS = 20
-
 const ENTITY_TYPES: EntityType[] = [
   { id: 'basic-enemy', label: 'Basic Enemy', icon: '👾', properties: { pointValue: 100, health: 1 } },
   { id: 'fast-enemy',  label: 'Fast Enemy',  icon: '🚀', properties: { pointValue: 200, health: 1 } },
@@ -35,11 +33,17 @@ export function CalibratorClient({ initialLevels }: Props) {
   }
 
   function handlePlace(placement: { entityTypeId: string; x: number; y: number }) {
-    updateCurrentLevel({ entities: [...current.entities, placement] })
+    setLevels((prev) =>
+      prev.map((l, i) => (i === levelIndex ? { ...l, entities: [...l.entities, placement] } : l))
+    )
   }
 
   function handleRemove(index: number) {
-    updateCurrentLevel({ entities: current.entities.filter((_, i) => i !== index) })
+    setLevels((prev) =>
+      prev.map((l, i) =>
+        i === levelIndex ? { ...l, entities: l.entities.filter((_, ei) => ei !== index) } : l
+      )
+    )
     setSelectedEntityIndex(null)
   }
 
@@ -68,7 +72,7 @@ export function CalibratorClient({ initialLevels }: Props) {
           </select>
         </div>
 
-        <DifficultyScore levelIndex={levelIndex} totalLevels={TOTAL_LEVELS} />
+        <DifficultyScore levelIndex={levelIndex} totalLevels={levels.length} />
 
         <Sliders
           value={current.params}
@@ -78,7 +82,7 @@ export function CalibratorClient({ initialLevels }: Props) {
         <button
           aria-label="Save"
           style={{ marginTop: 16, padding: '8px 20px', background: '#4CAF50', color: '#fff', border: 'none', cursor: 'pointer' }}
-          onClick={() => saveLevels(levels)}
+          onClick={() => { saveLevels(levels).catch((err) => console.error('Failed to save levels:', err)) }}
         >
           Save
         </button>
