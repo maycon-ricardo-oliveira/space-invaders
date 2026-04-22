@@ -194,7 +194,7 @@ export class GameLoop {
   }
 
   private checkWinLose(): void {
-    if (this.state.enemies.every(e => !e.alive)) {
+    if (this.state.enemies.length > 0 && this.state.enemies.every(e => !e.alive)) {
       this.state.status = 'won'
       return
     }

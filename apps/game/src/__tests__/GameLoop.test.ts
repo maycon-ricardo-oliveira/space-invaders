@@ -113,14 +113,22 @@ describe('GameLoop', () => {
     })
 
     it('movement does nothing when status is not playing', () => {
-      // 0 enemies → status becomes won after first update (vacuous truth)
-      const level: LevelDefinition = { ...mockLevel, params: { ...BASE_PARAMS, numberOfEnemies: 0 } }
+      // Kill the only enemy to reach status='won', then verify movement is blocked
+      const level: LevelDefinition = { ...mockLevel, params: { ...BASE_PARAMS, numberOfEnemies: 1 } }
       const loop = new GameLoop(level)
-      loop.update(16)
+      loop.fire()
+      for (let i = 0; i < 100; i++) loop.update(16) // enemy killed → status='won'
       const x = loop.getState().player.x
       loop.moveLeft(100)
       loop.moveRight(100)
       expect(loop.getState().player.x).toBe(x)
+    })
+
+    it('zero-enemy level does not trigger won on first update', () => {
+      const level: LevelDefinition = { ...mockLevel, params: { ...BASE_PARAMS, numberOfEnemies: 0 } }
+      const loop = new GameLoop(level)
+      loop.update(16)
+      expect(loop.getState().status).toBe('playing')
     })
   })
 
@@ -136,11 +144,12 @@ describe('GameLoop', () => {
     })
 
     it('fire does nothing when status is not playing', () => {
-      const level: LevelDefinition = { ...mockLevel, params: { ...BASE_PARAMS, numberOfEnemies: 0 } }
+      const level: LevelDefinition = { ...mockLevel, params: { ...BASE_PARAMS, numberOfEnemies: 1 } }
       const loop = new GameLoop(level)
-      loop.update(16) // status → won
       loop.fire()
-      expect(loop.getState().playerBullets).toHaveLength(0)
+      for (let i = 0; i < 100; i++) loop.update(16) // enemy killed → status='won'
+      loop.fire()
+      expect(loop.getState().playerBullets).toHaveLength(1) // only the first bullet remains
     })
   })
 
