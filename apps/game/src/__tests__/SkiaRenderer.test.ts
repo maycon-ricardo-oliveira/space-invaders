@@ -59,5 +59,6 @@ describe('SkiaRenderer', () => {
     renderer.setCanvas(canvas)
     renderer.drawSprite({ source: 'enemy.png', width: 32, height: 32 }, 10, 20, 32, 32)
     expect(canvas.drawRect).toHaveBeenCalledTimes(1)
+    expect(Skia.Color).toHaveBeenCalledWith('#ffffff')
   })
 })

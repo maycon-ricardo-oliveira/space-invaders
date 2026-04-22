@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native'
-import { Canvas, useCanvasRef, useFrameCallback } from '@shopify/react-native-skia'
+import { Canvas, Picture, Skia } from '@shopify/react-native-skia'
+import type { SkPicture } from '@shopify/react-native-skia'
 import { LevelEngine, CurveCalibratorStrategy } from '@si/level-engine'
 import { registerEntities } from '../entities/registerEntities'
 import { GameLoop, CANVAS_WIDTH, CANVAS_HEIGHT } from '../game/GameLoop'
@@ -21,27 +22,65 @@ function buildLoop(levelIndex: number, totalLevels: number): GameLoop {
 }
 
 export function GameScreen({ levelIndex, totalLevels, onBack }: Props) {
-  const canvasRef = useCanvasRef()
   const [loop] = useState(() => buildLoop(levelIndex, totalLevels))
   const [renderer] = useState(() => new SkiaRenderer(CANVAS_WIDTH, CANVAS_HEIGHT))
   const [status, setStatus] = useState<GameStatus>('playing')
-  const isPlaying = status === 'playing'
+  const [picture, setPicture] = useState<SkPicture | null>(null)
 
-  useFrameCallback(({ timeSincePreviousFrame }) => {
-    const surface = canvasRef.current
-    if (!surface) return
-    const canvas = (surface as any).getCanvas?.() ?? surface
-    renderer.setCanvas(canvas as any)
-    loop.update(timeSincePreviousFrame ?? 16)
-    loop.render(renderer)
-    ;(surface as any).flush?.()
-    const s = loop.getState().status
-    if (s !== 'playing') setStatus(s)
-  }, isPlaying)
+  const statusRef = useRef<GameStatus>('playing')
+  const isPlayingRef = useRef(true)
+  const rafRef = useRef<number | null>(null)
+  const lastTimeRef = useRef<number | null>(null)
+
+  const tick = useCallback(
+    (timestamp: number) => {
+      if (!isPlayingRef.current) return
+
+      const delta = lastTimeRef.current !== null ? timestamp - lastTimeRef.current : 16
+      lastTimeRef.current = timestamp
+
+      const bounds = Skia.XYWHRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT)
+      const rec = Skia.PictureRecorder()
+      const canvas = rec.beginRecording(bounds)
+      renderer.setCanvas(canvas)
+      loop.update(delta)
+      loop.render(renderer)
+      const pic = rec.finishRecordingAsPicture()
+      setPicture(pic)
+
+      const s = loop.getState().status
+      if (s !== statusRef.current) {
+        statusRef.current = s
+        setStatus(s)
+      }
+
+      if (s === 'playing') {
+        rafRef.current = requestAnimationFrame(tick)
+      }
+    },
+    [renderer, loop],
+  )
+
+  useEffect(() => {
+    isPlayingRef.current = true
+    lastTimeRef.current = null
+    rafRef.current = requestAnimationFrame(tick)
+    return () => {
+      isPlayingRef.current = false
+      if (rafRef.current !== null) {
+        cancelAnimationFrame(rafRef.current)
+        rafRef.current = null
+      }
+    }
+  }, [tick])
+
+  const isPlaying = status === 'playing'
 
   return (
     <View style={styles.container}>
-      <Canvas ref={canvasRef} style={{ width: CANVAS_WIDTH, height: CANVAS_HEIGHT }} />
+      <Canvas style={{ width: CANVAS_WIDTH, height: CANVAS_HEIGHT }}>
+        {picture && <Picture picture={picture} />}
+      </Canvas>
       {!isPlaying && (
         <View style={styles.overlay}>
           <Text style={styles.resultText}>{status === 'won' ? 'You Win!' : 'Game Over'}</Text>
