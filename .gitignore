@@ -31,3 +31,7 @@ npm-debug.log*
 
 # Superpowers brainstorm server artifacts
 .superpowers/
+
+# Claude Code session data
+.claude/
+.ai-jail
