@@ -8,6 +8,7 @@ import type {
   PlayerStats,
   CalibratorStrategy,
   ILevelEngine,
+  IRenderer,
 } from '../types'
 
 describe('types', () => {
@@ -65,5 +66,14 @@ describe('types', () => {
     }
     expect(def.style).toBe('classic')
     expect(def.difficultyScore).toBe(0)
+  })
+
+  it('IRenderer shape is assignable', () => {
+    const renderer: IRenderer = {
+      clear: () => {},
+      drawSprite: (sprite, x, y, width, height) => {},
+      drawRect: (x, y, width, height, color) => {},
+    }
+    expect(renderer).toBeDefined()
   })
 })

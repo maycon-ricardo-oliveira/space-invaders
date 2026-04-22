@@ -6,6 +6,12 @@ export interface Sprite {
   height: number
 }
 
+export interface IRenderer {
+  clear(): void
+  drawSprite(sprite: Sprite, x: number, y: number, width: number, height: number): void
+  drawRect(x: number, y: number, width: number, height: number, color: string): void
+}
+
 export interface EntityType {
   id: string
   label: string

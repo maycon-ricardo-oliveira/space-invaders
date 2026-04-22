@@ -11,6 +11,7 @@ export type {
   LevelRequest,
   CalibratorStrategy,
   ILevelEngine,
+  IRenderer,
 } from './types'
 
 export { computeDifficultyScore } from './difficulty'
