@@ -214,6 +214,74 @@ describe('GameLoop', () => {
     })
   })
 
+  describe('enemy wall-bounce', () => {
+    // With enemySpeed:100, actual speed = 100 * 40 = 4000 px/s
+    // Per update(16): dt=0.016s, delta = 4000 * 0.016 = 64 px/step
+    // 1 enemy: cols=1, totalWidth=32, startX = round((390-32)/2) = 179
+    // Right-wall bounce: e.x + 32 > 390 → e.x > 358 → triggered at step 3 (179+3*64=371)
+    // After right bounce: direction=-1, y=60+32=92, x=371
+    // Left-wall bounce: e.x < 0 → triggered at step 6 after bounce (371-6*64=-13)
+
+    function runUpdates(loop: GameLoop, n: number, dt = 16): void {
+      for (let i = 0; i < n; i++) loop.update(dt)
+    }
+
+    const bounceLevel: LevelDefinition = {
+      ...mockLevel,
+      params: {
+        ...BASE_PARAMS,
+        numberOfEnemies: 1,
+        enemySpeed: 100,
+        enemyShotDelay: 9999,
+      },
+    }
+
+    it('enemy starts moving right (enemyDirection is positive)', () => {
+      const loop = new GameLoop(bounceLevel)
+      // After 1 step rightward the enemy x should increase
+      const before = loop.getState().enemies[0].x
+      runUpdates(loop, 1)
+      expect(loop.getState().enemies[0].x).toBeGreaterThan(before)
+    })
+
+    it('right-wall bounce reverses direction and steps enemy down', () => {
+      const loop = new GameLoop(bounceLevel)
+      const initialY = loop.getState().enemies[0].y
+
+      // 3 steps push the rightmost edge past CANVAS_WIDTH (179+3*64=371; 371+32=403>390)
+      runUpdates(loop, 3)
+
+      const { enemies } = loop.getState()
+      // After bounce, enemy moves left on next step
+      const xAfterBounce = enemies[0].x
+      runUpdates(loop, 1)
+      expect(loop.getState().enemies[0].x).toBeLessThan(xAfterBounce)
+      // Enemy stepped down by ENTITY_SIZE
+      expect(enemies[0].y).toBe(initialY + ENTITY_SIZE)
+    })
+
+    it('left-wall bounce reverses direction again and steps enemy down a second time', () => {
+      const loop = new GameLoop(bounceLevel)
+      const initialY = loop.getState().enemies[0].y
+
+      // Trigger right-wall bounce
+      runUpdates(loop, 3)
+      const yAfterFirstBounce = loop.getState().enemies[0].y
+      expect(yAfterFirstBounce).toBe(initialY + ENTITY_SIZE)
+
+      // Trigger left-wall bounce: 6 more steps moving left (371-6*64=-13<0)
+      runUpdates(loop, 6)
+
+      const { enemies } = loop.getState()
+      // After left bounce, enemy moves right on next step
+      const xAfterLeftBounce = enemies[0].x
+      runUpdates(loop, 1)
+      expect(loop.getState().enemies[0].x).toBeGreaterThan(xAfterLeftBounce)
+      // Enemy stepped down a second time
+      expect(enemies[0].y).toBe(initialY + ENTITY_SIZE * 2)
+    })
+  })
+
   describe('render', () => {
     it('render calls renderer.clear() once', () => {
       new GameLoop(mockLevel).render(mockRenderer)
