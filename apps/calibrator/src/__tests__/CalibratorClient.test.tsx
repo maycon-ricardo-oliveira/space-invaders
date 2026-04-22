@@ -71,7 +71,8 @@ describe('CalibratorClient', () => {
       b.getAttribute('aria-label')?.startsWith('cell ')
     )
     fireEvent.click(gridCells[0])
-    fireEvent.click(gridCells[0])
+    // After placement the cell label shows the first letter of the entity type ('B' for basic-enemy)
+    expect(gridCells[0].textContent).toBe('B')
   })
 
   it('updates levels when slider changes and Save sends updated levels', () => {
