@@ -33,4 +33,11 @@ describe('Sliders', () => {
     fireEvent.click(getByLabelText('Has Power-Ups'))
     expect(onChange).toHaveBeenCalledWith({ ...defaultParams, hasPowerUps: false })
   })
+
+  it('calls onChange with correctly parsed float for enemyShotDelay', () => {
+    const onChange = jest.fn()
+    const { getByLabelText } = render(<Sliders value={defaultParams} onChange={onChange} />)
+    fireEvent.change(getByLabelText('Enemy Shot Delay (s) ↓=harder'), { target: { value: '0.8' } })
+    expect(onChange).toHaveBeenCalledWith({ ...defaultParams, enemyShotDelay: 0.8 })
+  })
 })

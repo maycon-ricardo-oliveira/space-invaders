@@ -13,14 +13,14 @@ const SLIDER_CONFIG: Array<{
   max: number
   step: number
 }> = [
-  { key: 'numberOfEnemies',  label: 'Number of Enemies',        min: 3,   max: 20,  step: 1   },
-  { key: 'enemySpeed',       label: 'Enemy Speed',               min: 1,   max: 5,   step: 0.1 },
-  { key: 'enemyShotDelay',   label: 'Enemy Shot Delay (s)',      min: 0.5, max: 3.0, step: 0.1 },
-  { key: 'enemyShotSpeed',   label: 'Enemy Shot Speed',          min: 2,   max: 8,   step: 0.5 },
-  { key: 'enemyAngerDelay',  label: 'Enemy Anger Delay (s)',     min: 5,   max: 30,  step: 1   },
-  { key: 'enemySpawnDelay',  label: 'Enemy Spawn Delay (s)',     min: 0.3, max: 2,   step: 0.1 },
-  { key: 'powerUpMinWait',   label: 'Power-Up Min Wait (s)',     min: 5,   max: 15,  step: 1   },
-  { key: 'powerUpMaxWait',   label: 'Power-Up Max Wait (s)',     min: 15,  max: 30,  step: 1   },
+  { key: 'numberOfEnemies',  label: 'Number of Enemies',              min: 3,   max: 20,  step: 1   },
+  { key: 'enemySpeed',       label: 'Enemy Speed',                     min: 1,   max: 5,   step: 0.1 },
+  { key: 'enemyShotDelay',   label: 'Enemy Shot Delay (s) ↓=harder',  min: 0.5, max: 3.0, step: 0.1 },
+  { key: 'enemyShotSpeed',   label: 'Enemy Shot Speed',                min: 2,   max: 8,   step: 0.5 },
+  { key: 'enemyAngerDelay',  label: 'Enemy Anger Delay (s) ↓=harder', min: 5,   max: 30,  step: 1   },
+  { key: 'enemySpawnDelay',  label: 'Enemy Spawn Delay (s) ↓=harder', min: 0.3, max: 2,   step: 0.1 },
+  { key: 'powerUpMinWait',   label: 'Power-Up Min Wait (s)',           min: 5,   max: 15,  step: 1   },
+  { key: 'powerUpMaxWait',   label: 'Power-Up Max Wait (s)',           min: 15,  max: 30,  step: 1   },
 ]
 
 export function Sliders({ value, onChange }: Props) {
@@ -40,7 +40,7 @@ export function Sliders({ value, onChange }: Props) {
               onChange({ ...value, [key]: parseFloat(e.target.value) })
             }
           />
-          <span>{(value[key] as number).toFixed(step < 1 ? 1 : 0)}</span>
+          <span>{(value[key] as number).toFixed(step >= 1 ? 0 : step >= 0.1 ? 1 : 2)}</span>
         </div>
       ))}
       <div>
