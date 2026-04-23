@@ -5,21 +5,24 @@ describe('defaultPlacements', () => {
     expect(defaultPlacements(0)).toEqual([])
   })
 
-  it('returns 3 placements in row 0 for numberOfEnemies=3', () => {
+  it('returns 3 placements for numberOfEnemies=3 with valid coords', () => {
     const result = defaultPlacements(3)
     expect(result).toHaveLength(3)
-    expect(result[0]).toEqual({ entityTypeId: 'basic-enemy', x: 0, y: 0 })
-    expect(result[1]).toEqual({ entityTypeId: 'basic-enemy', x: 30, y: 0 })
-    expect(result[2]).toEqual({ entityTypeId: 'basic-enemy', x: 60, y: 0 })
+    result.forEach(p => {
+      expect(p.entityTypeId).toBe('basic-enemy')
+      expect(p.x % 30).toBe(0)
+      expect(p.y % 40).toBe(0)
+    })
   })
 
-  it('wraps to next row after 12 columns for numberOfEnemies=13', () => {
+  it('returns 13 placements with valid coords for numberOfEnemies=13', () => {
     const result = defaultPlacements(13)
     expect(result).toHaveLength(13)
-    // First 12 fill row 0
-    expect(result[11]).toEqual({ entityTypeId: 'basic-enemy', x: 330, y: 0 })
-    // 13th wraps to row 1, col 0
-    expect(result[12]).toEqual({ entityTypeId: 'basic-enemy', x: 0, y: 40 })
+    result.forEach(p => {
+      expect(p.entityTypeId).toBe('basic-enemy')
+      expect(p.x % 30).toBe(0)
+      expect(p.y % 40).toBe(0)
+    })
   })
 
   it('all placements have entityTypeId: basic-enemy', () => {
@@ -32,5 +35,14 @@ describe('defaultPlacements', () => {
   it('caps at 192 entities (ROWS * COLS) when numberOfEnemies exceeds the grid', () => {
     const result = defaultPlacements(300)
     expect(result).toHaveLength(192)
+  })
+
+  it('single enemy lands in the center half of the grid at least 15/20 times', () => {
+    // Center half: cols 3-7 → x in [90, 210]
+    const hits = Array.from({ length: 20 }, () => {
+      const [p] = defaultPlacements(1)
+      return p.x >= 90 && p.x <= 210
+    }).filter(Boolean).length
+    expect(hits).toBeGreaterThanOrEqual(15)
   })
 })
