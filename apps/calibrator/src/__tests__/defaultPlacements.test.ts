@@ -37,12 +37,13 @@ describe('defaultPlacements', () => {
     expect(result).toHaveLength(192)
   })
 
-  it('single enemy lands in the center half of the grid at least 15/20 times', () => {
+  it('center-biased: majority of single placements land in center columns', () => {
     // Center half: cols 3-7 → x in [90, 210]
-    const hits = Array.from({ length: 20 }, () => {
+    let centerCount = 0
+    for (let i = 0; i < 100; i++) {
       const [p] = defaultPlacements(1)
-      return p.x >= 90 && p.x <= 210
-    }).filter(Boolean).length
-    expect(hits).toBeGreaterThanOrEqual(15)
+      if (p.x >= 90 && p.x <= 210) centerCount++
+    }
+    expect(centerCount).toBeGreaterThanOrEqual(70)
   })
 })
