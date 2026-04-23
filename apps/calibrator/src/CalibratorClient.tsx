@@ -6,6 +6,7 @@ import { DifficultyScore } from './CalibrationPanel/DifficultyScore'
 import { Toolbox } from './MapEditor/Toolbox'
 import { Grid } from './MapEditor/Grid'
 import { PropertiesPanel } from './MapEditor/PropertiesPanel'
+import { SuggestedComposition } from './CalibrationPanel/SuggestedComposition'
 import { saveLevels } from '../app/actions'
 
 const ENTITY_TYPES: EntityType[] = [
@@ -102,6 +103,10 @@ export function CalibratorClient({ initialLevels }: Props) {
           selectedEntityTypeId={selectedEntityTypeId}
           onPlace={handlePlace}
           onRemove={handleRemove}
+        />
+        <SuggestedComposition
+          params={current.params}
+          difficultyScore={current.difficultyScore}
         />
       </div>
 
