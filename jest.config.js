@@ -5,6 +5,7 @@ module.exports = {
     '<rootDir>/packages/monetization-plugin',
     '<rootDir>/packages/analytics-plugin',
     '<rootDir>/apps/game',
+    '<rootDir>/apps/jogo',
     '<rootDir>/apps/calibrator',
   ],
 }
