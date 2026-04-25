@@ -208,8 +208,8 @@ describe('GameLoop', () => {
         ...mockLevel,
         params: { ...BASE_PARAMS, numberOfEnemies: 1, enemyShotDelay: 0.001, enemyShotSpeed: 8 },
       })
-      // 3 hits × ~109 frames = ~330 frames; 500 frames is more than enough
-      for (let i = 0; i < 500; i++) loop.update(16)
+      // With invincibility (1500ms per hit), 3 hits take ~530 frames; 700 frames is enough.
+      for (let i = 0; i < 700; i++) loop.update(16)
       expect(loop.getState().status).toBe('lost')
     })
   })
@@ -314,6 +314,136 @@ describe('GameLoop', () => {
       loop.render(mockRenderer)
       // Only player drawn (enemy dead, bullet inactive, status=won)
       expect((mockRenderer.drawRect as jest.Mock).mock.calls.length).toBe(1)
+    })
+  })
+
+  describe('auto-fire', () => {
+    it('setFiring(true) fires a bullet on first update', () => {
+      const loop = new GameLoop(mockLevel)
+      loop.setFiring(true)
+      loop.update(16)
+      expect(loop.getState().playerBullets).toHaveLength(1)
+    })
+
+    it('fires a second bullet after AUTO_FIRE_INTERVAL ms', () => {
+      const loop = new GameLoop(mockLevel)
+      loop.setFiring(true)
+      loop.update(16)   // fires bullet 1; timer resets to 400
+      loop.update(400)  // timer 400 - 400 = 0 → fires bullet 2
+      expect(loop.getState().playerBullets).toHaveLength(2)
+    })
+
+    it('setFiring(false) does not fire bullets regardless of updates', () => {
+      const loop = new GameLoop(mockLevel)
+      loop.setFiring(false)
+      for (let i = 0; i < 50; i++) loop.update(16)
+      expect(loop.getState().playerBullets).toHaveLength(0)
+    })
+
+    it('setFiring(false) stops auto-fire mid-session', () => {
+      const loop = new GameLoop(mockLevel)
+      loop.setFiring(true)
+      loop.update(16)                                   // bullet 1
+      loop.setFiring(false)
+      const countAfterStop = loop.getState().playerBullets.length
+      for (let i = 0; i < 50; i++) loop.update(16)
+      expect(loop.getState().playerBullets).toHaveLength(countAfterStop)
+    })
+
+    it('re-enabling setFiring fires immediately (timer resets on setFiring false)', () => {
+      const loop = new GameLoop(mockLevel)
+      loop.setFiring(true)
+      loop.update(16)       // bullet 1
+      loop.setFiring(false) // autoFireTimer reset to 0
+      loop.setFiring(true)
+      loop.update(1)        // timer 0 - 1 = -1 ≤ 0 → bullet 2
+      expect(loop.getState().playerBullets).toHaveLength(2)
+    })
+  })
+
+  describe('invincibility', () => {
+    const hitParams = {
+      ...BASE_PARAMS,
+      numberOfEnemies: 1,
+      enemyShotDelay: 0.001,
+      enemyShotSpeed: 8,
+    }
+
+    it('player starts with invincibilityTimer of 0', () => {
+      expect(new GameLoop(mockLevel).getState().player.invincibilityTimer).toBe(0)
+    })
+
+    it('player hit sets invincibilityTimer to 1500', () => {
+      const loop = new GameLoop({ ...mockLevel, params: hitParams })
+      for (let i = 0; i < 200; i++) {
+        loop.update(16)
+        if (loop.getState().player.invincibilityTimer > 0) break
+      }
+      expect(loop.getState().player.invincibilityTimer).toBeGreaterThan(0)
+    })
+
+    it('invincibility prevents consecutive damage', () => {
+      const loop = new GameLoop({ ...mockLevel, params: hitParams })
+      // Run until first hit (lives drop from 3 to 2)
+      for (let i = 0; i < 200; i++) {
+        loop.update(16)
+        if (loop.getState().player.lives < 3) break
+      }
+      expect(loop.getState().player.lives).toBe(2)
+      // Immediately after: many bullets in flight, but invincibility blocks them
+      loop.update(16)
+      expect(loop.getState().player.lives).toBe(2)
+    })
+
+    it('invincibilityTimer decrements to 0 after 1500ms', () => {
+      const loop = new GameLoop({ ...mockLevel, params: hitParams })
+      // Wait for first hit
+      for (let i = 0; i < 200; i++) {
+        loop.update(16)
+        if (loop.getState().player.invincibilityTimer > 0) break
+      }
+      expect(loop.getState().player.invincibilityTimer).toBeGreaterThan(0)
+      // A single 1500ms update drains the timer to 0.
+      // checkCollisions runs first (invincibilityTimer > 0 blocks the hit),
+      // then updateInvincibility(1500) sets it to 0.
+      loop.update(1500)
+      expect(loop.getState().player.invincibilityTimer).toBe(0)
+    })
+
+    it('player is vulnerable again after invincibility expires', () => {
+      const loop = new GameLoop({ ...mockLevel, params: hitParams })
+      // First hit
+      for (let i = 0; i < 200; i++) {
+        loop.update(16)
+        if (loop.getState().player.lives < 3) break
+      }
+      expect(loop.getState().player.lives).toBe(2)
+      // Wait out invincibility + travel time for next bullet (~200 more frames)
+      for (let i = 0; i < 200; i++) loop.update(16)
+      expect(loop.getState().player.lives).toBeLessThan(2)
+    })
+  })
+
+  describe('render showPlayer', () => {
+    it('does not draw player when showPlayer is false', () => {
+      const loop = new GameLoop({ ...mockLevel, params: { ...BASE_PARAMS, numberOfEnemies: 0 } })
+      jest.clearAllMocks()
+      loop.render(mockRenderer, false)
+      expect(mockRenderer.drawRect).not.toHaveBeenCalled()
+    })
+
+    it('draws player when showPlayer defaults to true', () => {
+      const loop = new GameLoop({ ...mockLevel, params: { ...BASE_PARAMS, numberOfEnemies: 0 } })
+      jest.clearAllMocks()
+      loop.render(mockRenderer)
+      expect(mockRenderer.drawRect).toHaveBeenCalledTimes(1)
+    })
+
+    it('draws player when showPlayer is explicitly true', () => {
+      const loop = new GameLoop({ ...mockLevel, params: { ...BASE_PARAMS, numberOfEnemies: 0 } })
+      jest.clearAllMocks()
+      loop.render(mockRenderer, true)
+      expect(mockRenderer.drawRect).toHaveBeenCalledTimes(1)
     })
   })
 })

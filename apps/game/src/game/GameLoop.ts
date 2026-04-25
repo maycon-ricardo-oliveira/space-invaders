@@ -6,18 +6,22 @@ export const CANVAS_HEIGHT = 844
 export const ENTITY_SIZE = 32
 export const TOTAL_STORY_LEVELS = 20
 
-const PLAYER_SPEED = 200          // px/s
-const BULLET_SPEED = 500          // px/s
+const PLAYER_SPEED = 200           // px/s
+const BULLET_SPEED = 500           // px/s
 const BULLET_WIDTH = 4
 const BULLET_HEIGHT = 8
-const ENEMY_SPEED_SCALE = 40      // px/s per unit of LevelParams.enemySpeed
-const ENEMY_SHOT_SPEED_SCALE = 50 // px/s per unit of LevelParams.enemyShotSpeed
+const ENEMY_SPEED_SCALE = 40       // px/s per unit of LevelParams.enemySpeed
+const ENEMY_SHOT_SPEED_SCALE = 50  // px/s per unit of LevelParams.enemyShotSpeed
+const AUTO_FIRE_INTERVAL = 400     // ms between auto-fire shots
+const INVINCIBILITY_DURATION = 1500 // ms of player invincibility after a hit
 
 export class GameLoop {
   private state: GameState
   private enemyDirection = 1 // 1 = right, -1 = left
   private shotCooldown: number
   private readonly params: LevelDefinition['params']
+  private isFiring = false
+  private autoFireTimer = 0
 
   constructor(level: LevelDefinition) {
     this.params = level.params
@@ -27,6 +31,7 @@ export class GameLoop {
         x: CANVAS_WIDTH / 2 - ENTITY_SIZE / 2,
         y: CANVAS_HEIGHT - ENTITY_SIZE - 20,
         lives: 3,
+        invincibilityTimer: 0,
       },
       enemies: this.buildEnemies(level),
       playerBullets: [],
@@ -95,6 +100,12 @@ export class GameLoop {
     )
   }
 
+  /** Called by GameScreen when the player's finger touches or lifts. */
+  setFiring(active: boolean): void {
+    this.isFiring = active
+    if (!active) this.autoFireTimer = 0  // reset so next touch fires immediately
+  }
+
   fire(): void {
     if (this.state.status !== 'playing') return
     this.state.playerBullets.push({
@@ -111,6 +122,8 @@ export class GameLoop {
     this.moveEnemies(dt)
     this.handleEnemyShooting(dt)
     this.checkCollisions()
+    this.updateInvincibility(deltaMs)
+    this.handleAutoFire(deltaMs)
     this.checkWinLose()
   }
 
@@ -181,6 +194,7 @@ export class GameLoop {
     const p = this.state.player
     for (const bullet of this.state.enemyBullets) {
       if (!bullet.active) continue
+      if (p.invincibilityTimer > 0) continue  // player is invincible — skip
       if (
         bullet.x < p.x + ENTITY_SIZE &&
         bullet.x + BULLET_WIDTH > p.x &&
@@ -188,8 +202,27 @@ export class GameLoop {
         bullet.y + BULLET_HEIGHT > p.y
       ) {
         bullet.active = false
-        this.state.player.lives -= 1
+        p.lives -= 1
+        p.invincibilityTimer = INVINCIBILITY_DURATION
       }
+    }
+  }
+
+  private updateInvincibility(deltaMs: number): void {
+    if (this.state.player.invincibilityTimer > 0) {
+      this.state.player.invincibilityTimer = Math.max(
+        0,
+        this.state.player.invincibilityTimer - deltaMs,
+      )
+    }
+  }
+
+  private handleAutoFire(deltaMs: number): void {
+    if (!this.isFiring) return
+    this.autoFireTimer -= deltaMs
+    if (this.autoFireTimer <= 0) {
+      this.fire()
+      this.autoFireTimer = AUTO_FIRE_INTERVAL
     }
   }
 
@@ -203,15 +236,17 @@ export class GameLoop {
     }
   }
 
-  render(renderer: IRenderer): void {
+  render(renderer: IRenderer, showPlayer = true): void {
     renderer.clear()
-    renderer.drawRect(
-      this.state.player.x,
-      this.state.player.y,
-      ENTITY_SIZE,
-      ENTITY_SIZE,
-      '#00ff00',
-    )
+    if (showPlayer) {
+      renderer.drawRect(
+        this.state.player.x,
+        this.state.player.y,
+        ENTITY_SIZE,
+        ENTITY_SIZE,
+        '#00ff00',
+      )
+    }
     for (const enemy of this.state.enemies) {
       if (!enemy.alive) continue
       renderer.drawRect(enemy.x, enemy.y, ENTITY_SIZE, ENTITY_SIZE, '#ff0000')
