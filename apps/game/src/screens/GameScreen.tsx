@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native'
+import { PanResponder, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
 import { Canvas, Picture, Skia } from '@shopify/react-native-skia'
 import type { SkPicture } from '@shopify/react-native-skia'
 import { LevelEngine, CurveCalibratorStrategy } from '@si/level-engine'
@@ -14,6 +14,18 @@ interface Props {
   onBack: () => void
 }
 
+interface JoystickState {
+  baseX: number
+  baseY: number
+  currentX: number
+  currentY: number
+}
+
+const DEADZONE = 8
+const JOYSTICK_MAX_RADIUS = 40
+const KNOB_RADIUS = 20
+const FLASH_INTERVAL_MS = 150
+
 function buildLoop(levelIndex: number, totalLevels: number): GameLoop {
   const engine = new LevelEngine(new CurveCalibratorStrategy())
   registerEntities(engine)
@@ -26,11 +38,54 @@ export function GameScreen({ levelIndex, totalLevels, onBack }: Props) {
   const [renderer] = useState(() => new SkiaRenderer(CANVAS_WIDTH, CANVAS_HEIGHT))
   const [status, setStatus] = useState<GameStatus>('playing')
   const [picture, setPicture] = useState<SkPicture | null>(null)
+  const [hud, setHud] = useState({ lives: 3, score: 0 })
+  const [joystick, setJoystick] = useState<JoystickState | null>(null)
 
   const statusRef = useRef<GameStatus>('playing')
   const isPlayingRef = useRef(true)
   const rafRef = useRef<number | null>(null)
   const lastTimeRef = useRef<number | null>(null)
+  const joystickRef = useRef<JoystickState | null>(null)
+  const flashVisibleRef = useRef(true)
+  const flashTimerRef = useRef(0)
+
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: () => true,
+      onPanResponderGrant: (evt) => {
+        const j: JoystickState = {
+          baseX: evt.nativeEvent.pageX,
+          baseY: evt.nativeEvent.pageY,
+          currentX: evt.nativeEvent.pageX,
+          currentY: evt.nativeEvent.pageY,
+        }
+        joystickRef.current = j
+        setJoystick(j)
+        loop.setFiring(true)
+      },
+      onPanResponderMove: (evt) => {
+        if (!joystickRef.current) return
+        const j: JoystickState = {
+          ...joystickRef.current,
+          currentX: evt.nativeEvent.pageX,
+          currentY: evt.nativeEvent.pageY,
+        }
+        joystickRef.current = j
+        setJoystick(j)
+      },
+      onPanResponderRelease: () => {
+        joystickRef.current = null
+        setJoystick(null)
+        loop.setFiring(false)
+      },
+      onPanResponderTerminate: () => {
+        joystickRef.current = null
+        setJoystick(null)
+        loop.setFiring(false)
+      },
+    }),
+  ).current
 
   const tick = useCallback(
     (timestamp: number) => {
@@ -39,20 +94,44 @@ export function GameScreen({ levelIndex, totalLevels, onBack }: Props) {
       const delta = lastTimeRef.current !== null ? timestamp - lastTimeRef.current : 16
       lastTimeRef.current = timestamp
 
+      // Translate joystick horizontal displacement to player movement
+      const j = joystickRef.current
+      if (j) {
+        const dx = j.currentX - j.baseX
+        if (dx < -DEADZONE) loop.moveLeft(delta)
+        else if (dx > DEADZONE) loop.moveRight(delta)
+      }
+
+      loop.update(delta)
+      const state = loop.getState()
+
+      // Flash: toggle player visibility during invincibility
+      if (state.player.invincibilityTimer > 0) {
+        flashTimerRef.current -= delta
+        if (flashTimerRef.current <= 0) {
+          flashVisibleRef.current = !flashVisibleRef.current
+          flashTimerRef.current = FLASH_INTERVAL_MS
+        }
+      } else {
+        flashVisibleRef.current = true
+        flashTimerRef.current = 0
+      }
+
       const bounds = Skia.XYWHRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT)
       const rec = Skia.PictureRecorder()
-      const canvas = rec.beginRecording(bounds)
-      renderer.setCanvas(canvas)
-      loop.update(delta)
-      loop.render(renderer)
+      const skCanvas = rec.beginRecording(bounds)
+      renderer.setCanvas(skCanvas)
+      loop.render(renderer, flashVisibleRef.current)
       const pic = rec.finishRecordingAsPicture()
       setPicture(pic)
 
-      const s = loop.getState().status
+      const s = state.status
       if (s !== statusRef.current) {
         statusRef.current = s
         setStatus(s)
       }
+
+      setHud({ lives: state.player.lives, score: state.score })
 
       if (s === 'playing') {
         rafRef.current = requestAnimationFrame(tick)
@@ -77,28 +156,63 @@ export function GameScreen({ levelIndex, totalLevels, onBack }: Props) {
   const isPlaying = status === 'playing'
 
   return (
-    <View style={styles.container}>
+    <View style={styles.container} {...panResponder.panHandlers}>
       <Canvas style={{ width: CANVAS_WIDTH, height: CANVAS_HEIGHT }}>
         {picture && <Picture picture={picture} />}
       </Canvas>
+
+      {/* HUD overlay — pointerEvents none so touches fall through to PanResponder */}
+      <View style={styles.hudTopLeft} pointerEvents="none">
+        <Text style={styles.hudText}>{'❤️'.repeat(Math.max(0, hud.lives))}</Text>
+      </View>
+      <View style={styles.hudTopRight} pointerEvents="none">
+        <Text style={styles.hudText}>{hud.score}</Text>
+      </View>
+
+      {/* Floating joystick visual */}
+      {isPlaying && joystick && (
+        <>
+          <View
+            pointerEvents="none"
+            style={[
+              styles.joystickBase,
+              {
+                left: joystick.baseX - JOYSTICK_MAX_RADIUS,
+                top: joystick.baseY - JOYSTICK_MAX_RADIUS,
+              },
+            ]}
+          />
+          <View
+            pointerEvents="none"
+            style={[
+              styles.joystickKnob,
+              {
+                left:
+                  joystick.baseX +
+                  Math.max(
+                    -JOYSTICK_MAX_RADIUS,
+                    Math.min(JOYSTICK_MAX_RADIUS, joystick.currentX - joystick.baseX),
+                  ) -
+                  KNOB_RADIUS,
+                top:
+                  joystick.baseY +
+                  Math.max(
+                    -JOYSTICK_MAX_RADIUS,
+                    Math.min(JOYSTICK_MAX_RADIUS, joystick.currentY - joystick.baseY),
+                  ) -
+                  KNOB_RADIUS,
+              },
+            ]}
+          />
+        </>
+      )}
+
+      {/* Game over / win overlay */}
       {!isPlaying && (
         <View style={styles.overlay}>
           <Text style={styles.resultText}>{status === 'won' ? 'You Win!' : 'Game Over'}</Text>
           <TouchableOpacity onPress={onBack} style={styles.button}>
             <Text style={styles.buttonText}>Back to Levels</Text>
-          </TouchableOpacity>
-        </View>
-      )}
-      {isPlaying && (
-        <View style={styles.controls}>
-          <TouchableOpacity onPress={() => loop.moveLeft(16)} style={styles.controlBtn}>
-            <Text style={styles.controlText}>◀</Text>
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => loop.fire()} style={styles.controlBtn}>
-            <Text style={styles.controlText}>🔥</Text>
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => loop.moveRight(16)} style={styles.controlBtn}>
-            <Text style={styles.controlText}>▶</Text>
           </TouchableOpacity>
         </View>
       )}
@@ -108,6 +222,33 @@ export function GameScreen({ levelIndex, totalLevels, onBack }: Props) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#000', alignItems: 'center' },
+  hudTopLeft: {
+    position: 'absolute',
+    top: 8,
+    left: 12,
+  },
+  hudTopRight: {
+    position: 'absolute',
+    top: 8,
+    right: 12,
+  },
+  hudText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
+  joystickBase: {
+    position: 'absolute',
+    width: JOYSTICK_MAX_RADIUS * 2,
+    height: JOYSTICK_MAX_RADIUS * 2,
+    borderRadius: JOYSTICK_MAX_RADIUS,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    borderWidth: 2,
+    borderColor: 'rgba(255,255,255,0.3)',
+  },
+  joystickKnob: {
+    position: 'absolute',
+    width: KNOB_RADIUS * 2,
+    height: KNOB_RADIUS * 2,
+    borderRadius: KNOB_RADIUS,
+    backgroundColor: 'rgba(255,255,255,0.5)',
+  },
   overlay: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(0,0,0,0.7)',
@@ -117,13 +258,4 @@ const styles = StyleSheet.create({
   resultText: { color: '#fff', fontSize: 36, fontWeight: 'bold', marginBottom: 24 },
   button: { backgroundColor: '#444', paddingHorizontal: 24, paddingVertical: 12, borderRadius: 8 },
   buttonText: { color: '#fff', fontSize: 18 },
-  controls: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    width: CANVAS_WIDTH,
-    paddingVertical: 16,
-    backgroundColor: '#111',
-  },
-  controlBtn: { padding: 16 },
-  controlText: { color: '#fff', fontSize: 32 },
 })
