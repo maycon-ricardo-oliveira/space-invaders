@@ -1,4 +1,5 @@
-// Stub: forces HAS_REANIMATED_3 = false in @shopify/react-native-skia,
-// making Skia use StaticContainer instead of NativeReanimatedContainer.
-// Safe because our game uses no Reanimated Skia APIs.
-throw new Error('react-native-reanimated stubbed out');
+// Stub: makes Skia's renderHelpers see version=undefined → HAS_REANIMATED_3=false
+// → Skia uses StaticContainer (no worklets needed).
+// Must export {} instead of throwing — ReanimatedProxy re-throws errors as
+// "react-native-reanimated is not installed!" if require() fails.
+module.exports = {}
