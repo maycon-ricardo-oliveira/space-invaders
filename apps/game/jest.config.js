@@ -7,6 +7,7 @@ module.exports = {
     'src/**/*.{ts,tsx}',
     '!src/**/*.test.{ts,tsx}',
   ],
+  modulePaths: ['<rootDir>/node_modules'],
   transformIgnorePatterns: [
     '/node_modules/(?!(jest-expo|expo|@expo|expo-modules-core|@shopify/react-native-skia|react-native|@react-native|@react-native-community))',
   ],

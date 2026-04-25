@@ -9,10 +9,10 @@
     "web": "expo start --web"
   },
   "dependencies": {
+    "@shopify/react-native-skia": "2.2.12",
+    "@si/analytics-plugin": "*",
     "@si/level-engine": "*",
     "@si/monetization-plugin": "*",
-    "@si/analytics-plugin": "*",
-    "@shopify/react-native-skia": "^1.5.0",
     "expo": "~54.0.33",
     "expo-status-bar": "~3.0.9",
     "react": "19.1.0",
