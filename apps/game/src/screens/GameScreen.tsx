@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { PanResponder, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
+import { Platform, PanResponder, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
 import { Canvas, Picture, Skia } from '@shopify/react-native-skia'
 import type { SkPicture } from '@shopify/react-native-skia'
 import { LevelEngine, CurveCalibratorStrategy } from '@si/level-engine'
@@ -20,6 +20,9 @@ interface JoystickState {
   currentX: number
   currentY: number
 }
+
+const STATUS_BAR_HEIGHT = Platform.OS === 'android' ? (StatusBar.currentHeight ?? 24) : 44
+const HUD_TOP = STATUS_BAR_HEIGHT + 8
 
 const DEADZONE = 8
 const JOYSTICK_MAX_RADIUS = 40
@@ -224,12 +227,12 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#000', alignItems: 'center' },
   hudTopLeft: {
     position: 'absolute',
-    top: 8,
+    top: HUD_TOP,
     left: 12,
   },
   hudTopRight: {
     position: 'absolute',
-    top: 8,
+    top: HUD_TOP,
     right: 12,
   },
   hudText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
