@@ -20,11 +20,12 @@ jest.mock('../game/GameLoop', () => ({
     update: jest.fn(),
     render: jest.fn(),
     fire: jest.fn(),
+    setFiring: jest.fn(),
     moveLeft: jest.fn(),
     moveRight: jest.fn(),
     getState: jest.fn().mockImplementation(() => ({
       status: mockGameStatus,
-      player: { x: 0, y: 0, lives: 3 },
+      player: { x: 0, y: 0, lives: 3, invincibilityTimer: 0 },
       enemies: [],
       playerBullets: [],
       enemyBullets: [],
@@ -52,37 +53,35 @@ afterEach(() => {
   jest.restoreAllMocks()
 })
 
-describe('GameScreen — controls (playing state)', () => {
+describe('GameScreen — renders without crashing', () => {
   beforeEach(() => {
     mockGameStatus = 'playing'
   })
 
-  it('renders the left move control', () => {
-    const { getByText } = render(
-      <GameScreen levelIndex={0} totalLevels={20} onBack={jest.fn()} />,
-    )
-    expect(getByText('◀')).toBeTruthy()
-  })
-
-  it('renders the right move control', () => {
-    const { getByText } = render(
-      <GameScreen levelIndex={0} totalLevels={20} onBack={jest.fn()} />,
-    )
-    expect(getByText('▶')).toBeTruthy()
-  })
-
-  it('renders the fire control', () => {
-    const { getByText } = render(
-      <GameScreen levelIndex={0} totalLevels={20} onBack={jest.fn()} />,
-    )
-    expect(getByText('🔥')).toBeTruthy()
-  })
-
   it('renders without crashing', () => {
-    const onBack = jest.fn()
     expect(() =>
-      render(<GameScreen levelIndex={0} totalLevels={20} onBack={onBack} />),
+      render(<GameScreen levelIndex={0} totalLevels={20} onBack={jest.fn()} />),
     ).not.toThrow()
+  })
+})
+
+describe('GameScreen — HUD', () => {
+  beforeEach(() => {
+    mockGameStatus = 'playing'
+  })
+
+  it('renders lives hearts matching the game state', () => {
+    const { getByText } = render(
+      <GameScreen levelIndex={0} totalLevels={20} onBack={jest.fn()} />,
+    )
+    expect(getByText('❤️❤️❤️')).toBeTruthy()
+  })
+
+  it('renders score matching the game state', () => {
+    const { getByText } = render(
+      <GameScreen levelIndex={0} totalLevels={20} onBack={jest.fn()} />,
+    )
+    expect(getByText('0')).toBeTruthy()
   })
 })
 
