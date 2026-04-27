@@ -21,13 +21,31 @@ O problema original (calibração manual de dificuldade) é resolvido pelo Level
 |--------|------------|---------------|
 | Mobile | Expo ~54 + react-native-skia | Performance nativa via GPU, TypeScript |
 | Level Engine | TypeScript puro | Zero dependências nativas, testável com Jest |
-| Calibrador | Next.js 14 + Canvas HTML5 | Dev tool web, mesma lógica de jogo no browser |
+| Calibrador / Admin | Next.js 14 + Canvas HTML5 | Dev tool web + painel admin |
+| Banco do player | Firebase Firestore | Offline-first, sync automático, mobile-native |
+| Banco de conteúdo/admin | Supabase (Postgres) | Planetas, fases, waves editáveis via painel web sem build |
+| Auth | Firebase Anonymous Auth | Joga sem fricção; Google login no backlog |
 | Monetização | AdMob (rewarded ads) + RevenueCat (IAP) |
 | Analytics | Firebase Analytics |
-| OTA Updates | EAS Update | Publica level changes sem store review |
+| OTA Updates | EAS Update | Publica assets e configs sem store review |
 | Build | EAS Build | Cloud iOS/Android |
 
 **Plataformas:** Android (foco inicial), iOS (após validação).
+
+### Divisão de responsabilidades dos bancos
+
+| Dado | Banco |
+|------|-------|
+| Progresso, inventário, currencies, upgrades permanentes | Firebase Firestore (offline-first) |
+| Conteúdo do jogo: planetas, fases, waves, cartas, parâmetros | Supabase (Postgres) |
+| Players, métricas agregadas, ferramentas de ban/admin | Supabase (Postgres) |
+| Eventos de gameplay | Firebase Analytics |
+
+**Fluxo offline:**
+- Game baixa conteúdo do Supabase ao abrir → cacheia local
+- Progresso salvo localmente → sincroniza com Firestore ao reconectar
+- Loja: requer internet (IAP não funciona offline)
+- Ads: usa cache AdMob se disponível; sem cache → 1 revive grátis registrado localmente
 
 ---
 
@@ -558,45 +576,52 @@ Firebase Analytics — eventos principais:
 
 | # | Pergunta | Impacto |
 |---|----------|---------|
-| 1 | Quantos planetas no total? | Estrutura de progressão |
-| 2 | Narrativa de A Ordem: como se manifesta? | UI/UX |
-| 3 | Player pode repetir planetas? | Game loop |
-| 4 | Checkpoint ao morrer: fase ou level? | Game loop |
-| 5 | Missões Especiais: rotativa ou fixa? | Content pipeline |
-| 6 | Recompensas Missões Especiais vs Contratos | Balanceamento |
-| 7 | Survival: planeta-based ou score infinito? | Arquitetura |
-| 8 | Survival tem cartas também? | Arquitetura |
-| 9 | Quantas camadas de parallax? | Renderização |
+| 2 | Narrativa de A Ordem: como se manifesta? (tela de texto, cutscene, só visual?) | UI/UX |
+| 3 | Player pode repetir planetas já completos? Com que objetivo? | Game loop |
+| 5 | Missões Especiais: rotativa (novas por dia/semana) ou fixa? | Content pipeline |
+| 6 | Recompensas Missões Especiais vs Contratos: maiores, menores ou iguais? | Balanceamento |
+| 7 | Survival: estrutura própria ou score infinito? | Arquitetura |
+| 8 | Survival tem sistema de cartas também? | Arquitetura |
+| 9 | Quantas camadas de parallax? (ex: fundo estelar + nebulosa + asteroids) | Renderização |
 | 10 | Parallax muda entre fases ou só entre planetas? | Assets |
-| 11 | Tiro: automático ao mover ou para estilo Archero? | Core mechanic |
-| 12 | Timer padrão por level? Configurável? | Balanceamento |
-| 13 | Inimigos que sobrevivem ao timer: desaparecem ou falha? | Game loop |
-| 14 | HP base inicial? | Balanceamento |
-| 15 | % de HP que um drop restaura? | Balanceamento |
-| 16 | Combustível persiste entre fases ou reseta? | Game loop |
-| 17 | Indicador visual do tanque no HUD? | UI |
-| 18 | Frequência de asteroids por level? | Level design |
-| 19 | Asteroids causam dano por colisão? | Mecânica |
-| 20 | Padrões de spawn para MVP? | Level design |
-| 21 | 2 bosses na fase 10 level 10: mesmo tipo ou tipos diferentes? | Boss design |
-| 22 | Bosses têm enrage? A partir de qual % HP? | Boss design |
-| 23 | Boss dropa baú ao morrer ou só ao completar fase? | Economy |
-| 24 | Quantas cartas no pool para MVP? | Content |
-| 25 | Carta pode aparecer upgraded (2ª vez) ou única por run? | Roguelite design |
-| 26 | Raridade nas cartas? | Roguelite design |
-| 27 | Cartas do mesmo tipo se acumulam? | Roguelite design |
-| 28 | Habilidades especiais das armas por raridade? | Equipment design |
-| 29 | Slots 3 e 4: Reator + Escudo? Confirmar | Equipment design |
-| 30 | Equipamentos equipados persistem entre runs? | Meta design |
-| 31 | Tabela de drop rates por raridade? | Economy |
-| 32 | Custo e curva de upgrades permanentes? | Economy |
-| 33 | Upgrades desbloqueados gradualmente ou todos disponíveis? | UX |
-| 34 | Range de gold por fase? | Economy |
-| 35 | Custo em diamantes de cada ação? | Economy |
-| 36 | Pacotes IAP de diamantes? Preços? | Monetização |
-| 37 | Capacidade máxima de energia e tempo de recarga? | Session design |
-| 38 | Custo de energia por run: fixo ou variável? | Session design |
-| 39 | Reset dos 10 ads/dia: meia-noite local ou UTC? | Monetização |
-| 40 | Número máximo de revives por run? | Game loop |
-| 41 | Loja vende equipamentos diretamente ou só cosméticos? | Monetização |
-| 42 | Menu do player mostra inventário completo? | UI |
+| 12 | Timer padrão por level? Configurável no calibrador? | Balanceamento |
+| 13 | Inimigos que sobrevivem ao timer: desaparecem ou level falha? | Game loop |
+| 14 | HP base inicial (sem upgrades)? | Balanceamento |
+| 15 | % de HP restaurado por drop de vida? | Balanceamento |
+| 17 | Indicador visual do tanque de combustível no HUD? Como aparece? | UI |
+| 18 | Frequência de asteroids por level: fixo ou varia por fase/planeta? | Level design |
+| 19 | Asteroids causam dano por colisão, ou são apenas obstáculos destrutíveis? | Mecânica |
+| 21 | 2 bosses na fase 10 level 10: mesmo tipo ou podem ser tipos diferentes? | Boss design |
+| 22 | Bosses têm enrage? A partir de qual % de HP? | Boss design |
+| 23 | Boss dropa baú ao morrer ou apenas ao completar a fase? | Economy |
+| 25 | Carta pode aparecer uma segunda vez (upgraded) ou é única por run? | Roguelite design |
+| 26 | Existe raridade nas cartas? | Roguelite design |
+| 27 | Cartas do mesmo tipo se acumulam (stack)? | Roguelite design |
+| 28 | Habilidades especiais das armas por raridade (Incomum → Lendário)? | Equipment design |
+| 29 | Slots 3 e 4: Reator + Escudo? Confirmar antes de implementar | Equipment design |
+| 30 | Equipamentos: escolhidos antes da run ou equipados automaticamente? | Meta design |
+| 31 | Tabela de drop rates por raridade? (ex: Comum 60%, Incomum 25%, Raro 10%...) | Economy |
+| 32 | Custo base e curva dos upgrades permanentes? (linear ou exponencial?) | Economy |
+| 33 | Upgrades permanentes: todos disponíveis desde o início ou desbloqueiam gradualmente? | UX |
+| 34 | Range de gold por fase por planeta? | Economy |
+| 35 | Custo em diamantes de cada ação (reviver, energia)? | Economy |
+| 36 | Pacotes IAP de diamantes e preços? | Monetização |
+| 37 | Capacidade máxima de energia e tempo de recarga total? | Session design |
+| 38 | Custo de energia por run: fixo ou varia por planeta/dificuldade? | Session design |
+| 39 | Reset dos 10 ads/dia: meia-noite horário local ou UTC? | Monetização |
+| 40 | Número máximo de revives por run: 1 ou múltiplos? | Game loop |
+| 41 | Loja vende equipamentos diretamente (pay-to-win) ou apenas cosméticos + diamantes? | Monetização |
+| 42 | Menu do player exibe inventário completo de equipamentos coletados? | UI |
+
+## Fechados
+
+| # | Decisão |
+|---|---------|
+| 1 | 1 planeta no MVP. Novo planeta = inserir no Supabase, sem build. Cada planeta tem nome, ecosistema e hub art |
+| 4 | Checkpoint = level exato onde o player morreu |
+| 11 | Tiro automático mesmo ao mover |
+| 16 | Combustível reseta cheio ao iniciar cada fase |
+| 20 | Padrões pré-definidos (diamante, triângulo, etc.) + editor visual no calibrador. Cada level tem lista de waves; todas devem ser limpas para avançar. Templates reutilizáveis |
+| 24 | 14 cartas no deck MVP do Planeta 1. Deck é por planeta, configurável no calibrador |
+| Auth | Firebase Anonymous Auth no MVP; Google login no backlog |
+| DB | Firebase Firestore (player data) + Supabase Postgres (conteúdo/admin) |
