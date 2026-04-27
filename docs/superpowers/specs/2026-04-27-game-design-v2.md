@@ -141,15 +141,33 @@ Entrar no level
   → Próximo level
 ```
 
-### Parallax
+### Parallax e Terrain Scrolling
 
-- Fundo em múltiplas camadas scrollando em velocidades diferentes (ilusão de profundidade)
-- Cada fase tem um backdrop temático diferente
-- Loop: ao terminar todos os inimigos, a câmera avança para o próximo layout de parallax
+O jogo usa **terrain scrolling** — os obstáculos fazem parte do scroll junto com o fundo. A nave "voa por dentro" do mapa vertical.
 
-> ❓ **GAP 9:** Quantas camadas de parallax? (ex: fundo estelar lento + nebulosa média + asteroids rápidos)
+**Camadas:**
+- Configurável por planeta no editor (simples → complexo)
+- Cada planeta pode ter N camadas de parallax em velocidades diferentes
+- Exemplos: fundo estelar lento, nebulosa média, debris rápidos
 
-> ❓ **GAP 10:** O parallax muda visualmente entre fases do mesmo planeta ou só entre planetas?
+**Terrain design (editado no calibrador):**
+```
+Editor = mapa vertical scrollável por fase
+ ├── Espaço aberto (sem obstáculos)
+ ├── Campo de asteroids (obstáculos destrutíveis espalhados)
+ ├── Tunel/passagem estreita (paredes laterais, alta tensão)
+ └── Boss arena (parallax PAUSA aqui)
+```
+
+**Boss level — comportamento especial:**
+- Ao entrar no level de boss → parallax pausa → arena estática
+- Boss morreu → parallax retoma → avança para próximo level
+- Sinal visual claro de início e fim do boss fight
+
+**Colisão com terrain:**
+- Asteroids destrutíveis: tiro → explode → chance de dropar HP/fuel
+- Paredes de tunel / terrain fixo: colisão = dano ao player
+- Sem punição = sem tensão nos tuneis
 
 ### Movimento do jogador
 
@@ -624,11 +642,7 @@ Exemplos:
 | 6 | Recompensas Missões Especiais vs Contratos: maiores, menores ou iguais? | Balanceamento |
 | 7 | Survival: estrutura própria ou score infinito? | Arquitetura |
 | 8 | Survival tem sistema de cartas também? | Arquitetura |
-| 9 | Quantas camadas de parallax? (ex: fundo estelar + nebulosa + asteroids) | Renderização |
-| 10 | Parallax muda entre fases ou só entre planetas? | Assets |
 | 17 | Indicador visual do tanque de combustível no HUD? Como aparece? | UI |
-| 18 | Frequência de asteroids por level: fixo ou varia por fase/planeta? | Level design |
-| 19 | Asteroids causam dano por colisão, ou são apenas obstáculos destrutíveis? | Mecânica |
 | 21 | 2 bosses na fase 10 level 10: mesmo tipo ou podem ser tipos diferentes? | Boss design |
 | 22 | Bosses têm enrage? A partir de qual % de HP? | Boss design |
 | 23 | Boss dropa baú ao morrer ou apenas ao completar a fase? | Economy |
@@ -667,3 +681,7 @@ Exemplos:
 | 13 | Player morre → level pausa → tela de revive. Timer removido do design |
 | 14 | HP base inicial = 500 |
 | 15 | Drop de vida restaura 20% do HP máximo |
+| 9/10 | Parallax configurável por planeta (N camadas, simples → complexo) |
+| 18 | Asteroids fazem parte do terrain system — frequência definida no editor por level |
+| 19 | Colisão com terrain/asteroids = dano ao player. Asteroids destrutíveis dropam HP/fuel |
+| Terrain | Sistema de terrain scrolling: mapa vertical editável. Boss level pausa o parallax durante a batalha |
