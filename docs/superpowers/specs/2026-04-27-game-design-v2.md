@@ -560,6 +560,48 @@ Firebase Analytics — eventos principais:
 
 ---
 
+## Feature Registry — Domínios e Códigos
+
+Padrão de commit e PR:
+```
+[SCOPE] type(DOMAIN-N): descrição curta
+```
+
+Exemplos:
+```
+[GAME] feat(GL-1): add parallax scrolling system
+[GAME] feat(CARD-2): add card selection screen
+[CAL]  feat(BOSS-1): add boss difficulty controls
+[GAME] feat(META-3): add permanent upgrade hangar screen
+```
+
+### Domínios
+
+| Código | Domínio | Descrição |
+|--------|---------|-----------|
+| **GL** | Game Loop | Core gameplay, movimento, tiro, colisão, física |
+| **PARA** | Parallax | Sistema de scrolling e backgrounds |
+| **ENEMY** | Enemies | Tipos de inimigos, comportamentos, spawn |
+| **BOSS** | Boss | Sistema de bosses, fases, enrage |
+| **CARD** | Cards | Sistema de cartas roguelite |
+| **FUEL** | Fuel | Sistema de combustível |
+| **HP** | Health | Sistema de HP, drops de vida |
+| **META** | Meta | Upgrades permanentes, hangar |
+| **INV** | Inventory | Equipamentos, inventário, merge |
+| **SHOP** | Shop | Loja in-game, IAP |
+| **AUTH** | Auth | Autenticação (anônima, Google) |
+| **DB** | Database | Firebase Firestore, Supabase, sync offline |
+| **PLANET** | Planet | Estrutura planeta/fase/level, progressão |
+| **HUD** | HUD | Interface in-game, indicadores |
+| **NAV** | Navigation | Tela inicial, nav bar, menus |
+| **MON** | Monetization | AdMob, RevenueCat, ads, energia |
+| **CAL** | Calibrator | Editor de levels, waves, planetas |
+| **BONUS** | Bonus | Missões Especiais (modo clássico) |
+| **SURV** | Survival | Modo Survival (sprint separado) |
+| **ANA** | Analytics | Firebase Analytics, eventos |
+
+---
+
 ## Fora do Escopo (MVP)
 
 - Leaderboard online
@@ -584,10 +626,6 @@ Firebase Analytics — eventos principais:
 | 8 | Survival tem sistema de cartas também? | Arquitetura |
 | 9 | Quantas camadas de parallax? (ex: fundo estelar + nebulosa + asteroids) | Renderização |
 | 10 | Parallax muda entre fases ou só entre planetas? | Assets |
-| 12 | Timer padrão por level? Configurável no calibrador? | Balanceamento |
-| 13 | Inimigos que sobrevivem ao timer: desaparecem ou level falha? | Game loop |
-| 14 | HP base inicial (sem upgrades)? | Balanceamento |
-| 15 | % de HP restaurado por drop de vida? | Balanceamento |
 | 17 | Indicador visual do tanque de combustível no HUD? Como aparece? | UI |
 | 18 | Frequência de asteroids por level: fixo ou varia por fase/planeta? | Level design |
 | 19 | Asteroids causam dano por colisão, ou são apenas obstáculos destrutíveis? | Mecânica |
@@ -625,3 +663,7 @@ Firebase Analytics — eventos principais:
 | 24 | 14 cartas no deck MVP do Planeta 1. Deck é por planeta, configurável no calibrador |
 | Auth | Firebase Anonymous Auth no MVP; Google login no backlog |
 | DB | Firebase Firestore (player data) + Supabase Postgres (conteúdo/admin) |
+| 12 | Sem timer. Level avança somente quando todos os inimigos forem mortos |
+| 13 | Player morre → level pausa → tela de revive. Timer removido do design |
+| 14 | HP base inicial = 500 |
+| 15 | Drop de vida restaura 20% do HP máximo |
