@@ -25,10 +25,11 @@ jest.mock('../game/GameLoop', () => ({
     moveRight: jest.fn(),
     getState: jest.fn().mockImplementation(() => ({
       status: mockGameStatus,
-      player: { x: 0, y: 0, lives: 3, invincibilityTimer: 0 },
+      player: { x: 0, y: 0, hp: 500, maxHp: 500, fuel: 100, invincibilityTimer: 0 },
       enemies: [],
       playerBullets: [],
       enemyBullets: [],
+      fuelPickups: [],
       score: 0,
     })),
   })),
@@ -70,11 +71,18 @@ describe('GameScreen — HUD', () => {
     mockGameStatus = 'playing'
   })
 
-  it('renders lives hearts matching the game state', () => {
+  it('renders hp value in HUD', () => {
     const { getByText } = render(
       <GameScreen levelIndex={0} totalLevels={20} onBack={jest.fn()} />,
     )
-    expect(getByText('❤️❤️❤️')).toBeTruthy()
+    expect(getByText('500')).toBeTruthy()
+  })
+
+  it('renders fuel value in HUD', () => {
+    const { getByText } = render(
+      <GameScreen levelIndex={0} totalLevels={20} onBack={jest.fn()} />,
+    )
+    expect(getByText('100')).toBeTruthy()
   })
 
   it('renders score matching the game state', () => {
@@ -82,6 +90,13 @@ describe('GameScreen — HUD', () => {
       <GameScreen levelIndex={0} totalLevels={20} onBack={jest.fn()} />,
     )
     expect(getByText('0')).toBeTruthy()
+  })
+
+  it('does not render heart emoji HUD', () => {
+    const { queryByText } = render(
+      <GameScreen levelIndex={0} totalLevels={20} onBack={jest.fn()} />,
+    )
+    expect(queryByText('❤️❤️❤️')).toBeNull()
   })
 })
 
@@ -109,6 +124,14 @@ describe('GameScreen — game-over overlay', () => {
 
   it('shows "Game Over" overlay when game is lost', () => {
     mockGameStatus = 'lost'
+    const { queryByText } = render(
+      <GameScreen levelIndex={0} totalLevels={20} onBack={jest.fn()} />,
+    )
+    expect(queryByText('Game Over')).toBeTruthy()
+  })
+
+  it('shows "Game Over" overlay when fuel is empty', () => {
+    mockGameStatus = 'fuelEmpty'
     const { queryByText } = render(
       <GameScreen levelIndex={0} totalLevels={20} onBack={jest.fn()} />,
     )
