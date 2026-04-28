@@ -48,6 +48,7 @@ export function GameScreen({ levelIndex, totalLevels, onBack }: Props) {
   const [joystick, setJoystick] = useState<JoystickState | null>(null)
 
   const statusRef = useRef<GameStatus>('playing')
+  const hudRef = useRef({ hp: 500, maxHp: 500, fuel: 100, score: 0, xp: 0, xpToNext: 10, playerLevel: 1 })
   const isPlayingRef = useRef(true)
   const rafRef = useRef<number | null>(null)
   const lastTimeRef = useRef<number | null>(null)
@@ -137,7 +138,7 @@ export function GameScreen({ levelIndex, totalLevels, onBack }: Props) {
         setStatus(s)
       }
 
-      setHud({
+      const nextHud = {
         hp: state.player.hp,
         maxHp: state.player.maxHp,
         fuel: state.player.fuel,
@@ -145,7 +146,20 @@ export function GameScreen({ levelIndex, totalLevels, onBack }: Props) {
         xp: state.player.xp,
         xpToNext: state.player.xpToNext,
         playerLevel: state.player.playerLevel,
-      })
+      }
+      const prev = hudRef.current
+      if (
+        nextHud.hp !== prev.hp ||
+        nextHud.maxHp !== prev.maxHp ||
+        nextHud.fuel !== prev.fuel ||
+        nextHud.score !== prev.score ||
+        nextHud.xp !== prev.xp ||
+        nextHud.xpToNext !== prev.xpToNext ||
+        nextHud.playerLevel !== prev.playerLevel
+      ) {
+        hudRef.current = nextHud
+        setHud(nextHud)
+      }
 
       if (s === 'playing') {
         rafRef.current = requestAnimationFrame(tick)
@@ -256,6 +270,7 @@ export function GameScreen({ levelIndex, totalLevels, onBack }: Props) {
           <TouchableOpacity
             onPress={() => {
               loop.resumeFromCardSelection()
+              lastTimeRef.current = null  // reset so first resumed tick uses default delta
               rafRef.current = requestAnimationFrame(tick)
             }}
             style={styles.cardButton}
