@@ -44,7 +44,7 @@ A PR is only valid if it ships something that can be tested end-to-end. Examples
 | 3 | Game MVP | Game | ✅ Done (PR #3) |
 | 4 | Calibrator MVP | Calibrator | ✅ Done (PR #5) |
 | 5a | Game Mechanics (controls + HUD) | Game | ✅ Done (PR #8) |
-| 5b | Gameplay Foundation (HP + Fuel + XP + HUD) | Game | ⏳ Todo |
+| 5b | Gameplay Foundation (HP + Fuel + XP + HUD) | Game | 🚧 In Progress (PR #9) |
 | 6 | Enemies & Waves | Game | ⏳ Todo |
 | 7 | Card System | Game | ⏳ Todo |
 | 8 | Parallax & Terrain | Game | ⏳ Todo |
@@ -80,11 +80,11 @@ A PR is only valid if it ships something that can be tested end-to-end. Examples
 
 | # | Feature | Code | Status | PR | Deliverable |
 |---|---------|------|--------|-----|-------------|
-| 1 | HP Bar System | HP-1 | ⏳ Todo | — | HP bar replaces hearts, damage reduces bar, 0 → game over |
+| 1 | HP Bar System | HP-1 | 🚧 In Progress (PR #9) | — | HP bar replaces hearts, damage reduces bar, 0 → game over |
 | 2 | Life Drops | HP-2 | ⏳ Todo | — | Enemies/asteroids drop +20% HP pickups |
-| 3 | Fuel System | FUEL-1 | ⏳ Todo | — | Tank drains per level, collectible from level 5 restores it |
-| 4 | XP System | XP-1 | ⏳ Todo | — | Kills → XP bar fills → level-up triggers card screen |
-| 5 | HUD Update | HUD-1 | ⏳ Todo | — | 3 horizontal bars (HP, FUEL, XP finer) + integer values |
+| 3 | Fuel System | FUEL-1 | 🚧 In Progress (PR #9) | — | Tank drains per level, collectible from level 5 restores it |
+| 4 | XP System | XP-1 | 🚧 In Progress (PR #10) | — | Kills → XP bar fills → level-up triggers card screen |
+| 5 | HUD Update | HUD-1 | 🚧 In Progress (PR #9, #10) | — | 3 horizontal bars (HP, FUEL, XP finer) + integer values |
 
 ### Todo List
 
