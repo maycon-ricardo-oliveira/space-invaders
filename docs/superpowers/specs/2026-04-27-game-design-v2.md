@@ -1,7 +1,7 @@
 # Space Invaders Mobile — Design Spec v2
 
 **Data:** 2026-04-27
-**Status:** Em revisão — gaps sinalizados com ❓
+**Status:** ✅ Design fechado
 **Substitui:** `2026-04-18-space-invaders-design.md`
 **Referência externa:** Archero (Habby) — domain design extraído em 2026-04-27
 
@@ -58,7 +58,7 @@ interface IRenderer {
   drawRect(x, y, w, h, color): void
   drawSprite(sprite, x, y): void
   clear(): void
-  // ❓ GAP: precisamos de drawScrollingBackground(layers) para parallax?
+  drawScrollingBackground(layers: ParallaxLayer[]): void  // necessário para parallax
 }
 
 class SkiaRenderer implements IRenderer { /* mobile */ }
@@ -95,34 +95,35 @@ Planeta
 - 100 levels por planeta
 - Cada planeta tem tema visual próprio (parallax backdrop diferente)
 - Completar planeta → desbloqueia próximo planeta
-
-> ❓ **GAP 1:** Quantos planetas no jogo no total? É um número fixo ou expansível via OTA?
-
-> ❓ **GAP 2:** Como a narrativa de "A Ordem" se manifesta no jogo? Tela de texto entre planetas? Cutscene? Apenas temática visual?
-
-> ❓ **GAP 3:** O jogador pode repetir planetas já completos? Com que objetivo (farm de gold/baús)?
-
-> ❓ **GAP 4:** Ao morrer no level 7 da fase 3, o jogador recomeça do level 1 da fase 3, ou do último checkpoint? Qual é o checkpoint — início de fase ou início de level?
+- **MVP:** 1 planeta. Novos planetas adicionados via Supabase, sem build
+- **Narrativa:** tela de texto simples entre planetas ("A Ordem convoca você para..."). Cutscene animada no backlog
+- **Checkpoint:** level exato onde o player morreu (recomeça o level, não a fase)
 
 ### 2. Missões Especiais / Bônus
 
 Modo clássico Space Invaders (grid, movimento horizontal). Reaproveitamento do que já foi implementado.
 
-- Objetivo: farm de gold e diamantes
-- Estrutura: missões pontuais, não progressão contínua
+- Objetivo: farm de gold e baús
 - Sempre disponível na tela inicial
 
-> ❓ **GAP 5:** Missões Especiais têm rotação (novas missões por dia/semana) ou são fixas?
+**Estrutura de missões:**
 
-> ❓ **GAP 6:** As recompensas de Missões Especiais são maiores, menores ou iguais às de Contratos?
+| Tipo | Rotação | Recompensa |
+|------|---------|-----------|
+| Diárias | Pool fixo de missões, rotaciona diariamente | Gold |
+| Semanais | Pool fixo de missões, rotaciona semanalmente | Baú ao completar **todas** as semanais da semana |
+
+- Missões diárias e semanais são independentes entre si
+- Completar todas as missões semanais da semana → 1 baú garantido
+- Pool de missões configurável no Supabase (sem build nova para adicionar missões)
 
 ### 3. Survival Mode
 
-Modo infinito com geração procedural. Arquitetura a definir em sprint separado.
-
-> ❓ **GAP 7:** Survival Mode usa a mesma estrutura de planetas ou é completamente avulso (score infinito)?
-
-> ❓ **GAP 8:** No Survival, o sistema de cartas também aparece a cada level?
+> **Backlog — sem spec agora.** Design intent registrado:
+> - Geração procedural de fases
+> - Sem pausa entre fases — transição contínua (seamless)
+> - Reutiliza layouts de fases do modo Contratos encadeando uma na outra
+> - Spec completo a definir em sprint separado
 
 ---
 
@@ -135,10 +136,11 @@ Entrar no level
   → Parallax scrolling ativo (nave avança pelo espaço)
   → Inimigos entram por padrão pré-definido (top → down)
   → Player se move livremente em 2D via joystick
+  → Kills → XP → barra de XP sobe
+  → Level-up → pausa → tela de 3 cartas → escolhe 1 → continua
   → Asteroids aparecem (destruíveis, dropam HP/combustível)
-  → Todos inimigos mortos OU timer esgotado → level concluído
-  → Tela de cartas (escolher 1 de 3)
-  → Próximo level
+  → Todos inimigos mortos → level concluído
+  → Próximo level (Level 10 = boss: sem tela de cartas ao matar o boss — fase encerra)
 ```
 
 ### Parallax e Terrain Scrolling
@@ -176,16 +178,12 @@ Editor = mapa vertical scrollável por fase
 - Tiro **automático** enquanto o dedo está na tela
 - Velocidade base aumentada em relação ao Story Mode clássico
 
-> ❓ **GAP 11:** O tiro automático continua mesmo ao mover, ou o player para de atirar enquanto se move (estilo Archero: move OU atira)?
+- Tiro automático **continua mesmo ao mover** (diferente do Archero)
 
-### Timer de wave
+### Condição de conclusão de level
 
-- Cada level tem um timer
-- Timer esgota → level encerra independente de inimigos vivos
-
-> ❓ **GAP 12:** Qual o timer padrão por level? É configurável no calibrador por fase?
-
-> ❓ **GAP 13:** Inimigos que sobrevivem ao timer desaparecem, ou o level falha se não matar todos?
+- **Sem timer.** Level encerra somente quando todos os inimigos forem mortos
+- Player morre → level pausa → tela de revive (1 revive por run: ad ou 50 diamantes)
 
 ---
 
@@ -202,9 +200,8 @@ Editor = mapa vertical scrollável por fase
 - Carta de cura (level 5 de cada fase)
 - Carta Vampiro (kills recuperam X% de HP)
 
-> ❓ **GAP 14:** Qual o HP base inicial (sem nenhum upgrade)?
-
-> ❓ **GAP 15:** Qual % de HP recupera um drop de vida de inimigo/asteroid?
+- **HP base:** 500 (sem upgrades)
+- **Drop de vida:** restaura 20% do HP máximo atual
 
 ---
 
@@ -232,9 +229,24 @@ O tanque de combustível representa a durabilidade da nave ao longo dos levels d
 
 A mecânica de coleta continua relevante mesmo no upgrade máximo — recarregar entra na fase seguinte com reserva.
 
-> ❓ **GAP 16:** O combustível persiste entre fases do mesmo planeta ou reseta a cada fase?
+- **Combustível reseta cheio** ao iniciar cada fase
 
-> ❓ **GAP 17:** Existe indicador visual do nível do tanque no HUD? Como ele aparece?
+**HUD — 3 barras horizontais (canto superior esquerdo):**
+
+```
+[ HP   ████████░░ 380  ]
+[ FUEL ██████░░░░ 62%  ]
+[ XP   ████░░░░░░ 240  ]  ← mais fina que as outras duas
+```
+
+- Barra de HP: substitui os corações — valor inteiro atual (ex: 380)
+- Barra de Combustível: valor inteiro percentual (ex: 62)
+- Barra de XP: mais fina visualmente — valor inteiro de XP atual (ex: 240)
+- Todas no canto superior esquerdo, empilhadas
+- Score no canto superior direito (mantido)
+- **A definir em teste:** avaliar se HP fica melhor no topo ou flutuando acima do player
+
+Configurações do jogo: música (on/off/volume) e efeitos sonoros (on/off/volume)
 
 ---
 
@@ -258,16 +270,15 @@ A mecânica de coleta continua relevante mesmo no upgrade máximo — recarregar
   - Chance de HP (1 por level, aparece em qualquer level)
   - Chance de combustível (a partir do level 5 da fase)
 
-> ❓ **GAP 18:** Qual a frequência/quantidade de asteroids por level? É fixo ou varia por fase/planeta?
-
-> ❓ **GAP 19:** Asteroids também atiram ou causam dano por colisão, ou são apenas obstáculos destrutíveis?
+- Frequência configurável no editor por level (parte do terrain system)
+- Colisão com asteroid = dano ao player. Asteroids destrutíveis — não atiram
 
 ### Padrões de spawn (wave patterns)
 
 - Pré-definidos no calibrador por level (não aleatórios em Contratos)
 - Inimigos entram pelo topo em formações
 
-> ❓ **GAP 20:** Quais padrões de spawn queremos para o MVP? (ex: linha horizontal, V, flancos, espiral)
+- Padrões pré-definidos (diamante, triângulo, linha, V, flancos) + editor visual no calibrador. Templates reutilizáveis
 
 ---
 
@@ -284,18 +295,37 @@ Fase 10, Level 10 → 2 Bosses simultâneos @ 80% cada
 - Cada planeta escolhe qual tipo de boss spawna (Padrão / Rápido / Forte)
 - O `difficultyScore` (0–100) do boss é configurável no calibrador por planeta
 - Bosses têm fases de comportamento conforme HP cai
+- 2 bosses na fase 10 level 10: mesmo tipo por padrão, configurável no calibrador
+- **Enrage (backlog):** campo `enrageThreshold?: number` reservado no `BossConfig`. Target: 50% HP
 
-> ❓ **GAP 21:** Os 2 bosses no level 10 da fase 10 são do mesmo tipo ou podem ser tipos diferentes?
 
-> ❓ **GAP 22:** Bosses têm fases de raiva (enrage) a partir de certo % de HP? A partir de quanto?
+---
 
-> ❓ **GAP 23:** Boss derrota → dropa baú automaticamente ou apenas ao completar a fase?
+## Sistema de XP e Level-up
+
+- Cada kill de inimigo concede XP (quantidade configurável por tipo de inimigo e por planeta)
+- Inimigos mais fortes = mais XP
+- Barra de XP sobe visivelmente na HUD
+- **Level-up** → pausa automática → tela de 3 cartas → jogador escolhe 1 → continua
+- XP **reseta para 0** ao iniciar cada fase
+
+**Escala de cartas por planeta** (calibrável no editor):
+
+| Planeta | Cartas/fase (aprox.) | Método |
+|---------|---------------------|--------|
+| 1 | ~9–10 | ~1 level-up por level da fase |
+| 2 | ~11–12 | +2 vs planeta anterior |
+| 3 | ~13–14 | +2 vs planeta anterior |
+| N | N anterior + 2 | Builds ficam mais fortes nos planetas difíceis |
+
+- Level 10 de cada fase = boss: **sem tela de cartas** ao matar o boss — a fase encerra
+- Level-ups que ocorrem *durante* o boss fight (via kills de minions) ainda concedem cartas normalmente
 
 ---
 
 ## Sistema de Cartas
 
-Ao final de **todo level** → tela pausa → 3 cartas aleatórias → jogador escolhe 1.
+Cards são buffs temporários da run. Aparecem via **level-up** (XP de kills), não ao fim de cada level.
 
 **Level 5 de cada fase (especial):**
 - Sempre inclui pelo menos uma opção de vida:
@@ -318,13 +348,16 @@ Ao final de **todo level** → tela pausa → 3 cartas aleatórias → jogador e
 
 **Carta Vampiro:** ao matar um inimigo, recupera X% de HP. Incentiva estilo agressivo.
 
-> ❓ **GAP 24:** Quantas cartas no pool total para o MVP? (número mínimo para a variedade ser interessante)
+> ✅ **GAP 24:** 14 cartas no deck do Planeta 1. Deck é por planeta, configurável no calibrador.
 
-> ❓ **GAP 25:** Uma carta pode aparecer mais de uma vez (upgraded) ou só aparece uma vez por run?
+**Pesos e probabilidades do deck:**
 
-> ❓ **GAP 26:** Existe raridade nas cartas (comum, rara, épica) ou todas têm o mesmo peso no pool?
+- Por padrão todas as cartas têm peso igual no deck
+- Pesos configuráveis por fase e por planeta no calibrador (ex: forçar carta de vida aparecer mais no level 5)
+- **Diminishing returns:** carta já equipada nessa run tem probabilidade reduzida de reaparecer no deck — evita combo duplo fácil, mas não impossível
+- Configuração de peso fica no Supabase → ajustável sem build nova
 
-> ❓ **GAP 27:** Cartas do mesmo tipo se acumulam (ex: 2x Vampiro = 2x recuperação) ou são únicas?
+**Acumulação de cartas (gap #27):** cartas do mesmo tipo se acumulam (2× Vampiro = 2× recuperação). A probabilidade reduzida de reaparecer é o balanceador natural.
 
 ---
 
@@ -357,7 +390,7 @@ Lendário → habilidade máxima + efeito visual especial
 | Laser | Contínuo, dano médio, atravessa inimigos |
 | Metralhadora | Rajada rápida, baixo dano por bala, muitas balas |
 
-> ❓ **GAP 28:** Qual a habilidade especial de cada arma ao atingir raridade Incomum/Raro/Épico/Lendário?
+> **Backlog:** habilidades especiais por raridade a definir no sprint de equipamentos
 
 ### Slot 2 — Casco (armadura)
 
@@ -366,9 +399,8 @@ Lendário → habilidade máxima + efeito visual especial
 | Casco Leve | % de chance de esquiva completa do dano |
 | Casco Pesado | % de chance de não tomar dano ao colidir com inimigo |
 
-> ❓ **GAP 29:** Slots 3 e 4 — quais são? (sugestão: Reator + Escudo) Confirmar antes de implementar.
+> **Backlog:** Slots 3 e 4 (sugestão: Reator + Escudo) — confirmar antes de implementar
 
-> ❓ **GAP 30:** Os equipamentos equipados persistem entre runs ou são apenas meta (equipa antes de entrar)?
 
 ### Obtenção de equipamentos
 
@@ -376,7 +408,15 @@ Lendário → habilidade máxima + efeito visual especial
 - **Raridade do drop:** proporcional à dificuldade da fase
 - **Baús de boss:** boss derrotado → baú com chance de drop raro+
 
-> ❓ **GAP 31:** Qual a tabela de drop rates por raridade? (ex: Comum 60%, Incomum 25%, Raro 10%, Épico 4%, Lendário 1%)
+**Drop rates por raridade:**
+
+| Raridade | Chance |
+|----------|--------|
+| Comum | 64,9% |
+| Incomum | 25% |
+| Raro | 8% |
+| Épico | 2% |
+| Lendário | 0,1% |
 
 ---
 
@@ -384,22 +424,22 @@ Lendário → habilidade máxima + efeito visual especial
 
 8 upgrades, 10 níveis cada. Comprados com **gold**. Persistem entre todas as runs.
 
-| Upgrade | Efeito por nível |
-|---------|-----------------|
-| HP Máximo | +X de HP base |
-| Velocidade | +X% velocidade do player |
-| Dano Base | +X% dano de todos os tiros |
-| Velocidade de Tiro | +X% cadência de fogo |
-| Tanque de Combustível | +X% capacidade (ver balanceamento acima) |
-| Duração de Powerups | +X% tempo de cartas ativas |
-| Chance de Crítico | +X% por nível |
-| Esquiva Base | +X% chance de esquivar |
+| # | Upgrade | Info | Efeito por nível |
+|---|---------|------|-----------------|
+| 1 | HP Máximo | Aumenta o HP base da nave | +X de HP base |
+| 2 | Velocidade | Aumenta a velocidade de movimento | +X% velocidade do player |
+| 3 | Dano Base | Aumenta o dano de todos os tiros | +X% dano de todos os tiros |
+| 4 | Velocidade de Tiro | Aumenta a cadência de fogo | +X% cadência de fogo |
+| 5 | Tanque de Combustível | Aumenta a capacidade do tanque | +X% capacidade |
+| 6 | Inteligência | Aumenta o XP ganho por kill | +X% XP por inimigo morto |
+| 7 | Chance de Crítico | Chance de causar dano crítico | +X% por nível |
+| 8 | Esquiva Base | Chance de esquivar completamente do dano | +X% chance de esquivar |
 
-**Progressão de custo:** custo em gold aumenta por nível (curva a definir no calibrador).
+**Progressão de custo (L1–5):** curva de dobro por nível — 200 → 400 → 800 → 1.600 → 3.200 por upgrade.
+Total para maxar todos os 8 upgrades L1–5: **49.600 gold**.
+L6–10: bloqueados, desbloqueados por planeta com curva +50% (a calibrar).
 
-> ❓ **GAP 32:** Qual o custo base e a curva de progressão de custo por nível de upgrade? (ex: nível 1 = 100 gold, nível 2 = 200 gold, etc. — linear ou exponencial?)
-
-> ❓ **GAP 33:** Os upgrades são desbloqueados gradualmente (ex: Crítico só aparece após comprar X outros) ou todos disponíveis desde o início?
+**Todos os 8 upgrades disponíveis desde o início** — sem bloqueio progressivo.
 
 ---
 
@@ -407,11 +447,38 @@ Lendário → habilidade máxima + efeito visual especial
 
 ### Gold (Moedas)
 
-- **Fase completa:** gold fixo configurável no calibrador por fase
-- **Morte mid-fase:** gold proporcional ao level em que morreu
-- **Gasto em:** upgrades permanentes no hangar, merge de equipamentos
+**Regra de negócio — anti-farm:**
+- **Primeira conclusão de uma fase:** recompensa cheia (gold principal)
+- **Replay da mesma fase:** 20% do valor original — farming ineficiente por design
+- **Drops de inimigos:** XP (não gold). Kills não geram gold diretamente
+- **Morte mid-fase:** sem gold — apenas conclusão recompensa
 
-> ❓ **GAP 34:** Qual o range de gold por fase? (ex: Planeta 1 fase 1 = 50 gold, fase 10 = 500 gold)
+**Por que:** sem essa regra, o player faz 5 levels e sai repetidamente para acumular gold sem progredir — bug de economia clássico de mobile game.
+
+**Tabela de gold por fase (primeira conclusão):**
+
+| Planeta | Fase 1 | Fase 10 | Média | Planet completo (1ª vez) |
+|---------|--------|---------|-------|--------------------------|
+| 1 | 50 | 300 | 175 | 1.750 |
+| 2 | 100 | 600 | 350 | 3.500 |
+| 3 | 200 | 1.200 | 700 | 7.000 |
+| 4 | 400 | 2.400 | 1.400 | 14.000 |
+| 5 | 800 | 3.000 | 1.900 | 19.000 |
+
+Replay: 20% dos valores acima. Máximo por fase individual: ~3.000 gold (P5 fase 10 primeira conclusão).
+
+**Progressão esperada (full play, primeiro clear de cada planeta):**
+
+| Após planeta | Acumulado | Milestone de upgrade |
+|-------------|-----------|---------------------|
+| P1 | 1.750 | L1 em todos os upgrades |
+| P2 | 5.250 | L1+L2 todos (4.800) ✓ |
+| P3 | 12.250 | L1+L2+L3 todos (11.200) ✓ |
+| P4 | 26.250 | L4 quase todos |
+| P5 | 45.250 | L4 todos (24.000) ✓ |
+| P6 | ~70k | L5 todos (49.600) ✓ |
+
+- **Gasto em:** upgrades permanentes no hangar, merge de equipamentos
 
 ### Diamantes
 
@@ -426,9 +493,15 @@ Lendário → habilidade máxima + efeito visual especial
 - Recarregar energia
 - Futuras compras premium
 
-> ❓ **GAP 35:** Quantos diamantes valem cada ação (reviver, recarregar energia)?
 
-> ❓ **GAP 36:** Quais são os pacotes de diamantes na loja (IAP)? Preços?
+**Pacotes IAP de diamantes:**
+
+| Pacote | Diamantes | Preço |
+|--------|-----------|-------|
+| Starter | 100 | R$ 4,99 |
+| Popular | 500 | R$ 19,99 |
+| Best Value | 1.200 | R$ 39,99 |
+| Mega | 3.000 | R$ 89,99 |
 
 ### Energia
 
@@ -436,9 +509,15 @@ Lendário → habilidade máxima + efeito visual especial
 - Recarrega passivamente ao longo do dia
 - 1 ad rewarded = energia suficiente para 1 run completa
 
-> ❓ **GAP 37:** Capacidade máxima de energia? Quanto tempo para recarregar completamente?
+**Balanceamento de energia:**
 
-> ❓ **GAP 38:** Custo de energia por run: fixo ou varia por planeta/dificuldade?
+| Parâmetro | Valor |
+|-----------|-------|
+| Capacidade máxima | 150 |
+| Custo por run | 10 (fixo, independente de planeta) |
+| Runs com tank cheio | 15 runs |
+| Recarga | 1 energia/minuto |
+| Recarga completa | 2h30 |
 
 ### Ads Rewarded (máx 10/dia)
 
@@ -450,9 +529,7 @@ Contador único compartilhado entre todos os tipos de ad:
 | Energia | 1 run completa de energia |
 | Diamantes | X diamantes |
 
-> ❓ **GAP 39:** O limite de 10 ads/dia reseta à meia-noite (horário local) ou UTC?
 
-> ❓ **GAP 40:** Quantas vezes o jogador pode reviver por run? Apenas 1 vez ou múltiplas (consumindo ads/diamantes)?
 
 ### Revive
 
@@ -472,7 +549,28 @@ Tela acessível pelo botão esquerdo da nav bar.
 - Skins de inimigos
 - Pacotes bundle
 
-> ❓ **GAP 41:** A loja vende itens de equipamento diretamente (pay-to-win) ou apenas cosméticos + diamantes?
+**Apenas cosméticos e diamantes** — sem venda direta de equipamentos (sem pay-to-win)
+
+---
+
+## Hangar — Menu do Player
+
+Tela dividida com painel expansível (padrão "bottom sheet", estilo Instagram comments):
+
+```
+┌─────────────────────────┐
+│   Nave com equipamentos  │  ← painel superior (character view)
+│   slots visíveis         │
+├─────────────────────────┤  ← divisor arrastável
+│   Inventário completo    │  ← painel inferior (grid de itens)
+│   (todos os baús)        │
+└─────────────────────────┘
+```
+
+- Scroll **para cima** → painel de inventário expande, character view encolhe
+- Scroll **para baixo** → character view expande, inventário encolhe
+- Inventário exibe todos os equipamentos coletados (não apenas os equipados)
+- Player toca em um item → equipa no slot correspondente
 
 ---
 
@@ -493,7 +591,6 @@ Nav bar inferior com 3 botões:
 - Upgrades permanentes (Hangar)
 - Estatísticas do jogador
 
-> ❓ **GAP 42:** O menu do player mostra inventário completo de equipamentos coletados?
 
 ---
 
@@ -626,7 +723,7 @@ Exemplos:
 - Multiplayer
 - TelemetryCalibratorStrategy (v3)
 - Slots de equipamento 3–6 (Reator, Escudo, Drone, Módulo)
-- Survival Mode (sprint separado)
+- Survival Mode — procedural, seamless entre fases, reutiliza layouts de Contratos (spec em sprint separado)
 - SimulationCalibratorStrategy (v2)
 - Animações de cutscene entre planetas
 
@@ -636,34 +733,28 @@ Exemplos:
 
 | # | Pergunta | Impacto |
 |---|----------|---------|
-| 2 | Narrativa de A Ordem: como se manifesta? (tela de texto, cutscene, só visual?) | UI/UX |
-| 3 | Player pode repetir planetas já completos? Com que objetivo? | Game loop |
-| 5 | Missões Especiais: rotativa (novas por dia/semana) ou fixa? | Content pipeline |
-| 6 | Recompensas Missões Especiais vs Contratos: maiores, menores ou iguais? | Balanceamento |
-| 7 | Survival: estrutura própria ou score infinito? | Arquitetura |
-| 8 | Survival tem sistema de cartas também? | Arquitetura |
-| 17 | Indicador visual do tanque de combustível no HUD? Como aparece? | UI |
-| 21 | 2 bosses na fase 10 level 10: mesmo tipo ou podem ser tipos diferentes? | Boss design |
-| 22 | Bosses têm enrage? A partir de qual % de HP? | Boss design |
-| 23 | Boss dropa baú ao morrer ou apenas ao completar a fase? | Economy |
-| 25 | Carta pode aparecer uma segunda vez (upgraded) ou é única por run? | Roguelite design |
-| 26 | Existe raridade nas cartas? | Roguelite design |
-| 27 | Cartas do mesmo tipo se acumulam (stack)? | Roguelite design |
+| 17 | HUD: 3 barras horizontais empilhadas no canto sup. esq. (HP, FUEL, XP fina). Todas com valor inteiro. Score sup. dir. Posição HP (topo vs acima do player) a validar em teste |
+| 21 | 2 bosses na fase 10 level 10: mesmo tipo por padrão, mas configurável no calibrador por planeta |
+| 22 | Boss enrage a 50% HP — backlog. BossConfig deve ter campo `enrageThreshold?: number` preparado mas não implementado |
+| 23 | Boss morre → baú dropa imediatamente na tela (antes da tela de conclusão de fase) |
+| 26/27 | Cartas: peso igual por padrão, configurável por fase/planeta. Carta já equipada tem peso reduzido (diminishing returns). Acumulam (2× Vampiro = 2× efeito) |
 | 28 | Habilidades especiais das armas por raridade (Incomum → Lendário)? | Equipment design |
 | 29 | Slots 3 e 4: Reator + Escudo? Confirmar antes de implementar | Equipment design |
-| 30 | Equipamentos: escolhidos antes da run ou equipados automaticamente? | Meta design |
+| 30 | Equipamentos equipados no Hangar (menu do player), persistem entre runs. Ao iniciar run → carrega status atual do player com todos equipamentos e atributos |
+| 35 | Reviver = 50 diamantes. Recarregar energia (1 run) = 30 diamantes |
+| 36 | Pacotes IAP: 100/R$4,99 · 500/R$19,99 · 1.200/R$39,99 · 3.000/R$89,99 |
+| 37/38 | Energia: max 150, custo 10/run (fixo), recarga 1/min, cheio em 2h30 |
+| 39 | Reset dos 10 ads/dia: meia-noite horário local do dispositivo |
 | 31 | Tabela de drop rates por raridade? (ex: Comum 60%, Incomum 25%, Raro 10%...) | Economy |
-| 32 | Custo base e curva dos upgrades permanentes? (linear ou exponencial?) | Economy |
-| 33 | Upgrades permanentes: todos disponíveis desde o início ou desbloqueiam gradualmente? | UX |
-| 34 | Range de gold por fase por planeta? | Economy |
+| 34 | (fechado — ver tabela de gold acima) | — |
 | 35 | Custo em diamantes de cada ação (reviver, energia)? | Economy |
 | 36 | Pacotes IAP de diamantes e preços? | Monetização |
 | 37 | Capacidade máxima de energia e tempo de recarga total? | Session design |
 | 38 | Custo de energia por run: fixo ou varia por planeta/dificuldade? | Session design |
 | 39 | Reset dos 10 ads/dia: meia-noite horário local ou UTC? | Monetização |
-| 40 | Número máximo de revives por run: 1 ou múltiplos? | Game loop |
+| 40 | 1 revive por run: ad rewarded ou 50 diamantes |
 | 41 | Loja vende equipamentos diretamente (pay-to-win) ou apenas cosméticos + diamantes? | Monetização |
-| 42 | Menu do player exibe inventário completo de equipamentos coletados? | UI |
+| 42 | Hangar: tela dividida bottom-sheet (estilo Instagram). Scroll ↑ expande inventário, scroll ↓ expande character view. Inventário exibe todos os itens coletados |
 
 ## Fechados
 
@@ -685,3 +776,13 @@ Exemplos:
 | 18 | Asteroids fazem parte do terrain system — frequência definida no editor por level |
 | 19 | Colisão com terrain/asteroids = dano ao player. Asteroids destrutíveis dropam HP/fuel |
 | Terrain | Sistema de terrain scrolling: mapa vertical editável. Boss level pausa o parallax durante a batalha |
+| 25 | Carta pode reaparecer na mesma run (probabilidade reduzida, não proibida) |
+| 32 | Custo L1–5 por upgrade: 200→400→800→1.600→3.200. L6–10 bloqueados, desbloqueados por planeta com curva +50% |
+| 33 | Todos os 8 upgrades disponíveis desde o início |
+| 34 | Gold por fase: P1 50–300, escala ~2× por planeta. Max ~3.000/fase (P5 fase 10). Ver tabela acima |
+| XP | Kills → XP. Level-up → tela de cartas. XP reseta por fase. ~1 level-up por level da fase em P1, +2 cartas/fase por planeta adicional |
+| Inteligência | Upgrade permanente #6: substitui "Duração de Powerups". Info: "Aumenta o XP ganho por kill" |
+| 7/8 | Survival no backlog. Design intent: procedural, seamless entre fases, reutiliza layouts de Contratos |
+| 2 | Narrativa de A Ordem: tela de texto simples entre planetas. Cutscene animada no backlog |
+| 3 | Player pode repetir planetas/fases já completos livremente. Gold via replay = 20% (anti-farm natural). Objetivo: farm leve ou revisitar por diversão |
+| 5/6 | Missões Especiais: pool fixo com rotação diária (recompensa: gold) e semanal (recompensa: baú ao completar todas). Pool configurável no Supabase |

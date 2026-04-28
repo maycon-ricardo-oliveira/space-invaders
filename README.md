@@ -38,6 +38,9 @@ npm test
 # Build all TypeScript packages
 npm run build
 
+# Android emulator (WSL2)
+~/Android/sdk/emulator/emulator -avd Pixel7 -no-audio -no-boot-anim
+
 # Mobile game (Expo dev server)
 cd apps/game
 npx expo start
