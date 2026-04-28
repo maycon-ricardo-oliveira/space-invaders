@@ -15,9 +15,10 @@ export interface Enemy {
   y: number
   alive: boolean
   typeId: string
+  xpValue?: number
 }
 
-export type GameStatus = 'playing' | 'paused' | 'won' | 'lost' | 'fuelEmpty'
+export type GameStatus = 'playing' | 'paused' | 'won' | 'lost' | 'fuelEmpty' | 'card_selection'
 
 export interface PlayerState {
   x: number
@@ -26,6 +27,9 @@ export interface PlayerState {
   maxHp: number
   fuel: number
   invincibilityTimer: number
+  xp: number
+  xpToNext: number
+  playerLevel: number
 }
 
 export interface GameState {
