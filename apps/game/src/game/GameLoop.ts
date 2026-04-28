@@ -1,5 +1,5 @@
 import type { IRenderer, LevelDefinition } from '@si/level-engine'
-import type { Bullet, Enemy, GameState } from './types'
+import type { Bullet, Enemy, FuelPickup, GameState } from './types'
 
 export const CANVAS_WIDTH = 390
 export const CANVAS_HEIGHT = 844
@@ -14,6 +14,9 @@ const ENEMY_SPEED_SCALE = 40       // px/s per unit of LevelParams.enemySpeed
 const ENEMY_SHOT_SPEED_SCALE = 50  // px/s per unit of LevelParams.enemyShotSpeed
 const AUTO_FIRE_INTERVAL = 400     // ms between auto-fire shots
 const INVINCIBILITY_DURATION = 1500 // ms of player invincibility after a hit
+const PLAYER_INITIAL_HP = 500
+const PLAYER_INITIAL_FUEL = 100
+const DEFAULT_FUEL_DRAIN_RATE = 12  // fuel units per second
 
 export class GameLoop {
   private state: GameState
@@ -30,25 +33,36 @@ export class GameLoop {
       player: {
         x: CANVAS_WIDTH / 2 - ENTITY_SIZE / 2,
         y: CANVAS_HEIGHT - ENTITY_SIZE - 20,
-        lives: 3,
+        hp: PLAYER_INITIAL_HP,
+        maxHp: PLAYER_INITIAL_HP,
+        fuel: PLAYER_INITIAL_FUEL,
         invincibilityTimer: 0,
       },
       enemies: this.buildEnemies(level),
       playerBullets: [],
       enemyBullets: [],
+      fuelPickups: this.buildFuelPickups(level),
       score: 0,
       status: 'playing',
     }
   }
 
+  private buildFuelPickups(level: LevelDefinition): FuelPickup[] {
+    return level.entities
+      .filter(e => e.entityTypeId === 'fuel-pickup')
+      .map(e => ({ x: e.x, y: e.y, active: true }))
+  }
+
   private buildEnemies(level: LevelDefinition): Enemy[] {
     if (level.entities.length > 0) {
-      return level.entities.map(e => ({
-        x: e.x,
-        y: e.y,
-        alive: true,
-        typeId: e.entityTypeId,
-      }))
+      return level.entities
+        .filter(e => e.entityTypeId !== 'fuel-pickup')
+        .map(e => ({
+          x: e.x,
+          y: e.y,
+          alive: true,
+          typeId: e.entityTypeId,
+        }))
     }
     const count = level.params.numberOfEnemies
     if (count <= 0) return []
@@ -79,6 +93,7 @@ export class GameLoop {
       enemies: this.state.enemies.map(e => ({ ...e })),
       playerBullets: this.state.playerBullets.map(b => ({ ...b })),
       enemyBullets: this.state.enemyBullets.map(b => ({ ...b })),
+      fuelPickups: this.state.fuelPickups.map(f => ({ ...f })),
       score: this.state.score,
       status: this.state.status,
     }
@@ -118,13 +133,36 @@ export class GameLoop {
   update(deltaMs: number): void {
     if (this.state.status !== 'playing') return
     const dt = deltaMs / 1000
+    this.drainFuel(dt)
     this.moveBullets(dt)
     this.moveEnemies(dt)
     this.handleEnemyShooting(dt)
     this.checkCollisions()
+    this.checkFuelPickupCollisions()
     this.updateInvincibility(deltaMs)
     this.handleAutoFire(deltaMs)
     this.checkWinLose()
+  }
+
+  private drainFuel(dt: number): void {
+    const rate = this.params.fuelDrainRate ?? DEFAULT_FUEL_DRAIN_RATE
+    this.state.player.fuel = Math.max(0, this.state.player.fuel - rate * dt)
+  }
+
+  private checkFuelPickupCollisions(): void {
+    const p = this.state.player
+    for (const pickup of this.state.fuelPickups) {
+      if (!pickup.active) continue
+      if (
+        p.x < pickup.x + ENTITY_SIZE &&
+        p.x + ENTITY_SIZE > pickup.x &&
+        p.y < pickup.y + ENTITY_SIZE &&
+        p.y + ENTITY_SIZE > pickup.y
+      ) {
+        pickup.active = false
+        p.fuel = Math.min(PLAYER_INITIAL_FUEL, p.fuel + PLAYER_INITIAL_FUEL)
+      }
+    }
   }
 
   private moveBullets(dt: number): void {
@@ -202,7 +240,7 @@ export class GameLoop {
         bullet.y + BULLET_HEIGHT > p.y
       ) {
         bullet.active = false
-        p.lives -= 1
+        p.hp = Math.max(0, p.hp - 1)
         p.invincibilityTimer = INVINCIBILITY_DURATION
       }
     }
@@ -231,8 +269,12 @@ export class GameLoop {
       this.state.status = 'won'
       return
     }
-    if (this.state.player.lives <= 0) {
+    if (this.state.player.hp <= 0) {
       this.state.status = 'lost'
+      return
+    }
+    if (this.state.player.fuel <= 0) {
+      this.state.status = 'fuelEmpty'
     }
   }
 

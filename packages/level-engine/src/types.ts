@@ -39,6 +39,7 @@ export interface LevelParams {
   formationPattern?: GridPattern
   survivalDuration?: number
   spawnWaveInterval?: number
+  fuelDrainRate?: number
 }
 
 export interface LevelDefinition {

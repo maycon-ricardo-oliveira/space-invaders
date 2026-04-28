@@ -4,6 +4,12 @@ export interface Bullet {
   active: boolean
 }
 
+export interface FuelPickup {
+  x: number
+  y: number
+  active: boolean
+}
+
 export interface Enemy {
   x: number
   y: number
@@ -11,13 +17,23 @@ export interface Enemy {
   typeId: string
 }
 
-export type GameStatus = 'playing' | 'paused' | 'won' | 'lost'
+export type GameStatus = 'playing' | 'paused' | 'won' | 'lost' | 'fuelEmpty'
+
+export interface PlayerState {
+  x: number
+  y: number
+  hp: number
+  maxHp: number
+  fuel: number
+  invincibilityTimer: number
+}
 
 export interface GameState {
-  player: { x: number; y: number; lives: number; invincibilityTimer: number }
+  player: PlayerState
   enemies: Enemy[]
   playerBullets: Bullet[]
   enemyBullets: Bullet[]
+  fuelPickups: FuelPickup[]
   score: number
   status: GameStatus
 }
