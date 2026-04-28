@@ -23,9 +23,10 @@ jest.mock('../game/GameLoop', () => ({
     setFiring: jest.fn(),
     moveLeft: jest.fn(),
     moveRight: jest.fn(),
+    resumeFromCardSelection: jest.fn(),
     getState: jest.fn().mockImplementation(() => ({
       status: mockGameStatus,
-      player: { x: 0, y: 0, hp: 500, maxHp: 500, fuel: 100, invincibilityTimer: 0 },
+      player: { x: 0, y: 0, hp: 500, maxHp: 500, fuel: 100, invincibilityTimer: 0, xp: 0, xpToNext: 10, playerLevel: 1 },
       enemies: [],
       playerBullets: [],
       enemyBullets: [],
@@ -86,10 +87,11 @@ describe('GameScreen — HUD', () => {
   })
 
   it('renders score matching the game state', () => {
-    const { getByText } = render(
+    const { getAllByText } = render(
       <GameScreen levelIndex={0} totalLevels={20} onBack={jest.fn()} />,
     )
-    expect(getByText('0')).toBeTruthy()
+    // Score and XP both start at 0; verify at least one "0" is rendered
+    expect(getAllByText('0').length).toBeGreaterThanOrEqual(1)
   })
 
   it('does not render heart emoji HUD', () => {
@@ -146,5 +148,14 @@ describe('GameScreen — game-over overlay', () => {
     )
     fireEvent.press(getByText('Back to Levels'))
     expect(onBack).toHaveBeenCalledTimes(1)
+  })
+
+  it('shows card selection overlay when status is card_selection', () => {
+    mockGameStatus = 'card_selection'
+    const { queryByText } = render(
+      <GameScreen levelIndex={0} totalLevels={20} onBack={jest.fn()} />,
+    )
+    expect(queryByText('Level 1!')).toBeTruthy()
+    expect(queryByText('Cards coming in Sprint 7')).toBeTruthy()
   })
 })

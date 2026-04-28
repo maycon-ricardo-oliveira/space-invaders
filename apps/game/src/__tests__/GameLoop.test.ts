@@ -550,7 +550,7 @@ describe('GameLoop', () => {
     it('FuelPickup entity collision restores fuel to 100', () => {
       // The pickup is placed at the player's starting position.
       // drainFuel runs before checkFuelPickupCollisions each tick.
-      // After update(1000): fuel drains by 50, then pickup collision fires → fuel = min(100, 50+100) = 100.
+      // After update(1000): fuel drains by 50, then pickup collision fires → fuel = min(100, 50 + 100) = 100.
       const level: LevelDefinition = {
         ...mockLevel,
         params: { ...BASE_PARAMS, fuelDrainRate: 50 },
@@ -577,6 +577,110 @@ describe('GameLoop', () => {
       const loop = new GameLoop(level)
       loop.update(16)
       expect(loop.getState().player.fuel).toBe(100)
+    })
+  })
+
+  describe('XP system', () => {
+    it('player starts with xp = 0', () => {
+      expect(new GameLoop(mockLevel).getState().player.xp).toBe(0)
+    })
+
+    it('player starts with xpToNext = 10', () => {
+      expect(new GameLoop(mockLevel).getState().player.xpToNext).toBe(10)
+    })
+
+    it('player starts with playerLevel = 1', () => {
+      expect(new GameLoop(mockLevel).getState().player.playerLevel).toBe(1)
+    })
+
+    it('enemy kill increments player.xp by 1 (default xpValue)', () => {
+      const loop = new GameLoop({ ...mockLevel, params: { ...BASE_PARAMS, numberOfEnemies: 1, fuelDrainRate: 0 } })
+      loop.fire()
+      for (let i = 0; i < 100; i++) loop.update(16)
+      expect(loop.getState().player.xp).toBe(1)
+    })
+
+    it('xp accumulates correctly across multiple kills before reaching xpToNext', () => {
+      // Place 3 enemies in the same column as the player so sequential bullets hit each one
+      const playerX = CANVAS_WIDTH / 2 - ENTITY_SIZE / 2
+      const loop = new GameLoop({
+        ...mockLevel,
+        params: { ...BASE_PARAMS, numberOfEnemies: 0, fuelDrainRate: 0 },
+        entities: [
+          { entityTypeId: 'basic-enemy', x: playerX, y: 60 },
+          { entityTypeId: 'basic-enemy', x: playerX, y: 110 },
+          { entityTypeId: 'basic-enemy', x: playerX, y: 160 },
+        ],
+      })
+      loop.fire()
+      for (let i = 0; i < 100; i++) loop.update(16)
+      loop.fire()
+      for (let i = 0; i < 100; i++) loop.update(16)
+      loop.fire()
+      for (let i = 0; i < 100; i++) loop.update(16)
+      expect(loop.getState().player.xp).toBe(3)
+    })
+
+    it('reaching xpToNext (10 kills) sets status to card_selection', () => {
+      const playerX = CANVAS_WIDTH / 2 - ENTITY_SIZE / 2
+      const tenEnemies = Array.from({ length: 10 }, (_, i) => ({
+        entityTypeId: 'basic-enemy',
+        x: playerX,
+        y: 20 + i * 42,
+      }))
+      const loop = new GameLoop({
+        ...mockLevel,
+        params: { ...BASE_PARAMS, numberOfEnemies: 0, enemyShotDelay: 9999, fuelDrainRate: 0 },
+        entities: tenEnemies,
+      })
+      loop.setFiring(true)
+      for (let i = 0; i < 2000; i++) loop.update(16)
+      expect(loop.getState().status).toBe('card_selection')
+    })
+
+    it('after level-up, player.xp resets to 0 and playerLevel increments', () => {
+      const playerX = CANVAS_WIDTH / 2 - ENTITY_SIZE / 2
+      const tenEnemies = Array.from({ length: 10 }, (_, i) => ({
+        entityTypeId: 'basic-enemy',
+        x: playerX,
+        y: 20 + i * 42,
+      }))
+      const loop = new GameLoop({
+        ...mockLevel,
+        params: { ...BASE_PARAMS, numberOfEnemies: 0, enemyShotDelay: 9999, fuelDrainRate: 0 },
+        entities: tenEnemies,
+      })
+      loop.setFiring(true)
+      for (let i = 0; i < 2000; i++) loop.update(16)
+      const state = loop.getState()
+      expect(state.player.xp).toBe(0)
+      expect(state.player.playerLevel).toBe(2)
+    })
+
+    it('resumeFromCardSelection sets status back to playing', () => {
+      const playerX = CANVAS_WIDTH / 2 - ENTITY_SIZE / 2
+      const tenEnemies = Array.from({ length: 10 }, (_, i) => ({
+        entityTypeId: 'basic-enemy',
+        x: playerX,
+        y: 20 + i * 42,
+      }))
+      const loop = new GameLoop({
+        ...mockLevel,
+        params: { ...BASE_PARAMS, numberOfEnemies: 0, enemyShotDelay: 9999, fuelDrainRate: 0 },
+        entities: tenEnemies,
+      })
+      loop.setFiring(true)
+      for (let i = 0; i < 2000; i++) loop.update(16)
+      expect(loop.getState().status).toBe('card_selection')
+      loop.resumeFromCardSelection()
+      expect(loop.getState().status).toBe('playing')
+    })
+
+    it('getState returns xp, xpToNext, playerLevel in player object', () => {
+      const state = new GameLoop(mockLevel).getState()
+      expect(state.player).toHaveProperty('xp', 0)
+      expect(state.player).toHaveProperty('xpToNext', 10)
+      expect(state.player).toHaveProperty('playerLevel', 1)
     })
   })
 })

@@ -29,6 +29,8 @@ const JOYSTICK_MAX_RADIUS = 40
 const KNOB_RADIUS = 20
 const FLASH_INTERVAL_MS = 150
 const BAR_WIDTH = 140
+const XP_BAR_WIDTH = 180
+const XP_BAR_HEIGHT = 6
 
 function buildLoop(levelIndex: number, totalLevels: number): GameLoop {
   const engine = new LevelEngine(new CurveCalibratorStrategy())
@@ -42,7 +44,7 @@ export function GameScreen({ levelIndex, totalLevels, onBack }: Props) {
   const [renderer] = useState(() => new SkiaRenderer(CANVAS_WIDTH, CANVAS_HEIGHT))
   const [status, setStatus] = useState<GameStatus>('playing')
   const [picture, setPicture] = useState<SkPicture | null>(null)
-  const [hud, setHud] = useState({ hp: 500, maxHp: 500, fuel: 100, score: 0 })
+  const [hud, setHud] = useState({ hp: 500, maxHp: 500, fuel: 100, score: 0, xp: 0, xpToNext: 10, playerLevel: 1 })
   const [joystick, setJoystick] = useState<JoystickState | null>(null)
 
   const statusRef = useRef<GameStatus>('playing')
@@ -140,6 +142,9 @@ export function GameScreen({ levelIndex, totalLevels, onBack }: Props) {
         maxHp: state.player.maxHp,
         fuel: state.player.fuel,
         score: state.score,
+        xp: state.player.xp,
+        xpToNext: state.player.xpToNext,
+        playerLevel: state.player.playerLevel,
       })
 
       if (s === 'playing') {
@@ -165,6 +170,12 @@ export function GameScreen({ levelIndex, totalLevels, onBack }: Props) {
   const isPlaying = status === 'playing'
   const hpPct = hud.maxHp > 0 ? (hud.hp / hud.maxHp) * 100 : 0
   const fuelPct = Math.max(0, Math.min(100, hud.fuel))
+  const isGameOver = status === 'won' || status === 'lost' || status === 'fuelEmpty'
+  const isCardSelection = status === 'card_selection'
+
+  const xpFillWidth = hud.xpToNext > 0
+    ? Math.min(XP_BAR_WIDTH, (hud.xp / hud.xpToNext) * XP_BAR_WIDTH)
+    : 0
 
   return (
     <View style={styles.container} {...panResponder.panHandlers}>
@@ -189,6 +200,14 @@ export function GameScreen({ levelIndex, totalLevels, onBack }: Props) {
       </View>
       <View style={styles.hudTopRight} pointerEvents="none">
         <Text style={styles.hudText}>{hud.score}</Text>
+      </View>
+
+      {/* XP bar */}
+      <View style={styles.xpBarContainer} pointerEvents="none">
+        <View style={styles.xpBarTrack}>
+          <View style={[styles.xpBarFill, { width: xpFillWidth }]} />
+        </View>
+        <Text style={styles.xpText}>{hud.xp}</Text>
       </View>
 
       {/* Floating joystick visual */}
@@ -229,8 +248,25 @@ export function GameScreen({ levelIndex, totalLevels, onBack }: Props) {
         </>
       )}
 
+      {/* Card selection overlay */}
+      {isCardSelection && (
+        <View style={styles.cardOverlay} pointerEvents="box-only">
+          <Text style={styles.cardTitle}>{`Level ${hud.playerLevel}!`}</Text>
+          <Text style={styles.cardSubtitle}>Cards coming in Sprint 7</Text>
+          <TouchableOpacity
+            onPress={() => {
+              loop.resumeFromCardSelection()
+              rafRef.current = requestAnimationFrame(tick)
+            }}
+            style={styles.cardButton}
+          >
+            <Text style={styles.cardButtonText}>Continue</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
       {/* Game over / win overlay */}
-      {!isPlaying && (
+      {isGameOver && (
         <View style={styles.overlay}>
           <Text style={styles.resultText}>{status === 'won' ? 'You Win!' : 'Game Over'}</Text>
           <TouchableOpacity onPress={onBack} style={styles.button}>
@@ -277,6 +313,27 @@ const styles = StyleSheet.create({
     marginLeft: 6,
     minWidth: 32,
   },
+  xpBarContainer: {
+    position: 'absolute',
+    top: HUD_TOP + 28,
+    left: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  xpBarTrack: {
+    width: XP_BAR_WIDTH,
+    height: XP_BAR_HEIGHT,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderRadius: 3,
+    overflow: 'hidden',
+  },
+  xpBarFill: {
+    height: XP_BAR_HEIGHT,
+    backgroundColor: '#f1c40f',
+    borderRadius: 3,
+  },
+  xpText: { color: '#f1c40f', fontSize: 11, fontWeight: 'bold' },
   joystickBase: {
     position: 'absolute',
     width: JOYSTICK_MAX_RADIUS * 2,
@@ -293,6 +350,16 @@ const styles = StyleSheet.create({
     borderRadius: KNOB_RADIUS,
     backgroundColor: 'rgba(255,255,255,0.5)',
   },
+  cardOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.85)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cardTitle: { color: '#fff', fontSize: 28, fontWeight: 'bold', marginBottom: 8 },
+  cardSubtitle: { color: '#aaa', fontSize: 16, marginBottom: 24 },
+  cardButton: { backgroundColor: '#3498db', paddingHorizontal: 32, paddingVertical: 12, borderRadius: 8 },
+  cardButtonText: { color: '#fff', fontSize: 18, fontWeight: 'bold' },
   overlay: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(0,0,0,0.7)',

@@ -37,6 +37,9 @@ export class GameLoop {
         maxHp: PLAYER_INITIAL_HP,
         fuel: PLAYER_INITIAL_FUEL,
         invincibilityTimer: 0,
+        xp: 0,
+        xpToNext: 10,
+        playerLevel: 1,
       },
       enemies: this.buildEnemies(level),
       playerBullets: [],
@@ -62,6 +65,7 @@ export class GameLoop {
           y: e.y,
           alive: true,
           typeId: e.entityTypeId,
+          xpValue: 1,
         }))
     }
     const count = level.params.numberOfEnemies
@@ -80,6 +84,7 @@ export class GameLoop {
           y: 60 + row * (ENTITY_SIZE + gap),
           alive: true,
           typeId: 'basic-enemy',
+          xpValue: 1,
         })
         placed++
       }
@@ -142,6 +147,12 @@ export class GameLoop {
     this.updateInvincibility(deltaMs)
     this.handleAutoFire(deltaMs)
     this.checkWinLose()
+  }
+
+  resumeFromCardSelection(): void {
+    if (this.state.status === 'card_selection') {
+      this.state.status = 'playing'
+    }
   }
 
   private drainFuel(dt: number): void {
@@ -226,6 +237,12 @@ export class GameLoop {
           bullet.active = false
           enemy.alive = false
           this.state.score += 100
+          this.state.player.xp += (enemy.xpValue ?? 1)
+          if (this.state.player.xp >= this.state.player.xpToNext) {
+            this.state.player.playerLevel += 1
+            this.state.player.xp = 0
+            this.state.status = 'card_selection'
+          }
         }
       }
     }
@@ -265,6 +282,7 @@ export class GameLoop {
   }
 
   private checkWinLose(): void {
+    if (this.state.status === 'card_selection') return
     if (this.state.enemies.length > 0 && this.state.enemies.every(e => !e.alive)) {
       this.state.status = 'won'
       return
