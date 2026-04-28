@@ -50,8 +50,16 @@ describe('GameLoop', () => {
       expect(player.y).toBe(CANVAS_HEIGHT - ENTITY_SIZE - 20)
     })
 
-    it('player starts with 3 lives', () => {
-      expect(new GameLoop(mockLevel).getState().player.lives).toBe(3)
+    it('player starts with hp = 500', () => {
+      expect(new GameLoop(mockLevel).getState().player.hp).toBe(500)
+    })
+
+    it('player starts with maxHp = 500', () => {
+      expect(new GameLoop(mockLevel).getState().player.maxHp).toBe(500)
+    })
+
+    it('player starts with fuel = 100', () => {
+      expect(new GameLoop(mockLevel).getState().player.fuel).toBe(100)
     })
 
     it('creates enemies equal to numberOfEnemies', () => {
@@ -191,26 +199,35 @@ describe('GameLoop', () => {
       expect(loop.getState().status).toBe('won')
     })
 
-    it('enemy bullet reduces player lives on collision', () => {
+    it('enemy bullet reduces player hp on collision', () => {
       // enemyShotDelay:0.001 → bullet fired on first update frame
       // enemyShotSpeed:8 → 400px/s; travels 700px to player in ~1.75s (~109 frames)
       const loop = new GameLoop({
         ...mockLevel,
         params: { ...BASE_PARAMS, numberOfEnemies: 1, enemyShotDelay: 0.001, enemyShotSpeed: 8 },
       })
-      const before = loop.getState().player.lives
+      const before = loop.getState().player.hp
       for (let i = 0; i < 150; i++) loop.update(16)
-      expect(loop.getState().player.lives).toBeLessThan(before)
+      expect(loop.getState().player.hp).toBeLessThan(before)
     })
 
-    it('three enemy bullet hits → status is lost', () => {
+    it('hp reduced to 0 → status is lost', () => {
       const loop = new GameLoop({
         ...mockLevel,
-        params: { ...BASE_PARAMS, numberOfEnemies: 1, enemyShotDelay: 0.001, enemyShotSpeed: 8 },
+        params: { ...BASE_PARAMS, numberOfEnemies: 1, enemyShotDelay: 0.001, enemyShotSpeed: 8, fuelDrainRate: 0 },
       })
-      // With invincibility (1500ms per hit), 3 hits take ~530 frames; 700 frames is enough.
-      for (let i = 0; i < 700; i++) loop.update(16)
+      // Drive hp to 0: need 500 hits, each 1500ms apart → run many frames
+      for (let i = 0; i < 60000; i++) loop.update(16)
       expect(loop.getState().status).toBe('lost')
+    })
+
+    it('hp never goes below 0', () => {
+      const loop = new GameLoop({
+        ...mockLevel,
+        params: { ...BASE_PARAMS, numberOfEnemies: 1, enemyShotDelay: 0.001, enemyShotSpeed: 8, fuelDrainRate: 0 },
+      })
+      for (let i = 0; i < 60000; i++) loop.update(16)
+      expect(loop.getState().player.hp).toBeGreaterThanOrEqual(0)
     })
   })
 
@@ -384,15 +401,15 @@ describe('GameLoop', () => {
 
     it('invincibility prevents consecutive damage', () => {
       const loop = new GameLoop({ ...mockLevel, params: hitParams })
-      // Run until first hit (lives drop from 3 to 2)
+      // Run until first hit (hp drops from 500 to 499)
       for (let i = 0; i < 200; i++) {
         loop.update(16)
-        if (loop.getState().player.lives < 3) break
+        if (loop.getState().player.hp < 500) break
       }
-      expect(loop.getState().player.lives).toBe(2)
+      expect(loop.getState().player.hp).toBe(499)
       // Immediately after: many bullets in flight, but invincibility blocks them
       loop.update(16)
-      expect(loop.getState().player.lives).toBe(2)
+      expect(loop.getState().player.hp).toBe(499)
     })
 
     it('invincibilityTimer decrements to 0 after 1500ms', () => {
@@ -415,12 +432,12 @@ describe('GameLoop', () => {
       // First hit
       for (let i = 0; i < 200; i++) {
         loop.update(16)
-        if (loop.getState().player.lives < 3) break
+        if (loop.getState().player.hp < 500) break
       }
-      expect(loop.getState().player.lives).toBe(2)
+      expect(loop.getState().player.hp).toBe(499)
       // Wait out invincibility + travel time for next bullet (~200 more frames)
       for (let i = 0; i < 200; i++) loop.update(16)
-      expect(loop.getState().player.lives).toBeLessThan(2)
+      expect(loop.getState().player.hp).toBeLessThan(499)
     })
   })
 
@@ -444,6 +461,122 @@ describe('GameLoop', () => {
       jest.clearAllMocks()
       loop.render(mockRenderer, true)
       expect(mockRenderer.drawRect).toHaveBeenCalledTimes(1)
+    })
+  })
+
+  describe('hp system', () => {
+    const hitParams = {
+      ...BASE_PARAMS,
+      numberOfEnemies: 1,
+      enemyShotDelay: 0.001,
+      enemyShotSpeed: 8,
+      fuelDrainRate: 0,
+    }
+
+    it('player starts with hp = 500', () => {
+      expect(new GameLoop(mockLevel).getState().player.hp).toBe(500)
+    })
+
+    it('player starts with maxHp = 500', () => {
+      expect(new GameLoop(mockLevel).getState().player.maxHp).toBe(500)
+    })
+
+    it('enemy bullet hit reduces hp by 1', () => {
+      const loop = new GameLoop({ ...mockLevel, params: hitParams })
+      for (let i = 0; i < 150; i++) {
+        loop.update(16)
+        if (loop.getState().player.hp < 500) break
+      }
+      expect(loop.getState().player.hp).toBe(499)
+    })
+
+    it('hp reduced to 0 → status is lost', () => {
+      const loop = new GameLoop({ ...mockLevel, params: hitParams })
+      for (let i = 0; i < 60000; i++) loop.update(16)
+      expect(loop.getState().status).toBe('lost')
+    })
+
+    it('invincibility timer prevents hp loss from second hit', () => {
+      const loop = new GameLoop({ ...mockLevel, params: hitParams })
+      for (let i = 0; i < 200; i++) {
+        loop.update(16)
+        if (loop.getState().player.hp < 500) break
+      }
+      expect(loop.getState().player.hp).toBe(499)
+      loop.update(16)
+      expect(loop.getState().player.hp).toBe(499)
+    })
+
+    it('hp never goes below 0', () => {
+      const loop = new GameLoop({ ...mockLevel, params: hitParams })
+      for (let i = 0; i < 60000; i++) loop.update(16)
+      expect(loop.getState().player.hp).toBeGreaterThanOrEqual(0)
+    })
+  })
+
+  describe('fuel system', () => {
+    it('fuel starts at 100', () => {
+      expect(new GameLoop(mockLevel).getState().player.fuel).toBe(100)
+    })
+
+    it('fuel drains over time with default fuelDrainRate', () => {
+      const loop = new GameLoop(mockLevel)
+      loop.update(1000)  // 1 second
+      const { fuel } = loop.getState().player
+      expect(fuel).toBeLessThan(100)
+      expect(fuel).toBeCloseTo(100 - 12, 0)
+    })
+
+    it('fuel reaching 0 → status is fuelEmpty', () => {
+      const level: LevelDefinition = {
+        ...mockLevel,
+        params: { ...BASE_PARAMS, fuelDrainRate: 100 },
+      }
+      const loop = new GameLoop(level)
+      loop.update(1100)  // 1.1s × 100 drain/s = 110 → drains fully
+      expect(loop.getState().status).toBe('fuelEmpty')
+    })
+
+    it('fuel cannot go below 0', () => {
+      const level: LevelDefinition = {
+        ...mockLevel,
+        params: { ...BASE_PARAMS, fuelDrainRate: 100 },
+      }
+      const loop = new GameLoop(level)
+      loop.update(5000)
+      expect(loop.getState().player.fuel).toBeGreaterThanOrEqual(0)
+    })
+
+    it('FuelPickup entity collision restores fuel to 100', () => {
+      // The pickup is placed at the player's starting position.
+      // drainFuel runs before checkFuelPickupCollisions each tick.
+      // After update(1000): fuel drains by 50, then pickup collision fires → fuel = min(100, 50+100) = 100.
+      const level: LevelDefinition = {
+        ...mockLevel,
+        params: { ...BASE_PARAMS, fuelDrainRate: 50 },
+        entities: [
+          { entityTypeId: 'fuel-pickup', x: CANVAS_WIDTH / 2 - ENTITY_SIZE / 2, y: CANVAS_HEIGHT - ENTITY_SIZE - 20 },
+        ],
+      }
+      const loop = new GameLoop(level)
+      loop.update(1000)
+      expect(loop.getState().player.fuel).toBe(100)
+      // Confirm pickup was consumed (a second update drains fuel normally)
+      loop.update(1000)
+      expect(loop.getState().player.fuel).toBeCloseTo(50, 0)
+    })
+
+    it('fuel cannot exceed 100 from pickup', () => {
+      const level: LevelDefinition = {
+        ...mockLevel,
+        params: { ...BASE_PARAMS, fuelDrainRate: 0 },
+        entities: [
+          { entityTypeId: 'fuel-pickup', x: CANVAS_WIDTH / 2 - ENTITY_SIZE / 2, y: CANVAS_HEIGHT - ENTITY_SIZE - 20 },
+        ],
+      }
+      const loop = new GameLoop(level)
+      loop.update(16)
+      expect(loop.getState().player.fuel).toBe(100)
     })
   })
 })

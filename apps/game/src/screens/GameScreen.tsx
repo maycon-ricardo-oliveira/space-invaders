@@ -28,6 +28,7 @@ const DEADZONE = 8
 const JOYSTICK_MAX_RADIUS = 40
 const KNOB_RADIUS = 20
 const FLASH_INTERVAL_MS = 150
+const BAR_WIDTH = 140
 
 function buildLoop(levelIndex: number, totalLevels: number): GameLoop {
   const engine = new LevelEngine(new CurveCalibratorStrategy())
@@ -41,7 +42,7 @@ export function GameScreen({ levelIndex, totalLevels, onBack }: Props) {
   const [renderer] = useState(() => new SkiaRenderer(CANVAS_WIDTH, CANVAS_HEIGHT))
   const [status, setStatus] = useState<GameStatus>('playing')
   const [picture, setPicture] = useState<SkPicture | null>(null)
-  const [hud, setHud] = useState({ lives: 3, score: 0 })
+  const [hud, setHud] = useState({ hp: 500, maxHp: 500, fuel: 100, score: 0 })
   const [joystick, setJoystick] = useState<JoystickState | null>(null)
 
   const statusRef = useRef<GameStatus>('playing')
@@ -134,7 +135,12 @@ export function GameScreen({ levelIndex, totalLevels, onBack }: Props) {
         setStatus(s)
       }
 
-      setHud({ lives: state.player.lives, score: state.score })
+      setHud({
+        hp: state.player.hp,
+        maxHp: state.player.maxHp,
+        fuel: state.player.fuel,
+        score: state.score,
+      })
 
       if (s === 'playing') {
         rafRef.current = requestAnimationFrame(tick)
@@ -157,6 +163,8 @@ export function GameScreen({ levelIndex, totalLevels, onBack }: Props) {
   }, [tick])
 
   const isPlaying = status === 'playing'
+  const hpPct = hud.maxHp > 0 ? (hud.hp / hud.maxHp) * 100 : 0
+  const fuelPct = Math.max(0, Math.min(100, hud.fuel))
 
   return (
     <View style={styles.container} {...panResponder.panHandlers}>
@@ -166,7 +174,18 @@ export function GameScreen({ levelIndex, totalLevels, onBack }: Props) {
 
       {/* HUD overlay — pointerEvents none so touches fall through to PanResponder */}
       <View style={styles.hudTopLeft} pointerEvents="none">
-        <Text style={styles.hudText}>{'❤️'.repeat(Math.max(0, hud.lives))}</Text>
+        <View style={styles.barRow}>
+          <View style={[styles.barContainer, { width: BAR_WIDTH }]}>
+            <View style={[styles.barFill, { width: `${hpPct}%`, backgroundColor: '#e74c3c' }]} />
+          </View>
+          <Text style={styles.barLabel}>{Math.round(hud.hp)}</Text>
+        </View>
+        <View style={styles.barRow}>
+          <View style={[styles.barContainer, { width: BAR_WIDTH }]}>
+            <View style={[styles.barFill, { width: `${fuelPct}%`, backgroundColor: '#e67e22' }]} />
+          </View>
+          <Text style={styles.barLabel}>{Math.round(hud.fuel)}</Text>
+        </View>
       </View>
       <View style={styles.hudTopRight} pointerEvents="none">
         <Text style={styles.hudText}>{hud.score}</Text>
@@ -236,6 +255,28 @@ const styles = StyleSheet.create({
     right: 12,
   },
   hudText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
+  barRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  barContainer: {
+    height: 10,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderRadius: 5,
+    overflow: 'hidden',
+  },
+  barFill: {
+    height: '100%',
+    borderRadius: 5,
+  },
+  barLabel: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: 'bold',
+    marginLeft: 6,
+    minWidth: 32,
+  },
   joystickBase: {
     position: 'absolute',
     width: JOYSTICK_MAX_RADIUS * 2,
