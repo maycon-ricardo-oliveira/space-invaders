@@ -15,6 +15,7 @@ export interface Enemy {
   y: number
   alive: boolean
   typeId: string
+  hp: number
   xpValue?: number
 }
 

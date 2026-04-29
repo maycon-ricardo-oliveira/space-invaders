@@ -65,6 +65,7 @@ export class GameLoop {
           y: e.y,
           alive: true,
           typeId: e.entityTypeId,
+          hp: 1,
           xpValue: 1,
         }))
     }
@@ -84,6 +85,7 @@ export class GameLoop {
           y: 60 + row * (ENTITY_SIZE + gap),
           alive: true,
           typeId: 'basic-enemy',
+          hp: 1,
           xpValue: 1,
         })
         placed++

@@ -42,12 +42,17 @@ export interface LevelParams {
   fuelDrainRate?: number
 }
 
+export interface Wave {
+  entities: EntityPlacement[]
+}
+
 export interface LevelDefinition {
   id: string
   style: 'classic' | 'freeRoam' | 'mixed'
   difficultyScore: number
   entities: EntityPlacement[]
   params: LevelParams
+  waves?: Wave[]
 }
 
 export interface PlayerStats {

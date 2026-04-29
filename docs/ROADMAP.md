@@ -117,6 +117,7 @@ A PR is only valid if it ships something that can be tested end-to-end. Examples
 
 | # | Feature | Code | Status | PR | Deliverable |
 |---|---------|------|--------|-----|-------------|
+| 0 | Types | S6-TYPES | ✅ Done (PR #13) | #13 | Wave interface, hp on Enemy, waves? on LevelDefinition |
 | 1 | Asteroids | ENEMY-1 | ⏳ Todo | — | Destructible terrain obstacles, drop HP/fuel |
 | 2 | Fast Enemy | ENEMY-2 | ⏳ Todo | — | High speed, low HP, burst fire |
 | 3 | Strong Enemy | ENEMY-3 | ⏳ Todo | — | Multi-hit, high HP, heavy shot |
