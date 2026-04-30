@@ -35,3 +35,6 @@ npm-debug.log*
 # Claude Code session data
 .claude/
 .ai-jail
+
+# Git worktrees
+.worktrees/
