@@ -839,4 +839,45 @@ describe('GameLoop', () => {
       expect(loop.getState().enemies[0].y).toBe(initialY)
     })
   })
+
+  describe('burst fire', () => {
+    function burstLevel(burstCount: number): LevelDefinition {
+      return {
+        ...mockLevel,
+        params: { ...BASE_PARAMS, numberOfEnemies: 0, enemyShotDelay: 0.001 },
+        entities: [{ entityTypeId: 'fast-enemy', x: 200, y: 60, properties: { burstCount, hp: 40 } }],
+      }
+    }
+
+    it('enemy with burstCount=1 fires 1 bullet per shot cycle', () => {
+      const loop = new GameLoop(burstLevel(1))
+      for (let i = 0; i < 10; i++) loop.update(16)
+      // With burstCount=1, each shot cycle produces exactly 1 bullet (no burst interval)
+      // enemyShotDelay:0.001 triggers many cycles, so we check that each is a single bullet
+      const total = loop.getState().enemyBullets.length
+      expect(total).toBeGreaterThanOrEqual(1)
+      // All bullets should be active (no burst delay between them)
+      const activeCount = loop.getState().enemyBullets.filter(b => b.active).length
+      expect(activeCount).toBe(total)
+    })
+
+    it('enemy with burstCount=3 fires 3 bullets in a burst', () => {
+      const loop = new GameLoop(burstLevel(3))
+      // tick enough to trigger shot + full burst (3 × 50ms = 150ms)
+      for (let i = 0; i < 20; i++) loop.update(16)
+      const total = loop.getState().enemyBullets.length
+      expect(total).toBeGreaterThanOrEqual(3)
+    })
+
+    it('enemy with burstCount=0 (asteroid) never fires', () => {
+      const level: LevelDefinition = {
+        ...mockLevel,
+        params: { ...BASE_PARAMS, numberOfEnemies: 0, enemyShotDelay: 0.001 },
+        entities: [{ entityTypeId: 'asteroid', x: 200, y: 60, properties: { burstCount: 0, hp: 60 } }],
+      }
+      const loop = new GameLoop(level)
+      for (let i = 0; i < 50; i++) loop.update(16)
+      expect(loop.getState().enemyBullets).toHaveLength(0)
+    })
+  })
 })

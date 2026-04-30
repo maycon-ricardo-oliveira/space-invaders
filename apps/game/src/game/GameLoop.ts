@@ -25,6 +25,8 @@ export class GameLoop {
   private readonly params: LevelDefinition['params']
   private isFiring = false
   private autoFireTimer = 0
+  private burstQueue: Array<{ x: number; y: number; remaining: number; burstTimer: number }> = []
+  private readonly BURST_INTERVAL_MS = 50
 
   constructor(level: LevelDefinition) {
     this.params = level.params
@@ -231,16 +233,34 @@ export class GameLoop {
   }
 
   private handleEnemyShooting(dt: number): void {
+    // Process existing burst queue
+    for (const burst of this.burstQueue) {
+      if (burst.remaining <= 0) continue
+      burst.burstTimer -= dt * 1000
+      if (burst.burstTimer <= 0) {
+        this.state.enemyBullets.push({
+          x: burst.x + ENTITY_SIZE / 2 - BULLET_WIDTH / 2,
+          y: burst.y + ENTITY_SIZE,
+          active: true,
+        })
+        burst.remaining--
+        burst.burstTimer = this.BURST_INTERVAL_MS
+      }
+    }
+    this.burstQueue = this.burstQueue.filter(b => b.remaining > 0)
+
+    // Select new shooter
     this.shotCooldown -= dt
     if (this.shotCooldown > 0) return
     this.shotCooldown = this.params.enemyShotDelay
-    const alive = this.state.enemies.filter(e => e.alive)
-    if (alive.length === 0) return
-    const shooter = alive[Math.floor(Math.random() * alive.length)]
-    this.state.enemyBullets.push({
-      x: shooter.x + ENTITY_SIZE / 2 - BULLET_WIDTH / 2,
-      y: shooter.y + ENTITY_SIZE,
-      active: true,
+    const shooters = this.state.enemies.filter(e => e.alive && e.burstCount > 0)
+    if (shooters.length === 0) return
+    const shooter = shooters[Math.floor(Math.random() * shooters.length)]
+    this.burstQueue.push({
+      x: shooter.x,
+      y: shooter.y,
+      remaining: shooter.burstCount,
+      burstTimer: 0,
     })
   }
 
