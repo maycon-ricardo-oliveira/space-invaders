@@ -1,5 +1,5 @@
 import type { IRenderer, LevelDefinition } from '@si/level-engine'
-import type { Bullet, Enemy, FuelPickup, GameState } from './types'
+import type { Bullet, DamagePickup, Enemy, FuelPickup, GameState } from './types'
 
 export const CANVAS_WIDTH = 390
 export const CANVAS_HEIGHT = 844
@@ -40,11 +40,13 @@ export class GameLoop {
         xp: 0,
         xpToNext: 10,
         playerLevel: 1,
+        bulletDamage: 20,
       },
       enemies: this.buildEnemies(level),
       playerBullets: [],
       enemyBullets: [],
       fuelPickups: this.buildFuelPickups(level),
+      damagePickups: [],
       score: 0,
       status: 'playing',
     }
@@ -67,6 +69,9 @@ export class GameLoop {
           typeId: e.entityTypeId,
           hp: 1,
           xpValue: 1,
+          movementType: 'horizontal' as const,
+          burstCount: 0,
+          dropsPickup: null,
         }))
     }
     const count = level.params.numberOfEnemies
@@ -87,6 +92,9 @@ export class GameLoop {
           typeId: 'basic-enemy',
           hp: 1,
           xpValue: 1,
+          movementType: 'horizontal' as const,
+          burstCount: 0,
+          dropsPickup: null,
         })
         placed++
       }
@@ -101,6 +109,7 @@ export class GameLoop {
       playerBullets: this.state.playerBullets.map(b => ({ ...b })),
       enemyBullets: this.state.enemyBullets.map(b => ({ ...b })),
       fuelPickups: this.state.fuelPickups.map(f => ({ ...f })),
+      damagePickups: this.state.damagePickups.map(d => ({ ...d })),
       score: this.state.score,
       status: this.state.status,
     }

@@ -10,13 +10,22 @@ export interface FuelPickup {
   active: boolean
 }
 
+export interface DamagePickup {
+  x: number
+  y: number
+  active: boolean
+}
+
 export interface Enemy {
   x: number
   y: number
   alive: boolean
   typeId: string
   hp: number
-  xpValue?: number
+  xpValue: number
+  movementType: 'horizontal' | 'vertical'
+  burstCount: number
+  dropsPickup: 'damage' | null
 }
 
 export type GameStatus = 'playing' | 'paused' | 'won' | 'lost' | 'fuelEmpty' | 'card_selection'
@@ -31,6 +40,7 @@ export interface PlayerState {
   xp: number
   xpToNext: number
   playerLevel: number
+  bulletDamage: number
 }
 
 export interface GameState {
@@ -39,6 +49,7 @@ export interface GameState {
   playerBullets: Bullet[]
   enemyBullets: Bullet[]
   fuelPickups: FuelPickup[]
+  damagePickups: DamagePickup[]
   score: number
   status: GameStatus
 }

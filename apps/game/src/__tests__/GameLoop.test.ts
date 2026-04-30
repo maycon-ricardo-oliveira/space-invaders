@@ -78,6 +78,10 @@ describe('GameLoop', () => {
       expect(new GameLoop(mockLevel).getState().score).toBe(0)
     })
 
+    it('player starts with bulletDamage = 20', () => {
+      expect(new GameLoop(mockLevel).getState().player.bulletDamage).toBe(20)
+    })
+
     it('uses EntityPlacement coordinates when entities array is non-empty', () => {
       const level: LevelDefinition = {
         ...mockLevel,
