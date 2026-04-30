@@ -8,7 +8,7 @@
 
 ## Goal
 
-Add 3 new enemy types (asteroid, fast, strong) and a sequential wave system to the game loop. All enemy properties are registry-driven so the calibrator can configure them without touching game logic.
+Add 3 new enemy types (basic, fast, strong) plus a special asteroid obstacle entity, and a sequential wave system to the game loop. All enemy properties are registry-driven so the calibrator can configure them without touching game logic.
 
 ---
 
@@ -16,7 +16,11 @@ Add 3 new enemy types (asteroid, fast, strong) and a sequential wave system to t
 
 ### Player bullet damage
 
-`BULLET_DAMAGE = 20` — constant in `GameLoop.ts`. Upgradeable via cards in a future sprint.
+`bulletDamage` is a **player stat** stored in `PlayerState` (not a constant), starting at `20`. It can be upgraded via cards or pickups. All damage calculations use `player.bulletDamage` dynamically:
+
+```
+enemy.hp -= state.player.bulletDamage
+```
 
 ### Enemy HP
 
@@ -29,12 +33,26 @@ if (enemy.hp <= 0) enemy.alive = false
 
 ### Enemy type table
 
-| typeId | hp | hits to die | speedMultiplier | movementType | burstCount | xpValue | dropsPickup |
+The 3 enemy types + asteroid obstacle:
+
+| typeId | hp | hits to die (base dmg 20) | speedMultiplier | movementType | burstCount | xpValue | dropsPickup |
 |---|---|---|---|---|---|---|---|
 | `basic-enemy` | 100 | 5 | 1.0 | horizontal | 1 | 1 | — |
-| `asteroid` | 60 | 3 | 0.8 | vertical | 0 | 1 | `'fuel'` or `'hp'` (random) |
 | `fast-enemy` | 40 | 2 | 2.5 | horizontal | 3 | 2 | — |
 | `strong-enemy` | 200 | 10 | 0.5 | horizontal | 1 | 3 | — |
+| `asteroid` | 60 | 3 | 0.8 | vertical | 0 | 1 | `'damage'` (chance) |
+
+> **Asteroid** is a non-shooting obstacle entity. It is NOT counted as one of the 3 enemy types.
+
+### Damage pickup (asteroid drop)
+
+When an asteroid is destroyed, there is a random chance it drops a **damage pickup**. On collection, the player gains:
+
+```
+player.bulletDamage += 2 * player.bulletDamage
+```
+
+The boost scales with the player's **current** `bulletDamage` at collection time (not base value), so it compounds correctly with card upgrades.
 
 ### EntityType.properties schema
 
@@ -43,9 +61,9 @@ interface EnemyTypeProperties {
   hp: number
   speedMultiplier: number
   movementType: 'horizontal' | 'vertical'
-  burstCount: number      // shots per burst; 0 = no shooting
+  burstCount: number        // shots per burst; 0 = no shooting
   xpValue: number
-  dropsPickup?: 'hp' | 'fuel' | null
+  dropsPickup?: 'damage' | null
 }
 ```
 
@@ -59,7 +77,7 @@ Existing side-to-side bounce logic. Speed = `LevelParams.enemySpeed × ENEMY_SPE
 
 ### Vertical movement (asteroid)
 
-Moves straight down at constant speed. Does **not** shoot. When it exits the bottom of the screen (`y > CANVAS_HEIGHT`), it is removed (`alive = false`) — no damage to player. On death by bullet: random drop of HP pickup or fuel pickup at the asteroid's last position.
+Moves straight down at constant speed. Does **not** shoot. When it exits the bottom of the screen (`y > CANVAS_HEIGHT`), it is removed (`alive = false`) — no damage to player. On death by bullet: random chance to drop a damage pickup at the asteroid's last position.
 
 ### Burst fire (fast-enemy)
 
@@ -132,9 +150,11 @@ Flow:
 Both `registerEntities.ts` (game) and the calibrator toolbox must register all 4 entity types on startup. New entries:
 
 ```typescript
-registerEntityType({ id: 'asteroid',     ..., properties: { hp: 60,  speedMultiplier: 0.8, movementType: 'vertical',    burstCount: 0, xpValue: 1, dropsPickup: 'fuel' } })
-registerEntityType({ id: 'fast-enemy',   ..., properties: { hp: 40,  speedMultiplier: 2.5, movementType: 'horizontal',  burstCount: 3, xpValue: 2 } })
-registerEntityType({ id: 'strong-enemy', ..., properties: { hp: 200, speedMultiplier: 0.5, movementType: 'horizontal',  burstCount: 1, xpValue: 3 } })
+// 3 enemy types
+registerEntityType({ id: 'fast-enemy',   ..., properties: { hp: 40,  speedMultiplier: 2.5, movementType: 'horizontal', burstCount: 3, xpValue: 2 } })
+registerEntityType({ id: 'strong-enemy', ..., properties: { hp: 200, speedMultiplier: 0.5, movementType: 'horizontal', burstCount: 1, xpValue: 3 } })
+// obstacle entity
+registerEntityType({ id: 'asteroid',     ..., properties: { hp: 60,  speedMultiplier: 0.8, movementType: 'vertical',   burstCount: 0, xpValue: 1, dropsPickup: 'damage' } })
 ```
 
 ---
@@ -153,6 +173,6 @@ registerEntityType({ id: 'strong-enemy', ..., properties: { hp: 200, speedMultip
 ## 7. Out of Scope (Sprint 6)
 
 - Calibrator pattern editor (GL-2 visual grid) — deferred to Sprint 6c or later
-- Card upgrades to `BULLET_DAMAGE`
+- Card upgrades to `player.bulletDamage`
 - Enemy sprite assets (rectangles used for MVP)
 - Strong-enemy heavy shot visual differentiation
