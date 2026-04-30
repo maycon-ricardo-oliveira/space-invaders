@@ -26,6 +26,7 @@ export interface Enemy {
   movementType: 'horizontal' | 'vertical'
   burstCount: number
   dropsPickup: 'damage' | null
+  speedMultiplier: number
 }
 
 export type GameStatus = 'playing' | 'paused' | 'won' | 'lost' | 'fuelEmpty' | 'card_selection'

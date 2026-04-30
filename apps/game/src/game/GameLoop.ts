@@ -72,6 +72,7 @@ export class GameLoop {
           movementType: ((e.properties?.movementType as string) ?? 'horizontal') as 'horizontal' | 'vertical',
           burstCount: (e.properties?.burstCount as number) ?? 1,
           dropsPickup: ((e.properties?.dropsPickup as string) ?? null) as 'damage' | null,
+          speedMultiplier: (e.properties?.speedMultiplier as number) ?? 1.0,
         }))
     }
     const count = level.params.numberOfEnemies
@@ -95,6 +96,7 @@ export class GameLoop {
           movementType: 'horizontal' as const,
           burstCount: 1,
           dropsPickup: null,
+          speedMultiplier: 1.0,
         })
         placed++
       }
@@ -202,21 +204,29 @@ export class GameLoop {
   }
 
   private moveEnemies(dt: number): void {
-    const speed = this.params.enemySpeed * ENEMY_SPEED_SCALE
-    if (speed === 0) return
-    const alive = this.state.enemies.filter(e => e.alive)
-    if (alive.length === 0) return
-    let hitEdge = false
-    for (const e of alive) {
-      e.x += speed * this.enemyDirection * dt
-      if (this.enemyDirection === 1 && e.x + ENTITY_SIZE > CANVAS_WIDTH) hitEdge = true
-      if (this.enemyDirection === -1 && e.x < 0) hitEdge = true
-    }
-    if (hitEdge) {
-      this.enemyDirection *= -1
-      for (const e of alive) {
-        e.y += ENTITY_SIZE
+    const baseSpeed = this.params.enemySpeed * ENEMY_SPEED_SCALE
+    if (baseSpeed === 0) return
+
+    // Horizontal enemies: existing side-to-side bounce
+    const horizontal = this.state.enemies.filter(e => e.alive && e.movementType === 'horizontal')
+    if (horizontal.length > 0) {
+      let hitEdge = false
+      for (const e of horizontal) {
+        e.x += baseSpeed * e.speedMultiplier * this.enemyDirection * dt
+        if (this.enemyDirection === 1 && e.x + ENTITY_SIZE > CANVAS_WIDTH) hitEdge = true
+        if (this.enemyDirection === -1 && e.x < 0) hitEdge = true
       }
+      if (hitEdge) {
+        this.enemyDirection *= -1
+        for (const e of horizontal) e.y += ENTITY_SIZE
+      }
+    }
+
+    // Vertical enemies (asteroids): move straight down, disappear at bottom
+    const vertical = this.state.enemies.filter(e => e.alive && e.movementType === 'vertical')
+    for (const e of vertical) {
+      e.y += baseSpeed * e.speedMultiplier * dt
+      if (e.y > CANVAS_HEIGHT) e.alive = false
     }
   }
 

@@ -794,4 +794,49 @@ describe('GameLoop', () => {
       expect(enemies[1].burstCount).toBe(1)
     })
   })
+
+  describe('vertical movement (asteroid)', () => {
+    function asteroidLevel(): LevelDefinition {
+      return {
+        ...mockLevel,
+        params: { ...BASE_PARAMS, numberOfEnemies: 0, enemySpeed: 100 },
+        entities: [{ entityTypeId: 'asteroid', x: 100, y: 10, properties: { movementType: 'vertical', speedMultiplier: 1.0, hp: 60 } }],
+      }
+    }
+
+    it('asteroid moves downward each update', () => {
+      const loop = new GameLoop(asteroidLevel())
+      const before = loop.getState().enemies[0].y
+      loop.update(100)
+      expect(loop.getState().enemies[0].y).toBeGreaterThan(before)
+    })
+
+    it('asteroid does not move horizontally', () => {
+      const loop = new GameLoop(asteroidLevel())
+      const before = loop.getState().enemies[0].x
+      loop.update(100)
+      expect(loop.getState().enemies[0].x).toBe(before)
+    })
+
+    it('asteroid is removed (alive=false) when it exits the bottom of the screen', () => {
+      const level: LevelDefinition = {
+        ...mockLevel,
+        params: { ...BASE_PARAMS, numberOfEnemies: 0, enemySpeed: 1000 },
+        entities: [{ entityTypeId: 'asteroid', x: 100, y: CANVAS_HEIGHT - 10, properties: { movementType: 'vertical', speedMultiplier: 1.0 } }],
+      }
+      const loop = new GameLoop(level)
+      loop.update(100)
+      expect(loop.getState().enemies[0].alive).toBe(false)
+    })
+
+    it('horizontal enemies are not affected by vertical movement logic', () => {
+      const loop = new GameLoop({
+        ...mockLevel,
+        params: { ...BASE_PARAMS, numberOfEnemies: 1, enemySpeed: 100 },
+      })
+      const initialY = loop.getState().enemies[0].y
+      loop.update(16) // 1 rightward step — no Y change unless wall bounce
+      expect(loop.getState().enemies[0].y).toBe(initialY)
+    })
+  })
 })
