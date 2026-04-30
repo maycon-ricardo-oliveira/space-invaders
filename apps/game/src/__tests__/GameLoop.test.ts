@@ -216,6 +216,18 @@ describe('GameLoop', () => {
       expect(loop.getState().status).toBe('won')
     })
 
+    it('asteroid escaping bottom without being shot does not trigger won', () => {
+      // Asteroid exits at the bottom (alive=false, killed=false) — player did nothing
+      const playerX = CANVAS_WIDTH / 2 - ENTITY_SIZE / 2
+      const loop = new GameLoop({
+        ...mockLevel,
+        params: { ...BASE_PARAMS, numberOfEnemies: 0, enemySpeed: 10, fuelDrainRate: 0 },
+        entities: [{ entityTypeId: 'asteroid', x: playerX, y: CANVAS_HEIGHT - 5, properties: { hp: 100, movementType: 'vertical', speedMultiplier: 10 } }],
+      })
+      for (let i = 0; i < 50; i++) loop.update(16)
+      expect(loop.getState().status).toBe('playing')
+    })
+
     it('enemy bullet reduces player hp on collision', () => {
       // enemyShotDelay:0.001 → bullet fired on first update frame
       // enemyShotSpeed:8 → 400px/s; travels 700px to player in ~1.75s (~109 frames)
@@ -917,25 +929,24 @@ describe('GameLoop', () => {
       expect(loop.getState().damagePickups.length).toBeGreaterThan(0)
     })
 
-    it('collision sets pickup active=false when collected', () => {
-      // Test the collision logic: when AABB test passes, pickup.active should be set to false
-      // This tests the actual method behavior (not dependent on pickup spawning correctly)
+    it('collecting damage pickup triples bulletDamage and deactivates it', () => {
+      // Place enemy just above player so the bullet hits on the first update tick
+      // and the pickup spawns within the player's AABB, triggering collection in the same tick
       const playerX = CANVAS_WIDTH / 2 - ENTITY_SIZE / 2
-      const playerY = CANVAS_HEIGHT - ENTITY_SIZE - 20
+      const playerY = CANVAS_HEIGHT - ENTITY_SIZE - 20   // 792
+      const enemyY = playerY - ENTITY_SIZE / 2           // 776 — pickup spawns here, overlaps player
+      const mathRandom = jest.spyOn(Math, 'random').mockReturnValue(0) // guarantee drop
       const loop = new GameLoop({
         ...mockLevel,
-        params: { ...BASE_PARAMS, numberOfEnemies: 0, enemySpeed: 0, fuelDrainRate: 0 },
-        entities: [],
+        params: { ...BASE_PARAMS, numberOfEnemies: 0, fuelDrainRate: 0 },
+        entities: [{ entityTypeId: 'asteroid', x: playerX, y: enemyY, properties: { hp: 20, movementType: 'vertical', speedMultiplier: 0, dropsPickup: 'damage' } }],
       })
+      loop.fire()
+      loop.update(16) // bullet hits enemy → pickup spawns at enemyY → AABB overlap → collected
+      mathRandom.mockRestore()
 
-      // Since getState() returns a copy, we can't directly inject. Instead, test by:
-      // 1. Kill enemy with dropsPickup to create pickup
-      // 2. Verify pickup exists and is active
-      // 3. Trigger collision by... well, we can't move player vertically.
-      // Alternative: mock the internal collision check
-      // For now, just verify the pickup gets created (Task 5 did that correctly)
-      // and trust the collision logic is same as fuel pickup logic which is tested.
-      expect(loop.getState().damagePickups.length).toBe(0)
+      expect(loop.getState().player.bulletDamage).toBe(60) // 20 + 2*20
+      expect(loop.getState().damagePickups.every(p => !p.active)).toBe(true)
     })
 
     it('bulletDamage += 2 * bulletDamage (tripled: 20 becomes 60)', () => {

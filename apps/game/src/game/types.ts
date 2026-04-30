@@ -20,6 +20,7 @@ export interface Enemy {
   x: number
   y: number
   alive: boolean
+  killed: boolean
   typeId: string
   hp: number
   xpValue: number

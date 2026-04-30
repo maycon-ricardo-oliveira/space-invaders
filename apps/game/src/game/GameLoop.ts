@@ -25,7 +25,7 @@ export class GameLoop {
   private readonly params: LevelDefinition['params']
   private isFiring = false
   private autoFireTimer = 0
-  private burstQueue: Array<{ x: number; y: number; remaining: number; burstTimer: number }> = []
+  private burstQueue: Array<{ enemy: Enemy; remaining: number; burstTimer: number }> = []
   private readonly BURST_INTERVAL_MS = 50
 
   constructor(level: LevelDefinition) {
@@ -68,6 +68,7 @@ export class GameLoop {
           x: e.x,
           y: e.y,
           alive: true,
+          killed: false,
           typeId: e.entityTypeId,
           hp: (e.properties?.hp as number) ?? 100,
           xpValue: (e.properties?.xpValue as number) ?? 1,
@@ -92,6 +93,7 @@ export class GameLoop {
           x: startX + col * (ENTITY_SIZE + gap),
           y: 60 + row * (ENTITY_SIZE + gap),
           alive: true,
+          killed: false,
           typeId: 'basic-enemy',
           hp: 100,
           xpValue: 1,
@@ -224,24 +226,25 @@ export class GameLoop {
 
   private moveEnemies(dt: number): void {
     const baseSpeed = this.params.enemySpeed * ENEMY_SPEED_SCALE
-    if (baseSpeed === 0) return
 
-    // Horizontal enemies: existing side-to-side bounce
-    const horizontal = this.state.enemies.filter(e => e.alive && e.movementType === 'horizontal')
-    if (horizontal.length > 0) {
-      let hitEdge = false
-      for (const e of horizontal) {
-        e.x += baseSpeed * e.speedMultiplier * this.enemyDirection * dt
-        if (this.enemyDirection === 1 && e.x + ENTITY_SIZE > CANVAS_WIDTH) hitEdge = true
-        if (this.enemyDirection === -1 && e.x < 0) hitEdge = true
-      }
-      if (hitEdge) {
-        this.enemyDirection *= -1
-        for (const e of horizontal) e.y += ENTITY_SIZE
+    // Horizontal enemies: side-to-side bounce (skipped when speed is zero)
+    if (baseSpeed > 0) {
+      const horizontal = this.state.enemies.filter(e => e.alive && e.movementType === 'horizontal')
+      if (horizontal.length > 0) {
+        let hitEdge = false
+        for (const e of horizontal) {
+          e.x += baseSpeed * e.speedMultiplier * this.enemyDirection * dt
+          if (this.enemyDirection === 1 && e.x + ENTITY_SIZE > CANVAS_WIDTH) hitEdge = true
+          if (this.enemyDirection === -1 && e.x < 0) hitEdge = true
+        }
+        if (hitEdge) {
+          this.enemyDirection *= -1
+          for (const e of horizontal) e.y += ENTITY_SIZE
+        }
       }
     }
 
-    // Vertical enemies (asteroids): move straight down, disappear at bottom
+    // Vertical enemies (asteroids): always process regardless of base speed
     const vertical = this.state.enemies.filter(e => e.alive && e.movementType === 'vertical')
     for (const e of vertical) {
       e.y += baseSpeed * e.speedMultiplier * dt
@@ -250,14 +253,15 @@ export class GameLoop {
   }
 
   private handleEnemyShooting(dt: number): void {
-    // Process existing burst queue
+    // Process existing burst queue — use enemy's current position so bullets track movement
     for (const burst of this.burstQueue) {
       if (burst.remaining <= 0) continue
+      if (!burst.enemy.alive) { burst.remaining = 0; continue } // enemy died mid-burst
       burst.burstTimer -= dt * 1000
       if (burst.burstTimer <= 0) {
         this.state.enemyBullets.push({
-          x: burst.x + ENTITY_SIZE / 2 - BULLET_WIDTH / 2,
-          y: burst.y + ENTITY_SIZE,
+          x: burst.enemy.x + ENTITY_SIZE / 2 - BULLET_WIDTH / 2,
+          y: burst.enemy.y + ENTITY_SIZE,
           active: true,
         })
         burst.remaining--
@@ -274,8 +278,7 @@ export class GameLoop {
     if (shooters.length === 0) return
     const shooter = shooters[Math.floor(Math.random() * shooters.length)]
     this.burstQueue.push({
-      x: shooter.x,
-      y: shooter.y,
+      enemy: shooter,
       remaining: shooter.burstCount,
       burstTimer: 0,
     })
@@ -296,6 +299,7 @@ export class GameLoop {
           enemy.hp -= this.state.player.bulletDamage
           if (enemy.hp <= 0) {
             enemy.alive = false
+            enemy.killed = true
             this.state.score += 100
             this.state.player.xp += (enemy.xpValue ?? 1)
             if (this.state.player.xp >= this.state.player.xpToNext) {
@@ -350,7 +354,9 @@ export class GameLoop {
 
   private checkWinLose(): void {
     if (this.state.status === 'card_selection') return
-    if (this.state.enemies.length > 0 && this.state.enemies.every(e => !e.alive)) {
+    const allDead = this.state.enemies.length > 0 && this.state.enemies.every(e => !e.alive)
+    const anyKilled = this.state.enemies.some(e => e.killed)
+    if (allDead && anyKilled) {
       this.state.status = 'won'
       return
     }
