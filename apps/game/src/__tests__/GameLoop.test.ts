@@ -36,6 +36,24 @@ const mockRenderer: IRenderer = {
 describe('GameLoop', () => {
   beforeEach(() => jest.clearAllMocks())
 
+  // Helper: level with a single 1-hit enemy (hp=20 = 1 × bulletDamage) at player's x
+  function oneHitLevel(overrides: Partial<typeof BASE_PARAMS> = {}): LevelDefinition {
+    const playerX = CANVAS_WIDTH / 2 - ENTITY_SIZE / 2
+    return {
+      ...mockLevel,
+      params: { ...BASE_PARAMS, numberOfEnemies: 0, ...overrides },
+      entities: [{ entityTypeId: 'basic-enemy', x: playerX, y: 60, properties: { hp: 20 } }],
+    }
+  }
+
+  // Helper: fire N times, each time ticking enough frames for the bullet to reach y=60
+  function fireAndTick(loop: GameLoop, times: number): void {
+    for (let i = 0; i < times; i++) {
+      loop.fire()
+      for (let j = 0; j < 120; j++) loop.update(16)
+    }
+  }
+
   describe('constants', () => {
     it('CANVAS_WIDTH is 390', () => expect(CANVAS_WIDTH).toBe(390))
     it('CANVAS_HEIGHT is 844', () => expect(CANVAS_HEIGHT).toBe(844))
@@ -126,10 +144,8 @@ describe('GameLoop', () => {
 
     it('movement does nothing when status is not playing', () => {
       // Kill the only enemy to reach status='won', then verify movement is blocked
-      const level: LevelDefinition = { ...mockLevel, params: { ...BASE_PARAMS, numberOfEnemies: 1 } }
-      const loop = new GameLoop(level)
-      loop.fire()
-      for (let i = 0; i < 100; i++) loop.update(16) // enemy killed → status='won'
+      const loop = new GameLoop(oneHitLevel())
+      fireAndTick(loop, 1) // kill enemy → status='won'
       const x = loop.getState().player.x
       loop.moveLeft(100)
       loop.moveRight(100)
@@ -156,12 +172,11 @@ describe('GameLoop', () => {
     })
 
     it('fire does nothing when status is not playing', () => {
-      const level: LevelDefinition = { ...mockLevel, params: { ...BASE_PARAMS, numberOfEnemies: 1 } }
-      const loop = new GameLoop(level)
+      const loop = new GameLoop(oneHitLevel())
+      fireAndTick(loop, 1) // kill enemy → status='won'
+      const countBefore = loop.getState().playerBullets.length
       loop.fire()
-      for (let i = 0; i < 100; i++) loop.update(16) // enemy killed → status='won'
-      loop.fire()
-      expect(loop.getState().playerBullets).toHaveLength(1) // only the first bullet remains
+      expect(loop.getState().playerBullets).toHaveLength(countBefore)
     })
   })
 
@@ -189,17 +204,15 @@ describe('GameLoop', () => {
     // Bullet fires from player.x + 14 = 193, which is inside enemy x-range [179, 211]. ✓
 
     it('player bullet kills enemy and adds 100 to score', () => {
-      const loop = new GameLoop({ ...mockLevel, params: { ...BASE_PARAMS, numberOfEnemies: 1 } })
-      loop.fire()
-      for (let i = 0; i < 100; i++) loop.update(16) // ~1.6s, bullet crosses enemy at ~1.4s
+      const loop = new GameLoop(oneHitLevel())
+      fireAndTick(loop, 1)
       expect(loop.getState().enemies[0].alive).toBe(false)
       expect(loop.getState().score).toBe(100)
     })
 
     it('all enemies dead → status is won', () => {
-      const loop = new GameLoop({ ...mockLevel, params: { ...BASE_PARAMS, numberOfEnemies: 1 } })
-      loop.fire()
-      for (let i = 0; i < 100; i++) loop.update(16)
+      const loop = new GameLoop(oneHitLevel())
+      fireAndTick(loop, 1)
       expect(loop.getState().status).toBe('won')
     })
 
@@ -232,6 +245,53 @@ describe('GameLoop', () => {
       })
       for (let i = 0; i < 60000; i++) loop.update(16)
       expect(loop.getState().player.hp).toBeGreaterThanOrEqual(0)
+    })
+  })
+
+  describe('HP decrement collision', () => {
+    it('player bullet reduces enemy hp by bulletDamage (20)', () => {
+      const level: LevelDefinition = {
+        ...mockLevel,
+        params: { ...BASE_PARAMS, numberOfEnemies: 0 },
+        entities: [{ entityTypeId: 'basic-enemy', x: CANVAS_WIDTH / 2 - ENTITY_SIZE / 2, y: 60, properties: { hp: 100 } }],
+      }
+      const loop = new GameLoop(level)
+      loop.fire()
+      for (let i = 0; i < 120; i++) loop.update(16)
+      expect(loop.getState().enemies[0].hp).toBe(80)
+      expect(loop.getState().enemies[0].alive).toBe(true)
+    })
+
+    it('enemy dies only when hp reaches 0', () => {
+      const level: LevelDefinition = {
+        ...mockLevel,
+        params: { ...BASE_PARAMS, numberOfEnemies: 0 },
+        entities: [{ entityTypeId: 'basic-enemy', x: CANVAS_WIDTH / 2 - ENTITY_SIZE / 2, y: 60, properties: { hp: 40 } }],
+      }
+      const loop = new GameLoop(level)
+      fireAndTick(loop, 1) // hp=20, still alive
+      expect(loop.getState().enemies[0].alive).toBe(true)
+      fireAndTick(loop, 1) // hp=0, dead
+      expect(loop.getState().enemies[0].alive).toBe(false)
+    })
+
+    it('score is added only on kill (hp reaches 0)', () => {
+      const level: LevelDefinition = {
+        ...mockLevel,
+        params: { ...BASE_PARAMS, numberOfEnemies: 0 },
+        entities: [{ entityTypeId: 'basic-enemy', x: CANVAS_WIDTH / 2 - ENTITY_SIZE / 2, y: 60, properties: { hp: 40 } }],
+      }
+      const loop = new GameLoop(level)
+      fireAndTick(loop, 1)
+      expect(loop.getState().score).toBe(0) // not dead yet
+      fireAndTick(loop, 1)
+      expect(loop.getState().score).toBe(100)
+    })
+
+    it('xp is awarded only on kill', () => {
+      const loop = new GameLoop(oneHitLevel())
+      fireAndTick(loop, 1)
+      expect(loop.getState().player.xp).toBe(1)
     })
   })
 
@@ -328,9 +388,8 @@ describe('GameLoop', () => {
     })
 
     it('render does not draw dead enemies', () => {
-      const loop = new GameLoop({ ...mockLevel, params: { ...BASE_PARAMS, numberOfEnemies: 1 } })
-      loop.fire()
-      for (let i = 0; i < 100; i++) loop.update(16) // kill the enemy
+      const loop = new GameLoop(oneHitLevel())
+      fireAndTick(loop, 1) // kill the enemy
       jest.clearAllMocks()
       loop.render(mockRenderer)
       // Only player drawn (enemy dead, bullet inactive, status=won)
@@ -598,30 +657,29 @@ describe('GameLoop', () => {
     })
 
     it('enemy kill increments player.xp by 1 (default xpValue)', () => {
-      const loop = new GameLoop({ ...mockLevel, params: { ...BASE_PARAMS, numberOfEnemies: 1, fuelDrainRate: 0 } })
-      loop.fire()
-      for (let i = 0; i < 100; i++) loop.update(16)
+      const loop = new GameLoop(oneHitLevel({ fuelDrainRate: 0 }))
+      fireAndTick(loop, 1)
       expect(loop.getState().player.xp).toBe(1)
     })
 
     it('xp accumulates correctly across multiple kills before reaching xpToNext', () => {
-      // Place 3 enemies in the same column as the player so sequential bullets hit each one
+      // Place 3 enemies (hp=20, 1-hit kills) in the same column as the player
       const playerX = CANVAS_WIDTH / 2 - ENTITY_SIZE / 2
       const loop = new GameLoop({
         ...mockLevel,
         params: { ...BASE_PARAMS, numberOfEnemies: 0, fuelDrainRate: 0 },
         entities: [
-          { entityTypeId: 'basic-enemy', x: playerX, y: 60 },
-          { entityTypeId: 'basic-enemy', x: playerX, y: 110 },
-          { entityTypeId: 'basic-enemy', x: playerX, y: 160 },
+          { entityTypeId: 'basic-enemy', x: playerX, y: 60, properties: { hp: 20 } },
+          { entityTypeId: 'basic-enemy', x: playerX, y: 110, properties: { hp: 20 } },
+          { entityTypeId: 'basic-enemy', x: playerX, y: 160, properties: { hp: 20 } },
         ],
       })
       loop.fire()
-      for (let i = 0; i < 100; i++) loop.update(16)
+      for (let i = 0; i < 120; i++) loop.update(16)
       loop.fire()
-      for (let i = 0; i < 100; i++) loop.update(16)
+      for (let i = 0; i < 120; i++) loop.update(16)
       loop.fire()
-      for (let i = 0; i < 100; i++) loop.update(16)
+      for (let i = 0; i < 120; i++) loop.update(16)
       expect(loop.getState().player.xp).toBe(3)
     })
 
@@ -631,6 +689,7 @@ describe('GameLoop', () => {
         entityTypeId: 'basic-enemy',
         x: playerX,
         y: 20 + i * 42,
+        properties: { hp: 20 },
       }))
       const loop = new GameLoop({
         ...mockLevel,
@@ -648,6 +707,7 @@ describe('GameLoop', () => {
         entityTypeId: 'basic-enemy',
         x: playerX,
         y: 20 + i * 42,
+        properties: { hp: 20 },
       }))
       const loop = new GameLoop({
         ...mockLevel,
@@ -667,6 +727,7 @@ describe('GameLoop', () => {
         entityTypeId: 'basic-enemy',
         x: playerX,
         y: 20 + i * 42,
+        properties: { hp: 20 },
       }))
       const loop = new GameLoop({
         ...mockLevel,

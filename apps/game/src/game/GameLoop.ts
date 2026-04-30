@@ -246,14 +246,23 @@ export class GameLoop {
           bullet.y + BULLET_HEIGHT > enemy.y
         ) {
           bullet.active = false
-          enemy.alive = false
-          this.state.score += 100
-          this.state.player.xp += (enemy.xpValue ?? 1)
-          if (this.state.player.xp >= this.state.player.xpToNext) {
-            this.state.player.playerLevel += 1
-            this.state.player.xp = 0
-            this.state.status = 'card_selection'
+          enemy.hp -= this.state.player.bulletDamage
+          if (enemy.hp <= 0) {
+            enemy.alive = false
+            this.state.score += 100
+            this.state.player.xp += (enemy.xpValue ?? 1)
+            if (this.state.player.xp >= this.state.player.xpToNext) {
+              this.state.player.playerLevel += 1
+              this.state.player.xp = 0
+              this.state.status = 'card_selection'
+            }
+            if (enemy.dropsPickup === 'damage') {
+              if (Math.random() < 0.5) {
+                this.state.damagePickups.push({ x: enemy.x, y: enemy.y, active: true })
+              }
+            }
           }
+          break
         }
       }
     }
