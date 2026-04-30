@@ -37,7 +37,7 @@ describe('GameLoop', () => {
   beforeEach(() => jest.clearAllMocks())
 
   // Helper: level with a single 1-hit enemy (hp=20 = 1 × bulletDamage) at player's x
-  function oneHitLevel(overrides: Partial<typeof BASE_PARAMS> = {}): LevelDefinition {
+  function oneHitLevel(overrides: Partial<LevelDefinition['params']> = {}): LevelDefinition {
     const playerX = CANVAS_WIDTH / 2 - ENTITY_SIZE / 2
     return {
       ...mockLevel,
