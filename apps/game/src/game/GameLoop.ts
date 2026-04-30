@@ -159,6 +159,7 @@ export class GameLoop {
     this.handleEnemyShooting(dt)
     this.checkCollisions()
     this.checkFuelPickupCollisions()
+    this.checkDamagePickupCollisions()
     this.updateInvincibility(deltaMs)
     this.handleAutoFire(deltaMs)
     this.checkWinLose()
@@ -187,6 +188,22 @@ export class GameLoop {
       ) {
         pickup.active = false
         p.fuel = Math.min(PLAYER_INITIAL_FUEL, p.fuel + PLAYER_INITIAL_FUEL)
+      }
+    }
+  }
+
+  private checkDamagePickupCollisions(): void {
+    const p = this.state.player
+    for (const pickup of this.state.damagePickups) {
+      if (!pickup.active) continue
+      if (
+        p.x < pickup.x + ENTITY_SIZE &&
+        p.x + ENTITY_SIZE > pickup.x &&
+        p.y < pickup.y + ENTITY_SIZE &&
+        p.y + ENTITY_SIZE > pickup.y
+      ) {
+        pickup.active = false
+        p.bulletDamage += 2 * p.bulletDamage
       }
     }
   }
