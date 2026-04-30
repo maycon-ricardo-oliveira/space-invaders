@@ -67,11 +67,11 @@ export class GameLoop {
           y: e.y,
           alive: true,
           typeId: e.entityTypeId,
-          hp: 1,
-          xpValue: 1,
-          movementType: 'horizontal' as const,
-          burstCount: 0,
-          dropsPickup: null,
+          hp: (e.properties?.hp as number) ?? 100,
+          xpValue: (e.properties?.xpValue as number) ?? 1,
+          movementType: ((e.properties?.movementType as string) ?? 'horizontal') as 'horizontal' | 'vertical',
+          burstCount: (e.properties?.burstCount as number) ?? 1,
+          dropsPickup: ((e.properties?.dropsPickup as string) ?? null) as 'damage' | null,
         }))
     }
     const count = level.params.numberOfEnemies
@@ -90,10 +90,10 @@ export class GameLoop {
           y: 60 + row * (ENTITY_SIZE + gap),
           alive: true,
           typeId: 'basic-enemy',
-          hp: 1,
+          hp: 100,
           xpValue: 1,
           movementType: 'horizontal' as const,
-          burstCount: 0,
+          burstCount: 1,
           dropsPickup: null,
         })
         placed++

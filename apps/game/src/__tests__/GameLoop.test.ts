@@ -687,4 +687,50 @@ describe('GameLoop', () => {
       expect(state.player).toHaveProperty('playerLevel', 1)
     })
   })
+
+  describe('enemy properties from EntityPlacement', () => {
+    it('enemy reads hp from EntityPlacement.properties', () => {
+      const level: LevelDefinition = {
+        ...mockLevel,
+        entities: [{ entityTypeId: 'strong-enemy', x: 100, y: 50, properties: { hp: 200 } }],
+      }
+      const enemies = new GameLoop(level).getState().enemies
+      expect(enemies[0].hp).toBe(200)
+    })
+
+    it('enemy defaults to hp=100 when properties.hp is absent', () => {
+      const level: LevelDefinition = {
+        ...mockLevel,
+        entities: [{ entityTypeId: 'basic-enemy', x: 100, y: 50 }],
+      }
+      const enemies = new GameLoop(level).getState().enemies
+      expect(enemies[0].hp).toBe(100)
+    })
+
+    it('enemy reads movementType from properties, defaults to horizontal', () => {
+      const level: LevelDefinition = {
+        ...mockLevel,
+        entities: [
+          { entityTypeId: 'asteroid', x: 100, y: 50, properties: { movementType: 'vertical' } },
+          { entityTypeId: 'basic-enemy', x: 200, y: 50 },
+        ],
+      }
+      const enemies = new GameLoop(level).getState().enemies
+      expect(enemies[0].movementType).toBe('vertical')
+      expect(enemies[1].movementType).toBe('horizontal')
+    })
+
+    it('enemy reads burstCount from properties, defaults to 1', () => {
+      const level: LevelDefinition = {
+        ...mockLevel,
+        entities: [
+          { entityTypeId: 'fast-enemy', x: 100, y: 50, properties: { burstCount: 3 } },
+          { entityTypeId: 'basic-enemy', x: 200, y: 50 },
+        ],
+      }
+      const enemies = new GameLoop(level).getState().enemies
+      expect(enemies[0].burstCount).toBe(3)
+      expect(enemies[1].burstCount).toBe(1)
+    })
+  })
 })
