@@ -948,12 +948,5 @@ describe('GameLoop', () => {
       expect(loop.getState().player.bulletDamage).toBe(60) // 20 + 2*20
       expect(loop.getState().damagePickups.every(p => !p.active)).toBe(true)
     })
-
-    it('bulletDamage += 2 * bulletDamage (tripled: 20 becomes 60)', () => {
-      // Verify the formula works: new = old + 2*old = 3*old
-      const initial = 20
-      const after = initial + 2 * initial
-      expect(after).toBe(60)
-    })
   })
 })
