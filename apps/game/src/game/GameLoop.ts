@@ -137,10 +137,10 @@ export class GameLoop {
     )
   }
 
-  /** Called by GameScreen when the player's finger touches or lifts. */
+  /** Archero mechanic: true = auto-fire (stationary), false = stop firing (moving). */
   setFiring(active: boolean): void {
     this.isFiring = active
-    if (!active) this.autoFireTimer = 0  // reset so next touch fires immediately
+    if (!active) this.autoFireTimer = 0  // reset so firing resumes immediately on next stationary
   }
 
   fire(): void {
