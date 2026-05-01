@@ -451,6 +451,47 @@ describe('GameLoop', () => {
       loop.update(1)        // timer 0 - 1 = -1 ≤ 0 → bullet 2
       expect(loop.getState().playerBullets).toHaveLength(2)
     })
+
+    describe('Archero mechanic (stationary = fire, moving = stop)', () => {
+      it('player does not auto-fire by default — setFiring(true) must be called explicitly', () => {
+        // GameLoop starts with isFiring=false; GameScreen useEffect calls setFiring(true) on mount
+        const loop = new GameLoop(mockLevel)
+        for (let i = 0; i < 50; i++) loop.update(16)
+        expect(loop.getState().playerBullets).toHaveLength(0)
+      })
+
+      it('setFiring(true) (stationary) fires on the first update tick', () => {
+        // Mirrors GameScreen useEffect mount: loop.setFiring(true) → player auto-fires immediately
+        const loop = new GameLoop(mockLevel)
+        loop.setFiring(true)
+        loop.update(1)
+        expect(loop.getState().playerBullets).toHaveLength(1)
+      })
+
+      it('setFiring(false) (moving) stops auto-fire; no new bullets while dragging', () => {
+        // Mirrors onPanResponderGrant: loop.setFiring(false) stops auto-fire during movement
+        const loop = new GameLoop(mockLevel)
+        loop.setFiring(true)
+        loop.update(1)                           // bullet 1
+        const countBeforeMove = loop.getState().playerBullets.length
+        loop.setFiring(false)                    // finger down — moving
+        for (let i = 0; i < 50; i++) loop.update(16)
+        expect(loop.getState().playerBullets).toHaveLength(countBeforeMove)
+      })
+
+      it('setFiring(true) (stationary after movement) resumes firing immediately', () => {
+        // Mirrors onPanResponderRelease: timer resets to 0 on setFiring(false),
+        // so the very next update after setFiring(true) fires a bullet without waiting 400 ms
+        const loop = new GameLoop(mockLevel)
+        loop.setFiring(true)
+        loop.update(1)          // bullet 1
+        loop.setFiring(false)   // moving — timer reset to 0
+        loop.update(200)        // no fire while moving
+        loop.setFiring(true)    // finger lift — stationary
+        loop.update(1)          // fires immediately (timer was 0)
+        expect(loop.getState().playerBullets).toHaveLength(2)
+      })
+    })
   })
 
   describe('invincibility', () => {
