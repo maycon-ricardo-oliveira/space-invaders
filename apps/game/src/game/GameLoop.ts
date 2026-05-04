@@ -1,5 +1,5 @@
 import type { IRenderer, LevelDefinition } from '@si/level-engine'
-import type { Bullet, Enemy, FuelPickup, GameState } from './types'
+import type { Bullet, DamagePickup, Enemy, FuelPickup, GameState } from './types'
 
 export const CANVAS_WIDTH = 390
 export const CANVAS_HEIGHT = 844
@@ -25,6 +25,8 @@ export class GameLoop {
   private readonly params: LevelDefinition['params']
   private isFiring = false
   private autoFireTimer = 0
+  private burstQueue: Array<{ enemy: Enemy; remaining: number; burstTimer: number }> = []
+  private readonly BURST_INTERVAL_MS = 50
 
   constructor(level: LevelDefinition) {
     this.params = level.params
@@ -40,11 +42,13 @@ export class GameLoop {
         xp: 0,
         xpToNext: 10,
         playerLevel: 1,
+        bulletDamage: 20,
       },
       enemies: this.buildEnemies(level),
       playerBullets: [],
       enemyBullets: [],
       fuelPickups: this.buildFuelPickups(level),
+      damagePickups: [],
       score: 0,
       status: 'playing',
     }
@@ -64,9 +68,14 @@ export class GameLoop {
           x: e.x,
           y: e.y,
           alive: true,
+          killed: false,
           typeId: e.entityTypeId,
-          hp: 1,
-          xpValue: 1,
+          hp: (e.properties?.hp as number) ?? 100,
+          xpValue: (e.properties?.xpValue as number) ?? 1,
+          movementType: ((e.properties?.movementType as string) ?? 'horizontal') as 'horizontal' | 'vertical',
+          burstCount: (e.properties?.burstCount as number) ?? 1,
+          dropsPickup: ((e.properties?.dropsPickup as string) ?? null) as 'damage' | null,
+          speedMultiplier: (e.properties?.speedMultiplier as number) ?? 1.0,
         }))
     }
     const count = level.params.numberOfEnemies
@@ -84,9 +93,14 @@ export class GameLoop {
           x: startX + col * (ENTITY_SIZE + gap),
           y: 60 + row * (ENTITY_SIZE + gap),
           alive: true,
+          killed: false,
           typeId: 'basic-enemy',
-          hp: 1,
+          hp: 100,
           xpValue: 1,
+          movementType: 'horizontal' as const,
+          burstCount: 1,
+          dropsPickup: null,
+          speedMultiplier: 1.0,
         })
         placed++
       }
@@ -101,6 +115,7 @@ export class GameLoop {
       playerBullets: this.state.playerBullets.map(b => ({ ...b })),
       enemyBullets: this.state.enemyBullets.map(b => ({ ...b })),
       fuelPickups: this.state.fuelPickups.map(f => ({ ...f })),
+      damagePickups: this.state.damagePickups.map(d => ({ ...d })),
       score: this.state.score,
       status: this.state.status,
     }
@@ -122,10 +137,10 @@ export class GameLoop {
     )
   }
 
-  /** Called by GameScreen when the player's finger touches or lifts. */
+  /** Archero mechanic: true = auto-fire (stationary), false = stop firing (moving). */
   setFiring(active: boolean): void {
     this.isFiring = active
-    if (!active) this.autoFireTimer = 0  // reset so next touch fires immediately
+    if (!active) this.autoFireTimer = 0  // reset so firing resumes immediately on next stationary
   }
 
   fire(): void {
@@ -146,6 +161,7 @@ export class GameLoop {
     this.handleEnemyShooting(dt)
     this.checkCollisions()
     this.checkFuelPickupCollisions()
+    this.checkDamagePickupCollisions()
     this.updateInvincibility(deltaMs)
     this.handleAutoFire(deltaMs)
     this.checkWinLose()
@@ -178,6 +194,22 @@ export class GameLoop {
     }
   }
 
+  private checkDamagePickupCollisions(): void {
+    const p = this.state.player
+    for (const pickup of this.state.damagePickups) {
+      if (!pickup.active) continue
+      if (
+        p.x < pickup.x + ENTITY_SIZE &&
+        p.x + ENTITY_SIZE > pickup.x &&
+        p.y < pickup.y + ENTITY_SIZE &&
+        p.y + ENTITY_SIZE > pickup.y
+      ) {
+        pickup.active = false
+        p.bulletDamage += 2 * p.bulletDamage
+      }
+    }
+  }
+
   private moveBullets(dt: number): void {
     for (const b of this.state.playerBullets) {
       if (!b.active) continue
@@ -193,35 +225,62 @@ export class GameLoop {
   }
 
   private moveEnemies(dt: number): void {
-    const speed = this.params.enemySpeed * ENEMY_SPEED_SCALE
-    if (speed === 0) return
-    const alive = this.state.enemies.filter(e => e.alive)
-    if (alive.length === 0) return
-    let hitEdge = false
-    for (const e of alive) {
-      e.x += speed * this.enemyDirection * dt
-      if (this.enemyDirection === 1 && e.x + ENTITY_SIZE > CANVAS_WIDTH) hitEdge = true
-      if (this.enemyDirection === -1 && e.x < 0) hitEdge = true
-    }
-    if (hitEdge) {
-      this.enemyDirection *= -1
-      for (const e of alive) {
-        e.y += ENTITY_SIZE
+    const baseSpeed = this.params.enemySpeed * ENEMY_SPEED_SCALE
+
+    // Horizontal enemies: side-to-side bounce (skipped when speed is zero)
+    if (baseSpeed > 0) {
+      const horizontal = this.state.enemies.filter(e => e.alive && e.movementType === 'horizontal')
+      if (horizontal.length > 0) {
+        let hitEdge = false
+        for (const e of horizontal) {
+          e.x += baseSpeed * e.speedMultiplier * this.enemyDirection * dt
+          if (this.enemyDirection === 1 && e.x + ENTITY_SIZE > CANVAS_WIDTH) hitEdge = true
+          if (this.enemyDirection === -1 && e.x < 0) hitEdge = true
+        }
+        if (hitEdge) {
+          this.enemyDirection *= -1
+          for (const e of horizontal) e.y += ENTITY_SIZE
+        }
       }
+    }
+
+    // Vertical enemies (asteroids): always process regardless of base speed
+    const vertical = this.state.enemies.filter(e => e.alive && e.movementType === 'vertical')
+    for (const e of vertical) {
+      e.y += baseSpeed * e.speedMultiplier * dt
+      if (e.y > CANVAS_HEIGHT) e.alive = false
     }
   }
 
   private handleEnemyShooting(dt: number): void {
+    // Process existing burst queue — use enemy's current position so bullets track movement
+    for (const burst of this.burstQueue) {
+      if (burst.remaining <= 0) continue
+      if (!burst.enemy.alive) { burst.remaining = 0; continue } // enemy died mid-burst
+      burst.burstTimer -= dt * 1000
+      if (burst.burstTimer <= 0) {
+        this.state.enemyBullets.push({
+          x: burst.enemy.x + ENTITY_SIZE / 2 - BULLET_WIDTH / 2,
+          y: burst.enemy.y + ENTITY_SIZE,
+          active: true,
+        })
+        burst.remaining--
+        burst.burstTimer = this.BURST_INTERVAL_MS
+      }
+    }
+    this.burstQueue = this.burstQueue.filter(b => b.remaining > 0)
+
+    // Select new shooter
     this.shotCooldown -= dt
     if (this.shotCooldown > 0) return
     this.shotCooldown = this.params.enemyShotDelay
-    const alive = this.state.enemies.filter(e => e.alive)
-    if (alive.length === 0) return
-    const shooter = alive[Math.floor(Math.random() * alive.length)]
-    this.state.enemyBullets.push({
-      x: shooter.x + ENTITY_SIZE / 2 - BULLET_WIDTH / 2,
-      y: shooter.y + ENTITY_SIZE,
-      active: true,
+    const shooters = this.state.enemies.filter(e => e.alive && e.burstCount > 0)
+    if (shooters.length === 0) return
+    const shooter = shooters[Math.floor(Math.random() * shooters.length)]
+    this.burstQueue.push({
+      enemy: shooter,
+      remaining: shooter.burstCount,
+      burstTimer: 0,
     })
   }
 
@@ -237,14 +296,24 @@ export class GameLoop {
           bullet.y + BULLET_HEIGHT > enemy.y
         ) {
           bullet.active = false
-          enemy.alive = false
-          this.state.score += 100
-          this.state.player.xp += (enemy.xpValue ?? 1)
-          if (this.state.player.xp >= this.state.player.xpToNext) {
-            this.state.player.playerLevel += 1
-            this.state.player.xp = 0
-            this.state.status = 'card_selection'
+          enemy.hp -= this.state.player.bulletDamage
+          if (enemy.hp <= 0) {
+            enemy.alive = false
+            enemy.killed = true
+            this.state.score += 100
+            this.state.player.xp += (enemy.xpValue ?? 1)
+            if (this.state.player.xp >= this.state.player.xpToNext) {
+              this.state.player.playerLevel += 1
+              this.state.player.xp = 0
+              this.state.status = 'card_selection'
+            }
+            if (enemy.dropsPickup === 'damage') {
+              if (Math.random() < 0.5) {
+                this.state.damagePickups.push({ x: enemy.x, y: enemy.y, active: true })
+              }
+            }
           }
+          break
         }
       }
     }
@@ -285,7 +354,9 @@ export class GameLoop {
 
   private checkWinLose(): void {
     if (this.state.status === 'card_selection') return
-    if (this.state.enemies.length > 0 && this.state.enemies.every(e => !e.alive)) {
+    const allDead = this.state.enemies.length > 0 && this.state.enemies.every(e => !e.alive)
+    const anyKilled = this.state.enemies.some(e => e.killed)
+    if (allDead && anyKilled) {
       this.state.status = 'won'
       return
     }

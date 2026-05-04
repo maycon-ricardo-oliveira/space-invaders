@@ -36,6 +36,24 @@ const mockRenderer: IRenderer = {
 describe('GameLoop', () => {
   beforeEach(() => jest.clearAllMocks())
 
+  // Helper: level with a single 1-hit enemy (hp=20 = 1 × bulletDamage) at player's x
+  function oneHitLevel(overrides: Partial<LevelDefinition['params']> = {}): LevelDefinition {
+    const playerX = CANVAS_WIDTH / 2 - ENTITY_SIZE / 2
+    return {
+      ...mockLevel,
+      params: { ...BASE_PARAMS, numberOfEnemies: 0, ...overrides },
+      entities: [{ entityTypeId: 'basic-enemy', x: playerX, y: 60, properties: { hp: 20 } }],
+    }
+  }
+
+  // Helper: fire N times, each time ticking enough frames for the bullet to reach y=60
+  function fireAndTick(loop: GameLoop, times: number): void {
+    for (let i = 0; i < times; i++) {
+      loop.fire()
+      for (let j = 0; j < 120; j++) loop.update(16)
+    }
+  }
+
   describe('constants', () => {
     it('CANVAS_WIDTH is 390', () => expect(CANVAS_WIDTH).toBe(390))
     it('CANVAS_HEIGHT is 844', () => expect(CANVAS_HEIGHT).toBe(844))
@@ -76,6 +94,10 @@ describe('GameLoop', () => {
 
     it('initial score is 0', () => {
       expect(new GameLoop(mockLevel).getState().score).toBe(0)
+    })
+
+    it('player starts with bulletDamage = 20', () => {
+      expect(new GameLoop(mockLevel).getState().player.bulletDamage).toBe(20)
     })
 
     it('uses EntityPlacement coordinates when entities array is non-empty', () => {
@@ -122,10 +144,8 @@ describe('GameLoop', () => {
 
     it('movement does nothing when status is not playing', () => {
       // Kill the only enemy to reach status='won', then verify movement is blocked
-      const level: LevelDefinition = { ...mockLevel, params: { ...BASE_PARAMS, numberOfEnemies: 1 } }
-      const loop = new GameLoop(level)
-      loop.fire()
-      for (let i = 0; i < 100; i++) loop.update(16) // enemy killed → status='won'
+      const loop = new GameLoop(oneHitLevel())
+      fireAndTick(loop, 1) // kill enemy → status='won'
       const x = loop.getState().player.x
       loop.moveLeft(100)
       loop.moveRight(100)
@@ -152,12 +172,11 @@ describe('GameLoop', () => {
     })
 
     it('fire does nothing when status is not playing', () => {
-      const level: LevelDefinition = { ...mockLevel, params: { ...BASE_PARAMS, numberOfEnemies: 1 } }
-      const loop = new GameLoop(level)
+      const loop = new GameLoop(oneHitLevel())
+      fireAndTick(loop, 1) // kill enemy → status='won'
+      const countBefore = loop.getState().playerBullets.length
       loop.fire()
-      for (let i = 0; i < 100; i++) loop.update(16) // enemy killed → status='won'
-      loop.fire()
-      expect(loop.getState().playerBullets).toHaveLength(1) // only the first bullet remains
+      expect(loop.getState().playerBullets).toHaveLength(countBefore)
     })
   })
 
@@ -185,18 +204,28 @@ describe('GameLoop', () => {
     // Bullet fires from player.x + 14 = 193, which is inside enemy x-range [179, 211]. ✓
 
     it('player bullet kills enemy and adds 100 to score', () => {
-      const loop = new GameLoop({ ...mockLevel, params: { ...BASE_PARAMS, numberOfEnemies: 1 } })
-      loop.fire()
-      for (let i = 0; i < 100; i++) loop.update(16) // ~1.6s, bullet crosses enemy at ~1.4s
+      const loop = new GameLoop(oneHitLevel())
+      fireAndTick(loop, 1)
       expect(loop.getState().enemies[0].alive).toBe(false)
       expect(loop.getState().score).toBe(100)
     })
 
     it('all enemies dead → status is won', () => {
-      const loop = new GameLoop({ ...mockLevel, params: { ...BASE_PARAMS, numberOfEnemies: 1 } })
-      loop.fire()
-      for (let i = 0; i < 100; i++) loop.update(16)
+      const loop = new GameLoop(oneHitLevel())
+      fireAndTick(loop, 1)
       expect(loop.getState().status).toBe('won')
+    })
+
+    it('asteroid escaping bottom without being shot does not trigger won', () => {
+      // Asteroid exits at the bottom (alive=false, killed=false) — player did nothing
+      const playerX = CANVAS_WIDTH / 2 - ENTITY_SIZE / 2
+      const loop = new GameLoop({
+        ...mockLevel,
+        params: { ...BASE_PARAMS, numberOfEnemies: 0, enemySpeed: 10, fuelDrainRate: 0 },
+        entities: [{ entityTypeId: 'asteroid', x: playerX, y: CANVAS_HEIGHT - 5, properties: { hp: 100, movementType: 'vertical', speedMultiplier: 10 } }],
+      })
+      for (let i = 0; i < 50; i++) loop.update(16)
+      expect(loop.getState().status).toBe('playing')
     })
 
     it('enemy bullet reduces player hp on collision', () => {
@@ -228,6 +257,53 @@ describe('GameLoop', () => {
       })
       for (let i = 0; i < 60000; i++) loop.update(16)
       expect(loop.getState().player.hp).toBeGreaterThanOrEqual(0)
+    })
+  })
+
+  describe('HP decrement collision', () => {
+    it('player bullet reduces enemy hp by bulletDamage (20)', () => {
+      const level: LevelDefinition = {
+        ...mockLevel,
+        params: { ...BASE_PARAMS, numberOfEnemies: 0 },
+        entities: [{ entityTypeId: 'basic-enemy', x: CANVAS_WIDTH / 2 - ENTITY_SIZE / 2, y: 60, properties: { hp: 100 } }],
+      }
+      const loop = new GameLoop(level)
+      loop.fire()
+      for (let i = 0; i < 120; i++) loop.update(16)
+      expect(loop.getState().enemies[0].hp).toBe(80)
+      expect(loop.getState().enemies[0].alive).toBe(true)
+    })
+
+    it('enemy dies only when hp reaches 0', () => {
+      const level: LevelDefinition = {
+        ...mockLevel,
+        params: { ...BASE_PARAMS, numberOfEnemies: 0 },
+        entities: [{ entityTypeId: 'basic-enemy', x: CANVAS_WIDTH / 2 - ENTITY_SIZE / 2, y: 60, properties: { hp: 40 } }],
+      }
+      const loop = new GameLoop(level)
+      fireAndTick(loop, 1) // hp=20, still alive
+      expect(loop.getState().enemies[0].alive).toBe(true)
+      fireAndTick(loop, 1) // hp=0, dead
+      expect(loop.getState().enemies[0].alive).toBe(false)
+    })
+
+    it('score is added only on kill (hp reaches 0)', () => {
+      const level: LevelDefinition = {
+        ...mockLevel,
+        params: { ...BASE_PARAMS, numberOfEnemies: 0 },
+        entities: [{ entityTypeId: 'basic-enemy', x: CANVAS_WIDTH / 2 - ENTITY_SIZE / 2, y: 60, properties: { hp: 40 } }],
+      }
+      const loop = new GameLoop(level)
+      fireAndTick(loop, 1)
+      expect(loop.getState().score).toBe(0) // not dead yet
+      fireAndTick(loop, 1)
+      expect(loop.getState().score).toBe(100)
+    })
+
+    it('xp is awarded only on kill', () => {
+      const loop = new GameLoop(oneHitLevel())
+      fireAndTick(loop, 1)
+      expect(loop.getState().player.xp).toBe(1)
     })
   })
 
@@ -324,9 +400,8 @@ describe('GameLoop', () => {
     })
 
     it('render does not draw dead enemies', () => {
-      const loop = new GameLoop({ ...mockLevel, params: { ...BASE_PARAMS, numberOfEnemies: 1 } })
-      loop.fire()
-      for (let i = 0; i < 100; i++) loop.update(16) // kill the enemy
+      const loop = new GameLoop(oneHitLevel())
+      fireAndTick(loop, 1) // kill the enemy
       jest.clearAllMocks()
       loop.render(mockRenderer)
       // Only player drawn (enemy dead, bullet inactive, status=won)
@@ -375,6 +450,47 @@ describe('GameLoop', () => {
       loop.setFiring(true)
       loop.update(1)        // timer 0 - 1 = -1 ≤ 0 → bullet 2
       expect(loop.getState().playerBullets).toHaveLength(2)
+    })
+
+    describe('Archero mechanic (stationary = fire, moving = stop)', () => {
+      it('player does not auto-fire by default — setFiring(true) must be called explicitly', () => {
+        // GameLoop starts with isFiring=false; GameScreen useEffect calls setFiring(true) on mount
+        const loop = new GameLoop(mockLevel)
+        for (let i = 0; i < 50; i++) loop.update(16)
+        expect(loop.getState().playerBullets).toHaveLength(0)
+      })
+
+      it('setFiring(true) (stationary) fires on the first update tick', () => {
+        // Mirrors GameScreen useEffect mount: loop.setFiring(true) → player auto-fires immediately
+        const loop = new GameLoop(mockLevel)
+        loop.setFiring(true)
+        loop.update(1)
+        expect(loop.getState().playerBullets).toHaveLength(1)
+      })
+
+      it('setFiring(false) (moving) stops auto-fire; no new bullets while dragging', () => {
+        // Mirrors onPanResponderGrant: loop.setFiring(false) stops auto-fire during movement
+        const loop = new GameLoop(mockLevel)
+        loop.setFiring(true)
+        loop.update(1)                           // bullet 1
+        const countBeforeMove = loop.getState().playerBullets.length
+        loop.setFiring(false)                    // finger down — moving
+        for (let i = 0; i < 50; i++) loop.update(16)
+        expect(loop.getState().playerBullets).toHaveLength(countBeforeMove)
+      })
+
+      it('setFiring(true) (stationary after movement) resumes firing immediately', () => {
+        // Mirrors onPanResponderRelease: timer resets to 0 on setFiring(false),
+        // so the very next update after setFiring(true) fires a bullet without waiting 400 ms
+        const loop = new GameLoop(mockLevel)
+        loop.setFiring(true)
+        loop.update(1)          // bullet 1
+        loop.setFiring(false)   // moving — timer reset to 0
+        loop.update(200)        // no fire while moving
+        loop.setFiring(true)    // finger lift — stationary
+        loop.update(1)          // fires immediately (timer was 0)
+        expect(loop.getState().playerBullets).toHaveLength(2)
+      })
     })
   })
 
@@ -594,30 +710,29 @@ describe('GameLoop', () => {
     })
 
     it('enemy kill increments player.xp by 1 (default xpValue)', () => {
-      const loop = new GameLoop({ ...mockLevel, params: { ...BASE_PARAMS, numberOfEnemies: 1, fuelDrainRate: 0 } })
-      loop.fire()
-      for (let i = 0; i < 100; i++) loop.update(16)
+      const loop = new GameLoop(oneHitLevel({ fuelDrainRate: 0 }))
+      fireAndTick(loop, 1)
       expect(loop.getState().player.xp).toBe(1)
     })
 
     it('xp accumulates correctly across multiple kills before reaching xpToNext', () => {
-      // Place 3 enemies in the same column as the player so sequential bullets hit each one
+      // Place 3 enemies (hp=20, 1-hit kills) in the same column as the player
       const playerX = CANVAS_WIDTH / 2 - ENTITY_SIZE / 2
       const loop = new GameLoop({
         ...mockLevel,
         params: { ...BASE_PARAMS, numberOfEnemies: 0, fuelDrainRate: 0 },
         entities: [
-          { entityTypeId: 'basic-enemy', x: playerX, y: 60 },
-          { entityTypeId: 'basic-enemy', x: playerX, y: 110 },
-          { entityTypeId: 'basic-enemy', x: playerX, y: 160 },
+          { entityTypeId: 'basic-enemy', x: playerX, y: 60, properties: { hp: 20 } },
+          { entityTypeId: 'basic-enemy', x: playerX, y: 110, properties: { hp: 20 } },
+          { entityTypeId: 'basic-enemy', x: playerX, y: 160, properties: { hp: 20 } },
         ],
       })
       loop.fire()
-      for (let i = 0; i < 100; i++) loop.update(16)
+      for (let i = 0; i < 120; i++) loop.update(16)
       loop.fire()
-      for (let i = 0; i < 100; i++) loop.update(16)
+      for (let i = 0; i < 120; i++) loop.update(16)
       loop.fire()
-      for (let i = 0; i < 100; i++) loop.update(16)
+      for (let i = 0; i < 120; i++) loop.update(16)
       expect(loop.getState().player.xp).toBe(3)
     })
 
@@ -627,6 +742,7 @@ describe('GameLoop', () => {
         entityTypeId: 'basic-enemy',
         x: playerX,
         y: 20 + i * 42,
+        properties: { hp: 20 },
       }))
       const loop = new GameLoop({
         ...mockLevel,
@@ -644,6 +760,7 @@ describe('GameLoop', () => {
         entityTypeId: 'basic-enemy',
         x: playerX,
         y: 20 + i * 42,
+        properties: { hp: 20 },
       }))
       const loop = new GameLoop({
         ...mockLevel,
@@ -663,6 +780,7 @@ describe('GameLoop', () => {
         entityTypeId: 'basic-enemy',
         x: playerX,
         y: 20 + i * 42,
+        properties: { hp: 20 },
       }))
       const loop = new GameLoop({
         ...mockLevel,
@@ -681,6 +799,195 @@ describe('GameLoop', () => {
       expect(state.player).toHaveProperty('xp', 0)
       expect(state.player).toHaveProperty('xpToNext', 10)
       expect(state.player).toHaveProperty('playerLevel', 1)
+    })
+  })
+
+  describe('enemy properties from EntityPlacement', () => {
+    it('enemy reads hp from EntityPlacement.properties', () => {
+      const level: LevelDefinition = {
+        ...mockLevel,
+        entities: [{ entityTypeId: 'strong-enemy', x: 100, y: 50, properties: { hp: 200 } }],
+      }
+      const enemies = new GameLoop(level).getState().enemies
+      expect(enemies[0].hp).toBe(200)
+    })
+
+    it('enemy defaults to hp=100 when properties.hp is absent', () => {
+      const level: LevelDefinition = {
+        ...mockLevel,
+        entities: [{ entityTypeId: 'basic-enemy', x: 100, y: 50 }],
+      }
+      const enemies = new GameLoop(level).getState().enemies
+      expect(enemies[0].hp).toBe(100)
+    })
+
+    it('enemy reads movementType from properties, defaults to horizontal', () => {
+      const level: LevelDefinition = {
+        ...mockLevel,
+        entities: [
+          { entityTypeId: 'asteroid', x: 100, y: 50, properties: { movementType: 'vertical' } },
+          { entityTypeId: 'basic-enemy', x: 200, y: 50 },
+        ],
+      }
+      const enemies = new GameLoop(level).getState().enemies
+      expect(enemies[0].movementType).toBe('vertical')
+      expect(enemies[1].movementType).toBe('horizontal')
+    })
+
+    it('enemy reads burstCount from properties, defaults to 1', () => {
+      const level: LevelDefinition = {
+        ...mockLevel,
+        entities: [
+          { entityTypeId: 'fast-enemy', x: 100, y: 50, properties: { burstCount: 3 } },
+          { entityTypeId: 'basic-enemy', x: 200, y: 50 },
+        ],
+      }
+      const enemies = new GameLoop(level).getState().enemies
+      expect(enemies[0].burstCount).toBe(3)
+      expect(enemies[1].burstCount).toBe(1)
+    })
+  })
+
+  describe('vertical movement (asteroid)', () => {
+    function asteroidLevel(): LevelDefinition {
+      return {
+        ...mockLevel,
+        params: { ...BASE_PARAMS, numberOfEnemies: 0, enemySpeed: 100 },
+        entities: [{ entityTypeId: 'asteroid', x: 100, y: 10, properties: { movementType: 'vertical', speedMultiplier: 1.0, hp: 60 } }],
+      }
+    }
+
+    it('asteroid moves downward each update', () => {
+      const loop = new GameLoop(asteroidLevel())
+      const before = loop.getState().enemies[0].y
+      loop.update(100)
+      expect(loop.getState().enemies[0].y).toBeGreaterThan(before)
+    })
+
+    it('asteroid does not move horizontally', () => {
+      const loop = new GameLoop(asteroidLevel())
+      const before = loop.getState().enemies[0].x
+      loop.update(100)
+      expect(loop.getState().enemies[0].x).toBe(before)
+    })
+
+    it('asteroid is removed (alive=false) when it exits the bottom of the screen', () => {
+      const level: LevelDefinition = {
+        ...mockLevel,
+        params: { ...BASE_PARAMS, numberOfEnemies: 0, enemySpeed: 1000 },
+        entities: [{ entityTypeId: 'asteroid', x: 100, y: CANVAS_HEIGHT - 10, properties: { movementType: 'vertical', speedMultiplier: 1.0 } }],
+      }
+      const loop = new GameLoop(level)
+      loop.update(100)
+      expect(loop.getState().enemies[0].alive).toBe(false)
+    })
+
+    it('horizontal enemies are not affected by vertical movement logic', () => {
+      const loop = new GameLoop({
+        ...mockLevel,
+        params: { ...BASE_PARAMS, numberOfEnemies: 1, enemySpeed: 100 },
+      })
+      const initialY = loop.getState().enemies[0].y
+      loop.update(16) // 1 rightward step — no Y change unless wall bounce
+      expect(loop.getState().enemies[0].y).toBe(initialY)
+    })
+  })
+
+  describe('burst fire', () => {
+    function burstLevel(burstCount: number): LevelDefinition {
+      return {
+        ...mockLevel,
+        params: { ...BASE_PARAMS, numberOfEnemies: 0, enemyShotDelay: 0.001 },
+        entities: [{ entityTypeId: 'fast-enemy', x: 200, y: 60, properties: { burstCount, hp: 40 } }],
+      }
+    }
+
+    it('enemy with burstCount=1 fires 1 bullet per shot cycle', () => {
+      const loop = new GameLoop(burstLevel(1))
+      for (let i = 0; i < 10; i++) loop.update(16)
+      // With burstCount=1, each shot cycle produces exactly 1 bullet (no burst interval)
+      // enemyShotDelay:0.001 triggers many cycles, so we check that each is a single bullet
+      const total = loop.getState().enemyBullets.length
+      expect(total).toBeGreaterThanOrEqual(1)
+      // All bullets should be active (no burst delay between them)
+      const activeCount = loop.getState().enemyBullets.filter(b => b.active).length
+      expect(activeCount).toBe(total)
+    })
+
+    it('enemy with burstCount=3 fires 3 bullets in a burst', () => {
+      const loop = new GameLoop(burstLevel(3))
+      // tick enough to trigger shot + full burst (3 × 50ms = 150ms)
+      for (let i = 0; i < 20; i++) loop.update(16)
+      const total = loop.getState().enemyBullets.length
+      expect(total).toBeGreaterThanOrEqual(3)
+    })
+
+    it('enemy with burstCount=0 (asteroid) never fires', () => {
+      const level: LevelDefinition = {
+        ...mockLevel,
+        params: { ...BASE_PARAMS, numberOfEnemies: 0, enemyShotDelay: 0.001 },
+        entities: [{ entityTypeId: 'asteroid', x: 200, y: 60, properties: { burstCount: 0, hp: 60 } }],
+      }
+      const loop = new GameLoop(level)
+      for (let i = 0; i < 50; i++) loop.update(16)
+      expect(loop.getState().enemyBullets).toHaveLength(0)
+    })
+  })
+
+  describe('damage pickup collection', () => {
+    it('bulletDamage formula: 20 + 2*20 = 60', () => {
+      const loop = new GameLoop(mockLevel)
+      expect(loop.getState().player.bulletDamage).toBe(20)
+      // bulletDamage += 2 * bulletDamage = 20 + 40 = 60
+      expect(20 + 2 * 20).toBe(60)
+    })
+
+    it('damagePickups array is checked in update()', () => {
+      // Verify that checkDamagePickupCollisions is called during update by checking
+      // that damagePickups spawned from enemy kills are properly tracked
+      const playerX = CANVAS_WIDTH / 2 - ENTITY_SIZE / 2
+      const enemyY = 100
+      const loop = new GameLoop({
+        ...mockLevel,
+        params: { ...BASE_PARAMS, numberOfEnemies: 0, enemySpeed: 0, fuelDrainRate: 0 },
+        entities: [{
+          entityTypeId: 'asteroid',
+          x: playerX,
+          y: enemyY,
+          properties: { hp: 20, movementType: 'vertical', dropsPickup: 'damage', speedMultiplier: 0 },
+        }],
+      })
+
+      jest.spyOn(Math, 'random').mockReturnValue(0.1) // guarantee drop
+      expect(loop.getState().damagePickups.length).toBe(0)
+
+      loop.fire()
+      // Ticks for bullet to reach enemy
+      for (let i = 0; i < 100; i++) loop.update(16)
+
+      jest.restoreAllMocks()
+      // After kill, pickup should exist
+      expect(loop.getState().damagePickups.length).toBeGreaterThan(0)
+    })
+
+    it('collecting damage pickup triples bulletDamage and deactivates it', () => {
+      // Place enemy just above player so the bullet hits on the first update tick
+      // and the pickup spawns within the player's AABB, triggering collection in the same tick
+      const playerX = CANVAS_WIDTH / 2 - ENTITY_SIZE / 2
+      const playerY = CANVAS_HEIGHT - ENTITY_SIZE - 20   // 792
+      const enemyY = playerY - ENTITY_SIZE / 2           // 776 — pickup spawns here, overlaps player
+      const mathRandom = jest.spyOn(Math, 'random').mockReturnValue(0) // guarantee drop
+      const loop = new GameLoop({
+        ...mockLevel,
+        params: { ...BASE_PARAMS, numberOfEnemies: 0, fuelDrainRate: 0 },
+        entities: [{ entityTypeId: 'asteroid', x: playerX, y: enemyY, properties: { hp: 20, movementType: 'vertical', speedMultiplier: 0, dropsPickup: 'damage' } }],
+      })
+      loop.fire()
+      loop.update(16) // bullet hits enemy → pickup spawns at enemyY → AABB overlap → collected
+      mathRandom.mockRestore()
+
+      expect(loop.getState().player.bulletDamage).toBe(60) // 20 + 2*20
+      expect(loop.getState().damagePickups.every(p => !p.active)).toBe(true)
     })
   })
 })

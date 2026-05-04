@@ -69,7 +69,7 @@ export function GameScreen({ levelIndex, totalLevels, onBack }: Props) {
         }
         joystickRef.current = j
         setJoystick(j)
-        loop.setFiring(true)
+        loop.setFiring(false) // Archero: moving = stop firing
       },
       onPanResponderMove: (evt) => {
         if (!joystickRef.current) return
@@ -84,12 +84,12 @@ export function GameScreen({ levelIndex, totalLevels, onBack }: Props) {
       onPanResponderRelease: () => {
         joystickRef.current = null
         setJoystick(null)
-        loop.setFiring(false)
+        loop.setFiring(true) // Archero: stationary = auto-fire
       },
       onPanResponderTerminate: () => {
         joystickRef.current = null
         setJoystick(null)
-        loop.setFiring(false)
+        loop.setFiring(true) // Archero: stationary = auto-fire
       },
     }),
   ).current
@@ -171,15 +171,17 @@ export function GameScreen({ levelIndex, totalLevels, onBack }: Props) {
   useEffect(() => {
     isPlayingRef.current = true
     lastTimeRef.current = null
+    loop.setFiring(true) // Archero: auto-fire from start when stationary
     rafRef.current = requestAnimationFrame(tick)
     return () => {
       isPlayingRef.current = false
+      loop.setFiring(false)
       if (rafRef.current !== null) {
         cancelAnimationFrame(rafRef.current)
         rafRef.current = null
       }
     }
-  }, [tick])
+  }, [tick, loop])
 
   const isPlaying = status === 'playing'
   const hpPct = hud.maxHp > 0 ? (hud.hp / hud.maxHp) * 100 : 0

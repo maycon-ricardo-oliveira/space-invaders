@@ -10,9 +10,10 @@ import { SuggestedComposition } from './CalibrationPanel/SuggestedComposition'
 import { saveLevels } from '../app/actions'
 
 const ENTITY_TYPES: EntityType[] = [
-  { id: 'basic-enemy', label: 'Basic Enemy', icon: '👾', properties: { pointValue: 100, health: 1 } },
-  { id: 'fast-enemy',  label: 'Fast Enemy',  icon: '🚀', properties: { pointValue: 200, health: 1 } },
-  { id: 'tank-enemy',  label: 'Tank Enemy',  icon: '🛡️', properties: { pointValue: 500, health: 3 } },
+  { id: 'basic-enemy',  label: 'Basic Enemy',  icon: '👾', properties: { pointValue: 100, health: 1 } },
+  { id: 'fast-enemy',   label: 'Fast Enemy',   icon: '🚀', properties: { pointValue: 200, health: 1 } },
+  { id: 'strong-enemy', label: 'Strong Enemy', icon: '🛡️', properties: { pointValue: 500, health: 3 } },
+  { id: 'asteroid',     label: 'Asteroid',     icon: '🪨', properties: { pointValue: 50,  health: 3 } },
 ]
 
 interface Props {
