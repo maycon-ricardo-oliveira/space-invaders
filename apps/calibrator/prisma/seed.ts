@@ -1,6 +1,11 @@
 import { PrismaClient } from '@prisma/client'
+import { PrismaPg } from '@prisma/adapter-pg'
+import * as dotenv from 'dotenv'
+dotenv.config()
 
-const prisma = new PrismaClient()
+const connectionString = process.env.DATABASE_URL!
+const adapter = new PrismaPg({ connectionString })
+const prisma = new PrismaClient({ adapter })
 
 async function main() {
   const world = await prisma.world.upsert({
