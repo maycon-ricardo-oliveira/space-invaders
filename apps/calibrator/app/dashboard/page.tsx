@@ -13,8 +13,20 @@ export default async function DashboardPage() {
     )
   }
   const phases = await getPhases(worlds[0].id)
-  if (phases.length === 0) redirect(`/dashboard`)
+  if (phases.length === 0) {
+    return (
+      <div style={{ padding: 40, color: '#666' }}>
+        No phases in world &quot;{worlds[0].name}&quot;. Add a phase to get started.
+      </div>
+    )
+  }
   const levels = await getLevels(phases[0].id)
-  if (levels.length === 0) redirect(`/dashboard`)
+  if (levels.length === 0) {
+    return (
+      <div style={{ padding: 40, color: '#666' }}>
+        No levels in phase &quot;{phases[0].name}&quot;. Add a level to get started.
+      </div>
+    )
+  }
   redirect(`/dashboard/${worlds[0].id}/${phases[0].id}/${levels[0].id}`)
 }

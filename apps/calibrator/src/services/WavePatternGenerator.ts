@@ -84,12 +84,10 @@ export function generatePattern(
     }
     case 'zigzag': {
       const step = Math.max(1, Math.ceil(cols / n))
-      let placed = 0
       for (let i = 0; i < n; i++) {
         const c = (i * step) % cols
         const r = (i % 2 === 0) ? 0 : Math.min(1, rows - 1)
         grid[r][c] = entity
-        placed++
       }
       break
     }

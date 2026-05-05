@@ -30,9 +30,10 @@ export function Sidebar({ worlds, selectedWorldId, selectedPhaseId }: SidebarPro
 
   useEffect(() => {
     if (!worldId) return
+    setPhaseId(undefined)  // reset when world changes
     getPhases(worldId).then(p => {
       setPhases(p as Phase[])
-      if (!phaseId && p.length > 0) setPhaseId(p[0].id)
+      if (p.length > 0) setPhaseId(p[0].id)
     })
   }, [worldId])
 

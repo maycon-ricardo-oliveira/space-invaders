@@ -1,6 +1,6 @@
 // apps/calibrator/src/components/WaveEditor/EditorPane.tsx
 'use client'
-import React, { useState, useCallback, useTransition } from 'react'
+import React, { useState, useCallback, useTransition, useEffect } from 'react'
 import { WaveStatsPanel } from '../WaveStatsPanel/WaveStatsPanel'
 import { WaveEditor } from './WaveEditor'
 import { updateWaveAction } from '../../../app/actions/wave.actions'
@@ -33,6 +33,12 @@ export function EditorPane({ level, initialWave, patterns }: EditorPaneProps) {
   // Debounce timer ref
   const debounceRef = React.useRef<ReturnType<typeof setTimeout> | null>(null)
 
+  useEffect(() => {
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current)
+    }
+  }, [])
+
   const handleWaveChange = useCallback((waveId: number, grid: Grid) => {
     if (debounceRef.current) clearTimeout(debounceRef.current)
     debounceRef.current = setTimeout(() => {
@@ -50,8 +56,12 @@ export function EditorPane({ level, initialWave, patterns }: EditorPaneProps) {
   }, [level.id])
 
   async function handleSavePattern(name: string, grid: Grid) {
-    const saved = await savePatternAction({ name, grid })
-    setUserPatterns(prev => [saved as UserPattern, ...prev])
+    try {
+      const saved = await savePatternAction({ name, grid })
+      setUserPatterns(prev => [saved as UserPattern, ...prev])
+    } catch (e) {
+      console.error('Failed to save pattern:', e)
+    }
   }
 
   if (!selectedWave) return <div style={{ padding: 40, color: '#555' }}>No waves. Add a wave to begin.</div>
