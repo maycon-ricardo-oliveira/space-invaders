@@ -16,6 +16,7 @@ jest.mock('../lib/prisma', () => ({
 
 import prisma from '../lib/prisma'
 import { getWaves, createWave, updateWave, deleteWave, reorderWaves } from '../services/WaveService'
+import type { Grid } from '../lib/schemas'
 
 const mock = prisma as unknown as {
   wave: { findMany: jest.Mock; create: jest.Mock; update: jest.Mock; delete: jest.Mock }
@@ -51,7 +52,7 @@ describe('createWave', () => {
 
 describe('updateWave', () => {
   it('updates wave grid', async () => {
-    const newGrid = [['grunt', null, null, null, null, null, null, null, null, null, null, null]]
+    const newGrid: Grid = [['grunt', null, null, null, null, null, null, null, null, null, null, null]]
     mock.wave.update.mockResolvedValue({ ...fakeWave, grid: newGrid })
     const result = await updateWave(1, { order: 1, delay: 3.0, grid: newGrid })
     expect(mock.wave.update).toHaveBeenCalledWith({ where: { id: 1 }, data: { order: 1, delay: 3.0, grid: newGrid } })
