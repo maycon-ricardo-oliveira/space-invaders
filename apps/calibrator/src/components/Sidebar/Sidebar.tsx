@@ -1,8 +1,8 @@
 'use client'
 import React, { useState, useEffect } from 'react'
 import { getPhases, createPhaseAction, deletePhaseAction } from '../../../app/actions/phase.actions'
-import { getLevels } from '../../../app/actions/level.actions'
-import { useRouter } from 'next/navigation'
+import { getLevels, createLevelAction, deleteLevelAction } from '../../../app/actions/level.actions'
+import { useRouter, usePathname } from 'next/navigation'
 
 type World = { id: number; name: string; index: number; image: string | null; parallaxTheme: string | null }
 type Phase = { id: number; worldId: number; name: string; index: number }
@@ -12,6 +12,11 @@ interface SidebarProps {
   worlds: World[]
   selectedWorldId?: number
   selectedPhaseId?: number
+}
+
+const LEVEL_DEFAULTS = {
+  enemySpeed: 2.0, shotDelay: 1.5, fuelDrain: 8.0,
+  enemyShotSpeed: 4.0, enemyAngerDelay: 15.0, enemySpawnDelay: 1.0, hasPowerUps: true,
 }
 
 const s = {
@@ -34,16 +39,19 @@ const s = {
     marginBottom: 2,
   }),
   deleteBtn: { color: '#555', fontSize: 12, cursor: 'pointer', background: 'none', border: 'none', padding: '0 2px', lineHeight: 1 },
+  emptyHint: { color: '#555', fontSize: 12, padding: '4px 0' },
 }
 
 export function Sidebar({ worlds, selectedWorldId, selectedPhaseId }: SidebarProps) {
   const router = useRouter()
+  const pathname = usePathname()
   const [worldId, setWorldId] = useState(selectedWorldId ?? worlds[0]?.id)
   const [phases, setPhases] = useState<Phase[]>([])
   const [phaseId, setPhaseId] = useState(selectedPhaseId)
   const [levels, setLevels] = useState<Level[]>([])
-  const [newPhaseName, setNewPhaseName] = useState('')
-  const [addingPhase, setAddingPhase] = useState(false)
+
+  // Derive active level from URL: /dashboard/[worldId]/[phaseId]/[levelId]
+  const activeLevelId = Number(pathname.split('/')[4]) || undefined
 
   useEffect(() => {
     if (!worldId) return
@@ -55,7 +63,7 @@ export function Sidebar({ worlds, selectedWorldId, selectedPhaseId }: SidebarPro
   }, [worldId])
 
   useEffect(() => {
-    if (!phaseId) return
+    if (!phaseId) { setLevels([]); return }
     getLevels(phaseId).then(l => setLevels(l as Level[]))
   }, [phaseId])
 
@@ -64,13 +72,12 @@ export function Sidebar({ worlds, selectedWorldId, selectedPhaseId }: SidebarPro
   }
 
   async function handleCreatePhase() {
-    if (!newPhaseName.trim() || !worldId) return
-    const nextIndex = phases.length
-    await createPhaseAction(worldId, { name: newPhaseName.trim(), index: nextIndex })
-    setNewPhaseName('')
-    setAddingPhase(false)
+    if (!worldId) return
+    const name = `Phase ${phases.length + 1}`
+    await createPhaseAction(worldId, { name, index: phases.length })
     const updated = await getPhases(worldId)
     setPhases(updated as Phase[])
+    setPhaseId((updated as Phase[]).at(-1)?.id)
   }
 
   async function handleDeletePhase(id: number, e: React.MouseEvent) {
@@ -79,7 +86,30 @@ export function Sidebar({ worlds, selectedWorldId, selectedPhaseId }: SidebarPro
     await deletePhaseAction(id)
     const updated = await getPhases(worldId!)
     setPhases(updated as Phase[])
-    if (phaseId === id) setPhaseId(updated[0]?.id)
+    if (phaseId === id) setPhaseId((updated as Phase[])[0]?.id)
+  }
+
+  async function handleCreateLevel() {
+    if (!phaseId || !worldId) return
+    const name = `Level ${levels.length + 1}`
+    await createLevelAction(phaseId, { name, index: levels.length, ...LEVEL_DEFAULTS })
+    const updated = await getLevels(phaseId)
+    setLevels(updated as Level[])
+    const newLevel = (updated as Level[]).at(-1)
+    if (newLevel) router.push(`/dashboard/${worldId}/${phaseId}/${newLevel.id}`)
+  }
+
+  async function handleDeleteLevel(id: number, e: React.MouseEvent) {
+    e.stopPropagation()
+    if (!confirm('Deletar este level?')) return
+    await deleteLevelAction(id)
+    const updated = await getLevels(phaseId!)
+    setLevels(updated as Level[])
+    if (activeLevelId === id) {
+      const next = (updated as Level[])[0]
+      if (next) router.push(`/dashboard/${worldId}/${phaseId}/${next.id}`)
+      else router.push('/dashboard')
+    }
   }
 
   return (
@@ -109,49 +139,38 @@ export function Sidebar({ worlds, selectedWorldId, selectedPhaseId }: SidebarPro
       <div style={s.section}>
         <div style={s.sectionHeader}>
           <div style={s.label}>Fase</div>
-          <button style={s.addBtn} onClick={() => setAddingPhase(v => !v)} title="Nova fase">+</button>
+          <button style={s.addBtn} onClick={handleCreatePhase} title="Nova fase">+</button>
         </div>
-
-        {addingPhase && (
-          <div style={{ display: 'flex', gap: 4, marginBottom: 8 }}>
-            <input
-              autoFocus
-              value={newPhaseName}
-              onChange={e => setNewPhaseName(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && handleCreatePhase()}
-              placeholder="Nome da fase"
-              style={{ flex: 1, background: '#2c2c3e', border: '1px solid #3498db', borderRadius: 4, padding: '4px 6px', color: '#eee', fontSize: 12 }}
-            />
-            <button onClick={handleCreatePhase} style={{ background: '#3498db', color: '#fff', border: 'none', borderRadius: 4, padding: '4px 8px', fontSize: 12, cursor: 'pointer' }}>✓</button>
-            <button onClick={() => setAddingPhase(false)} style={{ background: '#444', color: '#eee', border: 'none', borderRadius: 4, padding: '4px 6px', fontSize: 12, cursor: 'pointer' }}>✕</button>
-          </div>
-        )}
-
         {phases.map(p => (
           <div key={p.id} style={s.item(phaseId === p.id)} onClick={() => setPhaseId(p.id)}>
             <span>{p.name}</span>
             <button style={s.deleteBtn} onClick={e => handleDeletePhase(p.id, e)} title="Deletar fase">✕</button>
           </div>
         ))}
-
-        {phases.length === 0 && !addingPhase && (
-          <div style={{ color: '#555', fontSize: 12, padding: '4px 0' }}>Nenhuma fase. Clique em + para criar.</div>
+        {phases.length === 0 && (
+          <div style={s.emptyHint}>Nenhuma fase. Clique em + para criar.</div>
         )}
       </div>
 
       {/* Levels */}
-      {levels.length > 0 && (
-        <div style={s.section}>
+      <div style={s.section}>
+        <div style={s.sectionHeader}>
           <div style={s.label}>Level</div>
-          <div style={{ marginTop: 8 }}>
-            {levels.map(l => (
-              <div key={l.id} style={s.item(false)} onClick={() => navigateToLevel(l)}>
-                <span>{l.name}</span>
-              </div>
-            ))}
-          </div>
+          {phaseId && <button style={s.addBtn} onClick={handleCreateLevel} title="Novo level">+</button>}
         </div>
-      )}
+        {levels.map(l => (
+          <div key={l.id} style={s.item(activeLevelId === l.id)} onClick={() => navigateToLevel(l)}>
+            <span>{l.name}</span>
+            <button style={s.deleteBtn} onClick={e => handleDeleteLevel(l.id, e)} title="Deletar level">✕</button>
+          </div>
+        ))}
+        {levels.length === 0 && !phaseId && (
+          <div style={s.emptyHint}>Selecione uma fase.</div>
+        )}
+        {levels.length === 0 && phaseId && (
+          <div style={s.emptyHint}>Nenhum level. Clique em + para criar.</div>
+        )}
+      </div>
 
       {/* Export */}
       {worldId && (

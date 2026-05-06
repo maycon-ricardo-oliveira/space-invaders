@@ -2,14 +2,13 @@ import path from 'path'
 import { writeFileSync } from 'fs'
 import prisma from '../lib/prisma'
 import type { LevelDefinition, EntityPlacement, Wave } from '@si/level-engine'
+import { PHONE_WIDTH, GRID_COLS, CELL_HEIGHT_EXPORT } from '../lib/gridConstants'
 
 // process.cwd() = apps/calibrator/ when running Next.js / Jest from that directory
 const OUTPUT_PATH = path.join(process.cwd(), '..', 'game', 'src', 'levels.json')
 
-const GAME_WIDTH = 390
-const GRID_COLUMNS = 11
-const CELL_WIDTH = GAME_WIDTH / GRID_COLUMNS      // 32.5
-const CELL_HEIGHT = 40
+const CELL_WIDTH = PHONE_WIDTH / GRID_COLS   // 390/11 ≈ 35.45px
+const CELL_HEIGHT = CELL_HEIGHT_EXPORT       // 40px vertical spacing
 
 function gridToEntityPlacements(grid: (string | null)[][]): EntityPlacement[] {
   const placements: EntityPlacement[] = []

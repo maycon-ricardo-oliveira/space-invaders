@@ -6,6 +6,7 @@ import { PatternPicker } from './PatternPicker'
 import { SpawnZoneGrid } from './SpawnZoneGrid'
 import { GameAreaPreview } from './GameAreaPreview'
 import type { EntityType, Grid } from '../../lib/schemas'
+import { GRID_COLS, GRID_ROWS } from '../../lib/gridConstants'
 
 type Wave = { id: number; levelId: number; order: number; delay: number; grid: unknown }
 type UserPattern = { id: number; name: string; grid: unknown }
@@ -17,12 +18,9 @@ interface WaveEditorProps {
   onSavePattern: (name: string, grid: Grid) => void
 }
 
-const DEFAULT_ROWS = 4
-const DEFAULT_COLS = 11
-
 function ensureGrid(raw: unknown): Grid {
   if (Array.isArray(raw) && raw.length > 0) return raw as Grid
-  return Array.from({ length: DEFAULT_ROWS }, () => Array(DEFAULT_COLS).fill(null))
+  return Array.from({ length: GRID_ROWS }, () => Array(GRID_COLS).fill(null))
 }
 
 export function WaveEditor({ wave, userPatterns, onWaveChange, onSavePattern }: WaveEditorProps) {

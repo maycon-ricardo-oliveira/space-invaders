@@ -132,10 +132,10 @@ describe('exportToJson', () => {
     const levels = JSON.parse(writtenContent)
     const entity = levels[0].waves[0].entities[0]
 
-    // col=0: x = 0 * (390/12) + (390/12)/2 = 0 + 16.25 = 16.25
+    // col=0: x = 0 * (390/11) + (390/11)/2 = 390/22 ≈ 17.727
     // row=0: y = 0 * 40 + 20 = 20
     expect(entity.entityTypeId).toBe('grunt')
-    expect(entity.x).toBeCloseTo(16.25)
+    expect(entity.x).toBeCloseTo(390 / 22)
     expect(entity.y).toBe(20)
   })
 

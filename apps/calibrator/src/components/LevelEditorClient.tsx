@@ -19,26 +19,28 @@ interface LevelEditorClientProps {
 }
 
 export function LevelEditorClient({ level, patterns }: LevelEditorClientProps) {
-  const [selectedWave, setSelectedWave] = useState<Wave>(level.waves[0])
-
-  if (level.waves.length === 0) {
-    return <div style={{ padding: 40, color: '#555' }}>No waves. Add a wave to begin.</div>
-  }
+  const [selectedWave, setSelectedWave] = useState<Wave | null>(level.waves[0] ?? null)
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
       <WaveChipBar
-        waves={level.waves}
+        initialWaves={level.waves}
         levelId={level.id}
         onSelectWave={setSelectedWave}
       />
       <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
-        <EditorPane
-          key={selectedWave.id}
-          level={level}
-          initialWave={selectedWave}
-          patterns={patterns}
-        />
+        {selectedWave ? (
+          <EditorPane
+            key={selectedWave.id}
+            level={level}
+            initialWave={selectedWave}
+            patterns={patterns}
+          />
+        ) : (
+          <div style={{ padding: 40, color: '#555', fontSize: 14 }}>
+            Sem waves. Clique em + para adicionar.
+          </div>
+        )}
       </div>
     </div>
   )

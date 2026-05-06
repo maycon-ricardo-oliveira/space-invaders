@@ -2,6 +2,7 @@
 import React, { useState } from 'react'
 import { SYSTEM_PATTERNS, generatePattern, type PatternType } from '../../services/WavePatternGenerator'
 import type { EntityType, Grid } from '../../lib/schemas'
+import { GRID_COLS, GRID_ROWS } from '../../lib/gridConstants'
 
 type UserPattern = { id: number; name: string; grid: unknown }
 
@@ -18,7 +19,7 @@ export function PatternPicker({ userPatterns, selectedEntity, enemyCount, onAppl
   const [showSave, setShowSave] = useState(false)
 
   function applySystem(type: PatternType) {
-    const grid = generatePattern(type, selectedEntity, enemyCount || 4, 11, 4)
+    const grid = generatePattern(type, selectedEntity, enemyCount || 4, GRID_COLS, GRID_ROWS)
     onApplyPattern(grid)
   }
 

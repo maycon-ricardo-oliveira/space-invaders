@@ -1,6 +1,7 @@
 // apps/calibrator/src/components/WaveEditor/SpawnZoneGrid.tsx
 import React from 'react'
 import type { EntityType, Grid } from '../../lib/schemas'
+import { CELL_SIZE } from '../../lib/gridConstants'
 
 const ENTITY_ICON: Record<EntityType, string> = {
   grunt: '👾', rocket: '🚀', shield: '🛡️', rock: '🪨',
@@ -35,7 +36,7 @@ export function SpawnZoneGrid({ grid, selectedEntity, onGridChange }: SpawnZoneG
               data-testid="grid-cell"
               onClick={() => handleClick(ri, ci)}
               style={{
-                width: 34, height: 34,
+                width: CELL_SIZE, height: CELL_SIZE,
                 background: cell ? '#1e2d1e' : '#1a1a2e',
                 border: `1px solid ${cell ? '#2ecc71' : '#2c2c3e'}`,
                 borderRadius: 2,
