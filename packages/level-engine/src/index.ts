@@ -6,6 +6,7 @@ export type {
   EntityType,
   EntityPlacement,
   LevelParams,
+  Wave,
   LevelDefinition,
   PlayerStats,
   LevelRequest,
