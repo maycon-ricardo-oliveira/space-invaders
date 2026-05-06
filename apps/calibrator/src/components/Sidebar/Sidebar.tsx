@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react'
 import { getPhases, createPhaseAction, deletePhaseAction } from '../../../app/actions/phase.actions'
 import { getLevels, createLevelAction, deleteLevelAction } from '../../../app/actions/level.actions'
-import { getWorlds, createWorldAction } from '../../../app/actions/world.actions'
+import { getWorlds, createWorldAction, deleteWorldAction } from '../../../app/actions/world.actions'
 import { useRouter, usePathname } from 'next/navigation'
 
 type World = { id: number; name: string; index: number; image: string | null; parallaxTheme: string | null }
@@ -20,33 +20,50 @@ const LEVEL_DEFAULTS = {
   enemyShotSpeed: 4.0, enemyAngerDelay: 15.0, enemySpawnDelay: 1.0, hasPowerUps: true,
 }
 
+type Module = 'worlds' | 'analytics'
+
 const s = {
-  sidebar: { width: 190, minWidth: 190, background: '#1a1a2e', borderRight: '1px solid #2c2c3e', display: 'flex', flexDirection: 'column' as const, overflow: 'auto', padding: '16px 0' },
-  section: { padding: '0 12px 16px' },
-  sectionHeader: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 },
-  label: { color: '#666', fontSize: 11, textTransform: 'uppercase' as const, letterSpacing: 1 },
-  addBtn: (disabled?: boolean) => ({ color: disabled ? '#333' : '#3498db', fontSize: 16, cursor: disabled ? 'default' : 'pointer', lineHeight: 1, background: 'none', border: 'none', padding: '0 2px' }),
-  item: (active: boolean) => ({
-    color: active ? '#3498db' : '#aaa',
+  // Activity bar (left strip)
+  activityBar: {
+    width: 52, flexShrink: 0 as const, background: '#0d0d1a',
+    borderRight: '1px solid #1a1a2e', display: 'flex', flexDirection: 'column' as const,
+    alignItems: 'center', padding: '12px 0', gap: 6,
+  },
+  activityBtn: (active: boolean) => ({
+    width: 40, height: 40, borderRadius: 8, border: 'none', cursor: 'pointer',
     background: active ? '#1e2d3d' : 'transparent',
     borderLeft: active ? '2px solid #3498db' : '2px solid transparent',
-    padding: '6px 8px',
-    fontSize: 13,
-    cursor: 'pointer',
-    borderRadius: 3,
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 2,
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+    fontSize: 18, color: active ? '#3498db' : '#555',
   }),
-  deleteBtn: { color: '#555', fontSize: 12, cursor: 'pointer', background: 'none', border: 'none', padding: '0 2px', lineHeight: 1 },
-  emptyHint: { color: '#555', fontSize: 12, padding: '4px 0' },
-  depHint: { color: '#444', fontSize: 11, padding: '4px 0', fontStyle: 'italic' as const },
+  // Context panel
+  panel: {
+    width: 176, flexShrink: 0 as const, background: '#1a1a2e',
+    borderRight: '1px solid #2c2c3e', display: 'flex', flexDirection: 'column' as const,
+    overflow: 'hidden',
+  },
+  panelScroll: {
+    flex: 1, overflowY: 'auto' as const, padding: '12px 10px',
+    display: 'flex', flexDirection: 'column' as const, gap: 14,
+  },
+  sectionLabel: { fontSize: 10, color: '#555', textTransform: 'uppercase' as const, letterSpacing: 1, marginBottom: 4 },
+  dropRow: { display: 'flex', gap: 4, alignItems: 'center' },
+  select: (disabled?: boolean) => ({
+    flex: 1, background: '#2c2c3e', color: disabled ? '#555' : '#eee',
+    border: '1px solid #3c3c4e', borderRadius: 4, padding: '5px 6px',
+    fontSize: 12, minWidth: 0,
+  }),
+  iconBtn: (color: string, disabled?: boolean) => ({
+    background: 'none', border: 'none', cursor: disabled ? 'default' : 'pointer',
+    color: disabled ? '#333' : color, fontSize: 16, padding: '0 2px', lineHeight: 1, flexShrink: 0 as const,
+  }),
 }
 
 export function Sidebar({ worlds: initialWorlds, selectedWorldId, selectedPhaseId }: SidebarProps) {
   const router = useRouter()
   const pathname = usePathname()
+
+  const [activeModule, setActiveModule] = useState<Module>('worlds')
   const [worldsList, setWorldsList] = useState<World[]>(initialWorlds)
   const [worldId, setWorldId] = useState(selectedWorldId ?? initialWorlds[0]?.id)
   const [phases, setPhases] = useState<Phase[]>([])
@@ -54,7 +71,7 @@ export function Sidebar({ worlds: initialWorlds, selectedWorldId, selectedPhaseI
   const [levels, setLevels] = useState<Level[]>([])
 
   // Derive active level from URL: /dashboard/[worldId]/[phaseId]/[levelId]
-  const activeLevelId = Number(pathname.split('/')[4]) || undefined
+  const urlLevelId = Number(pathname.split('/')[4]) || undefined
 
   useEffect(() => {
     if (!worldId) return
@@ -70,157 +87,174 @@ export function Sidebar({ worlds: initialWorlds, selectedWorldId, selectedPhaseI
     getLevels(phaseId).then(l => setLevels(l as Level[]))
   }, [phaseId])
 
-  function navigateToLevel(lvl: Level) {
-    router.push(`/dashboard/${worldId}/${phaseId}/${lvl.id}`)
-  }
-
   // ── World ──────────────────────────────────────────────
   async function handleCreateWorld() {
-    const name = `World ${worldsList.length + 1}`
-    await createWorldAction({ name, index: worldsList.length })
+    await createWorldAction({ name: `World ${worldsList.length + 1}`, index: worldsList.length })
     const updated = await getWorlds()
     setWorldsList(updated as World[])
     const newest = (updated as World[]).at(-1)
     if (newest) setWorldId(newest.id)
   }
 
+  async function handleDeleteWorld() {
+    if (!worldId || !confirm('Deletar este world?')) return
+    await deleteWorldAction(worldId)
+    const updated = await getWorlds()
+    setWorldsList(updated as World[])
+    const first = (updated as World[])[0]
+    setWorldId(first?.id)
+  }
+
   // ── Phase ──────────────────────────────────────────────
   async function handleCreatePhase() {
     if (!worldId) return
-    const name = `Phase ${phases.length + 1}`
-    await createPhaseAction(worldId, { name, index: phases.length })
+    await createPhaseAction(worldId, { name: `Phase ${phases.length + 1}`, index: phases.length })
     const updated = await getPhases(worldId)
     setPhases(updated as Phase[])
     setPhaseId((updated as Phase[]).at(-1)?.id)
   }
 
-  async function handleDeletePhase(id: number, e: React.MouseEvent) {
-    e.stopPropagation()
-    if (!confirm('Deletar esta fase?')) return
-    await deletePhaseAction(id)
+  async function handleDeletePhase() {
+    if (!phaseId || !confirm('Deletar esta fase?')) return
+    await deletePhaseAction(phaseId)
     const updated = await getPhases(worldId!)
     setPhases(updated as Phase[])
-    if (phaseId === id) setPhaseId((updated as Phase[])[0]?.id)
+    setPhaseId((updated as Phase[])[0]?.id)
   }
 
   // ── Level ──────────────────────────────────────────────
   async function handleCreateLevel() {
     if (!phaseId || !worldId) return
-    const name = `Level ${levels.length + 1}`
-    await createLevelAction(phaseId, { name, index: levels.length, ...LEVEL_DEFAULTS })
+    await createLevelAction(phaseId, { name: `Level ${levels.length + 1}`, index: levels.length, ...LEVEL_DEFAULTS })
     const updated = await getLevels(phaseId)
     setLevels(updated as Level[])
     const newLevel = (updated as Level[]).at(-1)
     if (newLevel) router.push(`/dashboard/${worldId}/${phaseId}/${newLevel.id}`)
   }
 
-  async function handleDeleteLevel(id: number, e: React.MouseEvent) {
-    e.stopPropagation()
-    if (!confirm('Deletar este level?')) return
-    await deleteLevelAction(id)
+  async function handleDeleteLevel() {
+    if (!urlLevelId || !confirm('Deletar este level?')) return
+    await deleteLevelAction(urlLevelId)
     const updated = await getLevels(phaseId!)
     setLevels(updated as Level[])
-    if (activeLevelId === id) {
-      const next = (updated as Level[])[0]
-      if (next) router.push(`/dashboard/${worldId}/${phaseId}/${next.id}`)
-      else router.push('/dashboard')
-    }
+    const next = (updated as Level[])[0]
+    if (next) router.push(`/dashboard/${worldId}/${phaseId}/${next.id}`)
+    else router.push('/dashboard')
   }
 
-  const noWorld = !worldId
-  const noPhase = !phaseId
+  function handleSelectLevel(id: number) {
+    router.push(`/dashboard/${worldId}/${phaseId}/${id}`)
+  }
 
   return (
-    <nav style={s.sidebar}>
-      {/* Modules */}
-      <div style={s.section}>
-        <div style={s.label}>Módulos</div>
-        <div style={{ marginTop: 8 }}>
-          <div style={s.item(true)}><span>Worlds</span></div>
-          <div style={s.item(false)}><span>Analytics</span></div>
-        </div>
+    <div style={{ display: 'flex', height: '100%', flexShrink: 0 }}>
+      {/* ── Activity bar ── */}
+      <div style={s.activityBar}>
+        <button
+          style={s.activityBtn(activeModule === 'worlds')}
+          onClick={() => setActiveModule('worlds')}
+          title="Worlds"
+        >🌍</button>
+        <button
+          style={s.activityBtn(activeModule === 'analytics')}
+          onClick={() => setActiveModule('analytics')}
+          title="Analytics"
+        >📊</button>
       </div>
 
-      {/* World */}
-      <div style={s.section}>
-        <div style={s.sectionHeader}>
-          <div style={s.label}>World</div>
-          <button style={s.addBtn()} onClick={handleCreateWorld} title="Novo world">+</button>
-        </div>
-        {worldsList.length > 0 ? (
-          <select
-            value={worldId}
-            onChange={e => setWorldId(Number(e.target.value))}
-            style={{ width: '100%', background: '#2c2c3e', color: '#eee', border: '1px solid #3c3c4e', borderRadius: 4, padding: '6px 8px', fontSize: 13, marginTop: 4 }}
-          >
-            {worldsList.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
-          </select>
-        ) : (
-          <div style={s.emptyHint}>Nenhum world. Clique em + para criar.</div>
-        )}
-      </div>
+      {/* ── Worlds panel ── */}
+      {activeModule === 'worlds' && (
+        <div style={s.panel}>
+          <div style={{ padding: '12px 10px 6px', borderBottom: '1px solid #2c2c3e' }}>
+            <span style={{ fontSize: 11, color: '#888', textTransform: 'uppercase', letterSpacing: 1 }}>Worlds</span>
+          </div>
+          <div style={s.panelScroll}>
 
-      {/* Phase */}
-      <div style={s.section}>
-        <div style={s.sectionHeader}>
-          <div style={s.label}>Fase</div>
-          <button
-            style={s.addBtn(noWorld)}
-            onClick={noWorld ? undefined : handleCreatePhase}
-            title={noWorld ? 'Crie um world primeiro' : 'Nova fase'}
-          >+</button>
-        </div>
-        {noWorld ? (
-          <div style={s.depHint}>Selecione um world primeiro.</div>
-        ) : (
-          <>
-            {phases.map(p => (
-              <div key={p.id} style={s.item(phaseId === p.id)} onClick={() => setPhaseId(p.id)}>
-                <span>{p.name}</span>
-                <button style={s.deleteBtn} onClick={e => handleDeletePhase(p.id, e)} title="Deletar fase">✕</button>
+            {/* World */}
+            <div>
+              <div style={s.sectionLabel}>World</div>
+              <div style={s.dropRow}>
+                <select
+                  value={worldId ?? ''}
+                  onChange={e => setWorldId(Number(e.target.value))}
+                  style={s.select()}
+                >
+                  {worldsList.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
+                  {worldsList.length === 0 && <option value="" disabled>—</option>}
+                </select>
+                <button style={s.iconBtn('#3498db')} onClick={handleCreateWorld} title="Novo world">+</button>
+                <button style={s.iconBtn('#e74c3c', !worldId)} onClick={worldId ? handleDeleteWorld : undefined} title="Deletar world">×</button>
               </div>
-            ))}
-            {phases.length === 0 && (
-              <div style={s.emptyHint}>Nenhuma fase. Clique em + para criar.</div>
-            )}
-          </>
-        )}
-      </div>
+              {worldsList.length === 0 && (
+                <div style={{ fontSize: 11, color: '#444', marginTop: 4, fontStyle: 'italic' }}>Clique em + para criar um world.</div>
+              )}
+            </div>
 
-      {/* Level */}
-      <div style={s.section}>
-        <div style={s.sectionHeader}>
-          <div style={s.label}>Level</div>
-          <button
-            style={s.addBtn(noPhase)}
-            onClick={noPhase ? undefined : handleCreateLevel}
-            title={noPhase ? 'Crie uma fase primeiro' : 'Novo level'}
-          >+</button>
-        </div>
-        {noPhase ? (
-          <div style={s.depHint}>Selecione uma fase primeiro.</div>
-        ) : (
-          <>
-            {levels.map(l => (
-              <div key={l.id} style={s.item(activeLevelId === l.id)} onClick={() => navigateToLevel(l)}>
-                <span>{l.name}</span>
-                <button style={s.deleteBtn} onClick={e => handleDeleteLevel(l.id, e)} title="Deletar level">✕</button>
+            {/* Phase */}
+            <div>
+              <div style={s.sectionLabel}>Fase</div>
+              <div style={s.dropRow}>
+                <select
+                  value={phaseId ?? ''}
+                  onChange={e => setPhaseId(Number(e.target.value))}
+                  disabled={!worldId}
+                  style={s.select(!worldId)}
+                >
+                  {phases.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                  {phases.length === 0 && <option value="" disabled>—</option>}
+                </select>
+                <button style={s.iconBtn('#3498db', !worldId)} onClick={worldId ? handleCreatePhase : undefined} title="Nova fase">+</button>
+                <button style={s.iconBtn('#e74c3c', !phaseId)} onClick={phaseId ? handleDeletePhase : undefined} title="Deletar fase">×</button>
               </div>
-            ))}
-            {levels.length === 0 && (
-              <div style={s.emptyHint}>Nenhum level. Clique em + para criar.</div>
-            )}
-          </>
-        )}
-      </div>
+              {worldId && phases.length === 0 && (
+                <div style={{ fontSize: 11, color: '#444', marginTop: 4, fontStyle: 'italic' }}>Clique em + para criar uma fase.</div>
+              )}
+            </div>
 
-      {/* Export */}
-      {worldId && (
-        <div style={{ ...s.section, marginTop: 'auto' }}>
-          <ExportButton worldId={worldId} />
+            {/* Level */}
+            <div>
+              <div style={s.sectionLabel}>Level</div>
+              <div style={s.dropRow}>
+                <select
+                  value={urlLevelId ?? ''}
+                  onChange={e => handleSelectLevel(Number(e.target.value))}
+                  disabled={!phaseId}
+                  style={s.select(!phaseId)}
+                >
+                  {levels.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
+                  {levels.length === 0 && <option value="" disabled>—</option>}
+                </select>
+                <button style={s.iconBtn('#3498db', !phaseId)} onClick={phaseId ? handleCreateLevel : undefined} title="Novo level">+</button>
+                <button style={s.iconBtn('#e74c3c', !urlLevelId)} onClick={urlLevelId ? handleDeleteLevel : undefined} title="Deletar level">×</button>
+              </div>
+              {phaseId && levels.length === 0 && (
+                <div style={{ fontSize: 11, color: '#444', marginTop: 4, fontStyle: 'italic' }}>Clique em + para criar um level.</div>
+              )}
+            </div>
+
+          </div>
+
+          {/* Export at bottom */}
+          {worldId && (
+            <div style={{ padding: '8px 10px', borderTop: '1px solid #2c2c3e', flexShrink: 0 }}>
+              <ExportButton worldId={worldId} />
+            </div>
+          )}
         </div>
       )}
-    </nav>
+
+      {/* ── Analytics panel ── */}
+      {activeModule === 'analytics' && (
+        <div style={s.panel}>
+          <div style={{ padding: '12px 10px 6px', borderBottom: '1px solid #2c2c3e' }}>
+            <span style={{ fontSize: 11, color: '#888', textTransform: 'uppercase', letterSpacing: 1 }}>Analytics</span>
+          </div>
+          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <span style={{ fontSize: 12, color: '#444', fontStyle: 'italic' }}>Em breve</span>
+          </div>
+        </div>
+      )}
+    </div>
   )
 }
 
@@ -247,7 +281,7 @@ function ExportButton({ worldId }: { worldId: number }) {
     <button
       onClick={handleExport}
       disabled={status === 'loading'}
-      style={{ width: '100%', background: bg, color: status === 'done' ? '#111' : '#eee', border: 'none', borderRadius: 4, padding: '8px 0', fontSize: 13, cursor: 'pointer' }}
+      style={{ width: '100%', background: bg, color: status === 'done' ? '#111' : '#eee', border: 'none', borderRadius: 4, padding: '8px 0', fontSize: 12, cursor: 'pointer' }}
     >
       {label}
     </button>

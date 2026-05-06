@@ -1,6 +1,5 @@
 'use client'
 import React, { useState } from 'react'
-import { WaveChipBar } from './WaveChipBar/WaveChipBar'
 import { EditorPane } from './WaveEditor/EditorPane'
 
 type Wave = { id: number; levelId: number; order: number; delay: number; grid: unknown }
@@ -19,29 +18,26 @@ interface LevelEditorClientProps {
 }
 
 export function LevelEditorClient({ level, patterns }: LevelEditorClientProps) {
+  const [waves, setWaves] = useState<Wave[]>(level.waves)
   const [selectedWave, setSelectedWave] = useState<Wave | null>(level.waves[0] ?? null)
 
+  function handleWavesChange(updatedWaves: Wave[], next: Wave | null) {
+    setWaves(updatedWaves)
+    setSelectedWave(next)
+  }
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
-      <WaveChipBar
-        initialWaves={level.waves}
+    <div style={{ display: 'flex', height: '100%', overflow: 'hidden' }}>
+      <EditorPane
+        key={selectedWave?.id ?? 'no-wave'}
+        level={level}
+        initialWave={selectedWave}
+        initialWaves={waves}
         levelId={level.id}
+        patterns={patterns}
+        onWavesChange={handleWavesChange}
         onSelectWave={setSelectedWave}
       />
-      <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
-        {selectedWave ? (
-          <EditorPane
-            key={selectedWave.id}
-            level={level}
-            initialWave={selectedWave}
-            patterns={patterns}
-          />
-        ) : (
-          <div style={{ padding: 40, color: '#555', fontSize: 14 }}>
-            Sem waves. Clique em + para adicionar.
-          </div>
-        )}
-      </div>
     </div>
   )
 }

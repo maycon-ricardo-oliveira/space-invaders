@@ -1,8 +1,8 @@
 // apps/calibrator/src/components/WaveChipBar/WaveChipBar.tsx
 'use client'
 import React, { useState } from 'react'
-import { WaveChip } from './WaveChip'
 import { createWaveAction, deleteWaveAction, getWaves } from '../../../app/actions/wave.actions'
+import { computeWaveScore } from '../../services/WaveScoreCalculator'
 import type { Grid } from '../../lib/schemas'
 import { GRID_COLS, GRID_ROWS } from '../../lib/gridConstants'
 
@@ -36,44 +36,55 @@ export function WaveChipBar({ initialWaves, levelId, onSelectWave }: WaveChipBar
     if (newest) select(newest)
   }
 
-  async function handleDeleteWave(id: number, e: React.MouseEvent) {
-    e.stopPropagation()
-    if (!confirm('Deletar esta wave?')) return
-    await deleteWaveAction(id)
+  async function handleDeleteWave() {
+    const toDelete = waves.find(w => w.id === activeId)
+    if (!toDelete || !confirm('Deletar esta wave?')) return
+    await deleteWaveAction(toDelete.id)
     const updated = await getWaves(levelId)
     const typedWaves = updated as Wave[]
     setWaves(typedWaves)
-    if (activeId === id) {
-      const next = typedWaves[0] ?? null
-      setActiveId(next?.id)
-      onSelectWave?.(next)
-    }
+    const next = typedWaves[0] ?? null
+    setActiveId(next?.id)
+    onSelectWave?.(next)
   }
 
   return (
     <div style={{
-      display: 'flex', gap: 6, padding: '8px 12px', background: '#111',
-      borderBottom: '1px solid #2c2c3e', overflowX: 'auto', flexShrink: 0, alignItems: 'center',
+      display: 'flex', gap: 8, padding: '8px 12px', background: '#111',
+      borderBottom: '1px solid #2c2c3e', alignItems: 'center', flexShrink: 0,
     }}>
-      {waves.map(w => (
-        <WaveChip
-          key={w.id}
-          wave={w}
-          active={activeId === w.id}
-          onClick={() => select(w)}
-          onDelete={e => handleDeleteWave(w.id, e)}
-        />
-      ))}
+      <span style={{ fontSize: 11, color: '#666', textTransform: 'uppercase', letterSpacing: 1, flexShrink: 0 }}>Wave</span>
+      <select
+        value={activeId ?? ''}
+        onChange={e => {
+          const wave = waves.find(w => w.id === Number(e.target.value))
+          if (wave) select(wave)
+        }}
+        style={{
+          flex: 1, background: '#2c2c3e', color: '#eee',
+          border: '1px solid #3c3c4e', borderRadius: 4,
+          padding: '4px 8px', fontSize: 13,
+        }}
+      >
+        {waves.map(w => {
+          const score = computeWaveScore(w.grid as Grid, w.delay)
+          return <option key={w.id} value={w.id}>W{w.order} — score {score}</option>
+        })}
+        {waves.length === 0 && <option value="" disabled>Sem waves</option>}
+      </select>
       {waves.length < MAX_WAVES && (
         <button
           onClick={handleCreateWave}
-          style={{
-            background: '#2c2c3e', border: '1px dashed #3498db', borderRadius: 4,
-            padding: '6px 12px', cursor: 'pointer', color: '#3498db', fontSize: 18,
-            lineHeight: 1, flexShrink: 0,
-          }}
           title="Nova wave"
+          style={{ background: '#2c2c3e', border: '1px solid #3498db', borderRadius: 4, padding: '4px 10px', color: '#3498db', fontSize: 16, cursor: 'pointer', flexShrink: 0 }}
         >+</button>
+      )}
+      {waves.length > 0 && (
+        <button
+          onClick={handleDeleteWave}
+          title="Deletar wave"
+          style={{ background: '#2c2c3e', border: '1px solid #555', borderRadius: 4, padding: '4px 10px', color: '#888', fontSize: 12, cursor: 'pointer', flexShrink: 0 }}
+        >✕</button>
       )}
     </div>
   )
