@@ -5,12 +5,12 @@ import { ScoreCard } from './ScoreCard'
 import { LevelParamsSliders } from './LevelParamsSliders'
 import type { Grid } from '../../lib/schemas'
 
-type Wave = { id: number; levelId: number; order: number; delay: number; grid: unknown; createdAt: Date; updatedAt: Date }
+type Wave = { id: number; levelId: number; order: number; delay: number; grid: unknown }
 type Level = {
   id: number; phaseId: number; name: string; index: number;
   enemySpeed: number; shotDelay: number; fuelDrain: number;
   enemyShotSpeed: number; enemyAngerDelay: number; enemySpawnDelay: number;
-  hasPowerUps: boolean; parallaxTheme: string | null; createdAt: Date; updatedAt: Date;
+  hasPowerUps: boolean; parallaxTheme: string | null;
 }
 
 interface WaveStatsPanelProps {

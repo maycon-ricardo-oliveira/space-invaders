@@ -3,15 +3,15 @@ import React, { useState } from 'react'
 import { WaveChipBar } from './WaveChipBar/WaveChipBar'
 import { EditorPane } from './WaveEditor/EditorPane'
 
-type Wave = { id: number; levelId: number; order: number; delay: number; grid: unknown; createdAt: Date; updatedAt: Date }
+type Wave = { id: number; levelId: number; order: number; delay: number; grid: unknown }
 type Level = {
   id: number; phaseId: number; name: string; index: number;
   enemySpeed: number; shotDelay: number; fuelDrain: number;
   enemyShotSpeed: number; enemyAngerDelay: number; enemySpawnDelay: number;
-  hasPowerUps: boolean; parallaxTheme: string | null; createdAt: Date; updatedAt: Date;
+  hasPowerUps: boolean; parallaxTheme: string | null;
   waves: Wave[];
 }
-type UserPattern = { id: number; name: string; grid: unknown; createdAt: Date }
+type UserPattern = { id: number; name: string; grid: unknown }
 
 interface LevelEditorClientProps {
   level: Level

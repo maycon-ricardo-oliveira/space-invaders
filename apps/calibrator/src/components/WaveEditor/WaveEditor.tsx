@@ -7,7 +7,7 @@ import { SpawnZoneGrid } from './SpawnZoneGrid'
 import { GameAreaPreview } from './GameAreaPreview'
 import type { EntityType, Grid } from '../../lib/schemas'
 
-type Wave = { id: number; levelId: number; order: number; delay: number; grid: unknown; createdAt: Date; updatedAt: Date }
+type Wave = { id: number; levelId: number; order: number; delay: number; grid: unknown }
 type UserPattern = { id: number; name: string; grid: unknown }
 
 interface WaveEditorProps {

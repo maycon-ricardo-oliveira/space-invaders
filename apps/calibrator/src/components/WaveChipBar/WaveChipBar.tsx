@@ -3,7 +3,7 @@
 import React, { useState } from 'react'
 import { WaveChip } from './WaveChip'
 
-type Wave = { id: number; levelId: number; order: number; delay: number; grid: unknown; createdAt: Date; updatedAt: Date }
+type Wave = { id: number; levelId: number; order: number; delay: number; grid: unknown }
 
 interface WaveChipBarProps {
   waves: Wave[]

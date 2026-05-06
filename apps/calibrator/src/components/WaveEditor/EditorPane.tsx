@@ -8,15 +8,15 @@ import { updateLevelParamsAction } from '../../../app/actions/level.actions'
 import { savePatternAction } from '../../../app/actions/pattern.actions'
 import type { Grid } from '../../lib/schemas'
 
-type Wave = { id: number; levelId: number; order: number; delay: number; grid: unknown; createdAt: Date; updatedAt: Date }
+type Wave = { id: number; levelId: number; order: number; delay: number; grid: unknown }
 type Level = {
   id: number; phaseId: number; name: string; index: number;
   enemySpeed: number; shotDelay: number; fuelDrain: number;
   enemyShotSpeed: number; enemyAngerDelay: number; enemySpawnDelay: number;
-  hasPowerUps: boolean; parallaxTheme: string | null; createdAt: Date; updatedAt: Date;
+  hasPowerUps: boolean; parallaxTheme: string | null;
   waves: Wave[];
 }
-type UserPattern = { id: number; name: string; grid: unknown; createdAt: Date }
+type UserPattern = { id: number; name: string; grid: unknown }
 
 interface EditorPaneProps {
   level: Level
