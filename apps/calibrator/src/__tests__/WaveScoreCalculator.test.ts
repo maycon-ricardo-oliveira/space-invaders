@@ -11,8 +11,11 @@ describe('computeWaveScore', () => {
   })
 
   it('shield enemies score higher than grunts', () => {
-    const grunts: Grid = [['grunt', null, null, null, null, null, null, null, null, null, null, null]]
-    const shields: Grid = [['shield', null, null, null, null, null, null, null, null, null, null, null]]
+    // Use a full row so scores survive rounding
+    const fullRowGrunts = Array(11).fill('grunt') as Grid[0]
+    const fullRowShields = Array(11).fill('shield') as Grid[0]
+    const grunts: Grid = [fullRowGrunts]
+    const shields: Grid = [fullRowShields]
     expect(computeWaveScore(shields, 3.0)).toBeGreaterThan(computeWaveScore(grunts, 3.0))
   })
 
