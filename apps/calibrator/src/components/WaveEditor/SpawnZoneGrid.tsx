@@ -35,7 +35,7 @@ export function SpawnZoneGrid({ grid, selectedEntity, onGridChange }: SpawnZoneG
               data-testid="grid-cell"
               onClick={() => handleClick(ri, ci)}
               style={{
-                width: 32, height: 32,
+                width: 34, height: 34,
                 background: cell ? '#1e2d1e' : '#1a1a2e',
                 border: `1px solid ${cell ? '#2ecc71' : '#2c2c3e'}`,
                 borderRadius: 2,

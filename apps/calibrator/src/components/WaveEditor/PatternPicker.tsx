@@ -18,7 +18,7 @@ export function PatternPicker({ userPatterns, selectedEntity, enemyCount, onAppl
   const [showSave, setShowSave] = useState(false)
 
   function applySystem(type: PatternType) {
-    const grid = generatePattern(type, selectedEntity, enemyCount || 4, 12, 4)
+    const grid = generatePattern(type, selectedEntity, enemyCount || 4, 11, 4)
     onApplyPattern(grid)
   }
 
@@ -36,12 +36,12 @@ export function PatternPicker({ userPatterns, selectedEntity, enemyCount, onAppl
 
   return (
     <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap', padding: '4px 0' }}>
-      <span style={{ fontSize: 9, color: '#555' }}>Pattern:</span>
+      <span style={{ fontSize: 12, color: '#555' }}>Pattern:</span>
       {SYSTEM_PATTERNS.map(p => (
         <button
           key={p.type}
           onClick={() => applySystem(p.type)}
-          style={{ background: '#2c2c3e', border: '1px solid #3c3c4e', borderRadius: 3, padding: '2px 6px', cursor: 'pointer', fontSize: 9, color: '#aaa' }}
+          style={{ background: '#2c2c3e', border: '1px solid #3c3c4e', borderRadius: 3, padding: '2px 6px', cursor: 'pointer', fontSize: 12, color: '#aaa' }}
         >
           {p.label}
         </button>
@@ -50,7 +50,7 @@ export function PatternPicker({ userPatterns, selectedEntity, enemyCount, onAppl
         <button
           key={p.id}
           onClick={() => applyUser(p)}
-          style={{ background: '#1e3a1e', border: '1px solid #2ecc71', borderRadius: 3, padding: '2px 6px', cursor: 'pointer', fontSize: 9, color: '#2ecc71' }}
+          style={{ background: '#1e3a1e', border: '1px solid #2ecc71', borderRadius: 3, padding: '2px 6px', cursor: 'pointer', fontSize: 12, color: '#2ecc71' }}
         >
           {p.name}
         </button>
@@ -61,15 +61,15 @@ export function PatternPicker({ userPatterns, selectedEntity, enemyCount, onAppl
             value={saveName}
             onChange={e => setSaveName(e.target.value)}
             placeholder="Nome do pattern"
-            style={{ fontSize: 9, padding: '2px 6px', background: '#2c2c3e', border: '1px solid #3c3c4e', borderRadius: 3, color: '#eee' }}
+            style={{ fontSize: 12, padding: '2px 6px', background: '#2c2c3e', border: '1px solid #3c3c4e', borderRadius: 3, color: '#eee' }}
           />
-          <button onClick={handleSave} style={{ fontSize: 9, padding: '2px 6px', background: '#2ecc71', color: '#111', borderRadius: 3, border: 'none', cursor: 'pointer' }}>Salvar</button>
-          <button onClick={() => setShowSave(false)} style={{ fontSize: 9, padding: '2px 6px', background: '#444', color: '#eee', borderRadius: 3, border: 'none', cursor: 'pointer' }}>✕</button>
+          <button onClick={handleSave} style={{ fontSize: 12, padding: '2px 6px', background: '#2ecc71', color: '#111', borderRadius: 3, border: 'none', cursor: 'pointer' }}>Salvar</button>
+          <button onClick={() => setShowSave(false)} style={{ fontSize: 12, padding: '2px 6px', background: '#444', color: '#eee', borderRadius: 3, border: 'none', cursor: 'pointer' }}>✕</button>
         </>
       ) : (
         <button
           onClick={() => setShowSave(true)}
-          style={{ fontSize: 9, padding: '2px 6px', background: '#2c2c3e', border: '1px dashed #2ecc71', borderRadius: 3, color: '#2ecc71', cursor: 'pointer' }}
+          style={{ fontSize: 12, padding: '2px 6px', background: '#2c2c3e', border: '1px dashed #2ecc71', borderRadius: 3, color: '#2ecc71', cursor: 'pointer' }}
         >
           + Salvar como pattern
         </button>

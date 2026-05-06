@@ -14,7 +14,7 @@ interface SliderProps {
 function Slider({ label, name, value, min, max, step, onChange }: SliderProps) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-      <label htmlFor={name} style={{ color: '#666', fontSize: 9, width: 90 }}>{label}</label>
+      <label htmlFor={name} style={{ color: '#666', fontSize: 11, width: 90 }}>{label}</label>
       <input
         id={name}
         type="range"
@@ -26,7 +26,7 @@ function Slider({ label, name, value, min, max, step, onChange }: SliderProps) {
         style={{ flex: 1 }}
         aria-label={label}
       />
-      <span style={{ color: '#eee', fontSize: 9, width: 30, textAlign: 'right' }}>{value}</span>
+      <span style={{ color: '#eee', fontSize: 11, width: 30, textAlign: 'right' }}>{value}</span>
     </div>
   )
 }

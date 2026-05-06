@@ -7,7 +7,7 @@ import type { LevelDefinition, EntityPlacement, Wave } from '@si/level-engine'
 const OUTPUT_PATH = path.join(process.cwd(), '..', 'game', 'src', 'levels.json')
 
 const GAME_WIDTH = 390
-const GRID_COLUMNS = 12
+const GRID_COLUMNS = 11
 const CELL_WIDTH = GAME_WIDTH / GRID_COLUMNS      // 32.5
 const CELL_HEIGHT = 40
 

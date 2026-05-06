@@ -18,7 +18,7 @@ interface WaveEditorProps {
 }
 
 const DEFAULT_ROWS = 4
-const DEFAULT_COLS = 12
+const DEFAULT_COLS = 11
 
 function ensureGrid(raw: unknown): Grid {
   if (Array.isArray(raw) && raw.length > 0) return raw as Grid

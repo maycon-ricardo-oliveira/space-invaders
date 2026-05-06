@@ -22,10 +22,10 @@ export function WaveChip({ wave, active, onClick }: WaveChipProps) {
         border: `1px solid ${active ? '#3498db' : '#3c3c4e'}`,
       }}
     >
-      <span style={{ fontSize: 11, color: active ? '#3498db' : '#aaa', fontWeight: 'bold' }}>
+      <span style={{ fontSize: 13, color: active ? '#3498db' : '#aaa', fontWeight: 'bold' }}>
         W{wave.order}
       </span>
-      <span data-testid="wave-score" style={{ fontSize: 9, color: '#f1c40f', marginTop: 2 }}>
+      <span data-testid="wave-score" style={{ fontSize: 11, color: '#f1c40f', marginTop: 2 }}>
         {score}
       </span>
     </div>
