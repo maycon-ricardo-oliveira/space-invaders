@@ -18,9 +18,12 @@ interface WaveEditorProps {
   onSavePattern: (name: string, grid: Grid) => void
 }
 
+// Always normalizes to exactly GRID_ROWS × GRID_COLS, padding/trimming as needed.
 function ensureGrid(raw: unknown): Grid {
-  if (Array.isArray(raw) && raw.length > 0) return raw as Grid
-  return Array.from({ length: GRID_ROWS }, () => Array(GRID_COLS).fill(null))
+  const src = Array.isArray(raw) ? (raw as Grid) : []
+  return Array.from({ length: GRID_ROWS }, (_, ri) =>
+    Array.from({ length: GRID_COLS }, (_, ci) => src[ri]?.[ci] ?? null)
+  )
 }
 
 export function WaveEditor({ wave, userPatterns, onWaveChange, onSavePattern }: WaveEditorProps) {

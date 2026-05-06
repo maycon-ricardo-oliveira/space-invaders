@@ -1,4 +1,5 @@
 import type { Grid } from '../lib/schemas'
+import { MAX_WAVE_SCORE } from '../lib/gridConstants'
 
 const TYPE_WEIGHT: Record<string, number> = {
   grunt:  1.0,
@@ -6,9 +7,6 @@ const TYPE_WEIGHT: Record<string, number> = {
   rocket: 2.0,
   shield: 3.0,
 }
-
-// Max possible: 12 cols × 4 rows × max weight 3 = 144
-const MAX_RAW = 144
 
 // delay → multiplier: 0s = 1.5, 3s = 1.0, 6s+ = 0.8
 function delayMultiplier(delay: number): number {
@@ -26,6 +24,6 @@ export function computeWaveScore(grid: Grid, delay: number): number {
     }
   }
   if (raw === 0) return 0
-  const score = (raw / MAX_RAW) * 100 * delayMultiplier(delay)
+  const score = (raw / MAX_WAVE_SCORE) * 100 * delayMultiplier(delay)
   return Math.min(100, Math.round(score))
 }

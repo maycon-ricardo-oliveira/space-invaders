@@ -14,6 +14,11 @@ jest.mock('../../app/actions/level.actions', () => ({
   getLevels: jest.fn().mockResolvedValue([]),
 }))
 
+jest.mock('../../app/actions/world.actions', () => ({
+  getWorlds: jest.fn().mockResolvedValue([]),
+  createWorldAction: jest.fn(),
+}))
+
 import { Sidebar } from '../components/Sidebar/Sidebar'
 
 const worlds = [

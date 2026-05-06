@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react'
 import { getPhases, createPhaseAction, deletePhaseAction } from '../../../app/actions/phase.actions'
 import { getLevels, createLevelAction, deleteLevelAction } from '../../../app/actions/level.actions'
+import { getWorlds, createWorldAction } from '../../../app/actions/world.actions'
 import { useRouter, usePathname } from 'next/navigation'
 
 type World = { id: number; name: string; index: number; image: string | null; parallaxTheme: string | null }
@@ -20,11 +21,11 @@ const LEVEL_DEFAULTS = {
 }
 
 const s = {
-  sidebar: { width: 180, minWidth: 180, background: '#1a1a2e', borderRight: '1px solid #2c2c3e', display: 'flex', flexDirection: 'column' as const, overflow: 'auto', padding: '16px 0' },
+  sidebar: { width: 190, minWidth: 190, background: '#1a1a2e', borderRight: '1px solid #2c2c3e', display: 'flex', flexDirection: 'column' as const, overflow: 'auto', padding: '16px 0' },
   section: { padding: '0 12px 16px' },
   sectionHeader: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 },
   label: { color: '#666', fontSize: 11, textTransform: 'uppercase' as const, letterSpacing: 1 },
-  addBtn: { color: '#3498db', fontSize: 16, cursor: 'pointer', lineHeight: 1, background: 'none', border: 'none', padding: '0 2px' },
+  addBtn: (disabled?: boolean) => ({ color: disabled ? '#333' : '#3498db', fontSize: 16, cursor: disabled ? 'default' : 'pointer', lineHeight: 1, background: 'none', border: 'none', padding: '0 2px' }),
   item: (active: boolean) => ({
     color: active ? '#3498db' : '#aaa',
     background: active ? '#1e2d3d' : 'transparent',
@@ -40,12 +41,14 @@ const s = {
   }),
   deleteBtn: { color: '#555', fontSize: 12, cursor: 'pointer', background: 'none', border: 'none', padding: '0 2px', lineHeight: 1 },
   emptyHint: { color: '#555', fontSize: 12, padding: '4px 0' },
+  depHint: { color: '#444', fontSize: 11, padding: '4px 0', fontStyle: 'italic' as const },
 }
 
-export function Sidebar({ worlds, selectedWorldId, selectedPhaseId }: SidebarProps) {
+export function Sidebar({ worlds: initialWorlds, selectedWorldId, selectedPhaseId }: SidebarProps) {
   const router = useRouter()
   const pathname = usePathname()
-  const [worldId, setWorldId] = useState(selectedWorldId ?? worlds[0]?.id)
+  const [worldsList, setWorldsList] = useState<World[]>(initialWorlds)
+  const [worldId, setWorldId] = useState(selectedWorldId ?? initialWorlds[0]?.id)
   const [phases, setPhases] = useState<Phase[]>([])
   const [phaseId, setPhaseId] = useState(selectedPhaseId)
   const [levels, setLevels] = useState<Level[]>([])
@@ -71,6 +74,17 @@ export function Sidebar({ worlds, selectedWorldId, selectedPhaseId }: SidebarPro
     router.push(`/dashboard/${worldId}/${phaseId}/${lvl.id}`)
   }
 
+  // ── World ──────────────────────────────────────────────
+  async function handleCreateWorld() {
+    const name = `World ${worldsList.length + 1}`
+    await createWorldAction({ name, index: worldsList.length })
+    const updated = await getWorlds()
+    setWorldsList(updated as World[])
+    const newest = (updated as World[]).at(-1)
+    if (newest) setWorldId(newest.id)
+  }
+
+  // ── Phase ──────────────────────────────────────────────
   async function handleCreatePhase() {
     if (!worldId) return
     const name = `Phase ${phases.length + 1}`
@@ -89,6 +103,7 @@ export function Sidebar({ worlds, selectedWorldId, selectedPhaseId }: SidebarPro
     if (phaseId === id) setPhaseId((updated as Phase[])[0]?.id)
   }
 
+  // ── Level ──────────────────────────────────────────────
   async function handleCreateLevel() {
     if (!phaseId || !worldId) return
     const name = `Level ${levels.length + 1}`
@@ -112,6 +127,9 @@ export function Sidebar({ worlds, selectedWorldId, selectedPhaseId }: SidebarPro
     }
   }
 
+  const noWorld = !worldId
+  const noPhase = !phaseId
+
   return (
     <nav style={s.sidebar}>
       {/* Modules */}
@@ -123,52 +141,76 @@ export function Sidebar({ worlds, selectedWorldId, selectedPhaseId }: SidebarPro
         </div>
       </div>
 
-      {/* World selector */}
+      {/* World */}
       <div style={s.section}>
-        <div style={s.label}>World</div>
-        <select
-          value={worldId}
-          onChange={e => setWorldId(Number(e.target.value))}
-          style={{ width: '100%', background: '#2c2c3e', color: '#eee', border: '1px solid #3c3c4e', borderRadius: 4, padding: '6px 8px', fontSize: 13, marginTop: 6 }}
-        >
-          {worlds.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
-        </select>
+        <div style={s.sectionHeader}>
+          <div style={s.label}>World</div>
+          <button style={s.addBtn()} onClick={handleCreateWorld} title="Novo world">+</button>
+        </div>
+        {worldsList.length > 0 ? (
+          <select
+            value={worldId}
+            onChange={e => setWorldId(Number(e.target.value))}
+            style={{ width: '100%', background: '#2c2c3e', color: '#eee', border: '1px solid #3c3c4e', borderRadius: 4, padding: '6px 8px', fontSize: 13, marginTop: 4 }}
+          >
+            {worldsList.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
+          </select>
+        ) : (
+          <div style={s.emptyHint}>Nenhum world. Clique em + para criar.</div>
+        )}
       </div>
 
-      {/* Phases */}
+      {/* Phase */}
       <div style={s.section}>
         <div style={s.sectionHeader}>
           <div style={s.label}>Fase</div>
-          <button style={s.addBtn} onClick={handleCreatePhase} title="Nova fase">+</button>
+          <button
+            style={s.addBtn(noWorld)}
+            onClick={noWorld ? undefined : handleCreatePhase}
+            title={noWorld ? 'Crie um world primeiro' : 'Nova fase'}
+          >+</button>
         </div>
-        {phases.map(p => (
-          <div key={p.id} style={s.item(phaseId === p.id)} onClick={() => setPhaseId(p.id)}>
-            <span>{p.name}</span>
-            <button style={s.deleteBtn} onClick={e => handleDeletePhase(p.id, e)} title="Deletar fase">✕</button>
-          </div>
-        ))}
-        {phases.length === 0 && (
-          <div style={s.emptyHint}>Nenhuma fase. Clique em + para criar.</div>
+        {noWorld ? (
+          <div style={s.depHint}>Selecione um world primeiro.</div>
+        ) : (
+          <>
+            {phases.map(p => (
+              <div key={p.id} style={s.item(phaseId === p.id)} onClick={() => setPhaseId(p.id)}>
+                <span>{p.name}</span>
+                <button style={s.deleteBtn} onClick={e => handleDeletePhase(p.id, e)} title="Deletar fase">✕</button>
+              </div>
+            ))}
+            {phases.length === 0 && (
+              <div style={s.emptyHint}>Nenhuma fase. Clique em + para criar.</div>
+            )}
+          </>
         )}
       </div>
 
-      {/* Levels */}
+      {/* Level */}
       <div style={s.section}>
         <div style={s.sectionHeader}>
           <div style={s.label}>Level</div>
-          {phaseId && <button style={s.addBtn} onClick={handleCreateLevel} title="Novo level">+</button>}
+          <button
+            style={s.addBtn(noPhase)}
+            onClick={noPhase ? undefined : handleCreateLevel}
+            title={noPhase ? 'Crie uma fase primeiro' : 'Novo level'}
+          >+</button>
         </div>
-        {levels.map(l => (
-          <div key={l.id} style={s.item(activeLevelId === l.id)} onClick={() => navigateToLevel(l)}>
-            <span>{l.name}</span>
-            <button style={s.deleteBtn} onClick={e => handleDeleteLevel(l.id, e)} title="Deletar level">✕</button>
-          </div>
-        ))}
-        {levels.length === 0 && !phaseId && (
-          <div style={s.emptyHint}>Selecione uma fase.</div>
-        )}
-        {levels.length === 0 && phaseId && (
-          <div style={s.emptyHint}>Nenhum level. Clique em + para criar.</div>
+        {noPhase ? (
+          <div style={s.depHint}>Selecione uma fase primeiro.</div>
+        ) : (
+          <>
+            {levels.map(l => (
+              <div key={l.id} style={s.item(activeLevelId === l.id)} onClick={() => navigateToLevel(l)}>
+                <span>{l.name}</span>
+                <button style={s.deleteBtn} onClick={e => handleDeleteLevel(l.id, e)} title="Deletar level">✕</button>
+              </div>
+            ))}
+            {levels.length === 0 && (
+              <div style={s.emptyHint}>Nenhum level. Clique em + para criar.</div>
+            )}
+          </>
         )}
       </div>
 

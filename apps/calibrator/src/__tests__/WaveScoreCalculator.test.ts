@@ -17,7 +17,9 @@ describe('computeWaveScore', () => {
   })
 
   it('lower delay produces higher score', () => {
-    const grid: Grid = [['grunt', 'grunt', null, null, null, null, null, null, null, null, null, null]]
+    // Use enough enemies so scores don't round to the same integer
+    const row = Array(11).fill('grunt') as Grid[0]
+    const grid: Grid = [row, row, row]
     const scoreHighDelay = computeWaveScore(grid, 6.0)
     const scoreLowDelay = computeWaveScore(grid, 1.0)
     expect(scoreLowDelay).toBeGreaterThan(scoreHighDelay)
