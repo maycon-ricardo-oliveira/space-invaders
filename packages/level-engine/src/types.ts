@@ -90,8 +90,9 @@ export interface LevelSummary {
 }
 
 export interface LevelSource {
-  /** JSON source: validates in-memory data. Future Supabase source: fetches everything at startup. */
+  /** Must resolve before listLevels()/getLevel() are called. */
   load(): Promise<void>
   listLevels(): LevelSummary[]
+  /** @throws Error if id is unknown. */
   getLevel(id: string): LevelDefinition
 }
