@@ -17,12 +17,15 @@ const INVINCIBILITY_DURATION = 1500 // ms of player invincibility after a hit
 const PLAYER_INITIAL_HP = 500
 const PLAYER_INITIAL_FUEL = 100
 const DEFAULT_FUEL_DRAIN_RATE = 12  // fuel units per second
+const ASTEROID_FUEL_DROP_CHANCE = 0.3
+const ASTEROID_FUEL_DROP_MIN_LEVEL = 5
 
 export class GameLoop {
   private state: GameState
   private enemyDirection = 1 // 1 = right, -1 = left
   private shotCooldown: number
   private readonly params: LevelDefinition['params']
+  private readonly levelIndex: number
   private isFiring = false
   private autoFireTimer = 0
   private burstQueue: Array<{ enemy: Enemy; remaining: number; burstTimer: number }> = []
@@ -30,6 +33,7 @@ export class GameLoop {
 
   constructor(level: LevelDefinition) {
     this.params = level.params
+    this.levelIndex = level.levelIndex ?? 0
     this.shotCooldown = level.params.enemyShotDelay
     this.state = {
       player: {
@@ -311,6 +315,13 @@ export class GameLoop {
               if (Math.random() < 0.5) {
                 this.state.damagePickups.push({ x: enemy.x, y: enemy.y, active: true })
               }
+            }
+            if (
+              enemy.typeId === 'asteroid' &&
+              this.levelIndex >= ASTEROID_FUEL_DROP_MIN_LEVEL &&
+              Math.random() < ASTEROID_FUEL_DROP_CHANCE
+            ) {
+              this.state.fuelPickups.push({ x: enemy.x, y: enemy.y, active: true })
             }
           }
           break

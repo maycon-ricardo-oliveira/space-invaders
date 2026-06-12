@@ -934,6 +934,60 @@ describe('GameLoop', () => {
     })
   })
 
+  describe('asteroid fuel drop (FUEL-1)', () => {
+    // Helper: build a level with a single asteroid at the player's column,
+    // at levelIndex N. enemyShotDelay=99 keeps enemy shooting from consuming
+    // Math.random calls. dropsPickup:null isolates the fuel-drop roll.
+    function asteroidFuelLevel(levelIndex: number): LevelDefinition {
+      const playerX = CANVAS_WIDTH / 2 - ENTITY_SIZE / 2
+      return {
+        ...mockLevel,
+        levelIndex,
+        params: { ...BASE_PARAMS, numberOfEnemies: 0, enemyShotDelay: 99, fuelDrainRate: 0 },
+        entities: [{ entityTypeId: 'asteroid', x: playerX, y: 60, properties: { hp: 20, movementType: 'vertical', speedMultiplier: 0, dropsPickup: null } }],
+      }
+    }
+
+    afterEach(() => jest.restoreAllMocks())
+
+    it('spawns 1 fuel pickup when asteroid is killed at levelIndex 5 and random < 0.3', () => {
+      jest.spyOn(Math, 'random').mockReturnValue(0.1)
+      const loop = new GameLoop(asteroidFuelLevel(5))
+      const playerX = CANVAS_WIDTH / 2 - ENTITY_SIZE / 2
+      fireAndTick(loop, 1)
+      const pickups = loop.getState().fuelPickups
+      expect(pickups.filter(p => p.active)).toHaveLength(1)
+      expect(pickups[0]).toMatchObject({ x: playerX, y: 60, active: true })
+    })
+
+    it('does not spawn fuel pickup when asteroid is killed at levelIndex 4 (below threshold)', () => {
+      jest.spyOn(Math, 'random').mockReturnValue(0.1)
+      const loop = new GameLoop(asteroidFuelLevel(4))
+      fireAndTick(loop, 1)
+      expect(loop.getState().fuelPickups.filter(p => p.active)).toHaveLength(0)
+    })
+
+    it('does not spawn fuel pickup when asteroid is killed at levelIndex 5 but random >= 0.3', () => {
+      jest.spyOn(Math, 'random').mockReturnValue(0.9)
+      const loop = new GameLoop(asteroidFuelLevel(5))
+      fireAndTick(loop, 1)
+      expect(loop.getState().fuelPickups.filter(p => p.active)).toHaveLength(0)
+    })
+
+    it('does not spawn fuel pickup when a non-asteroid is killed at levelIndex 5 (random 0.1)', () => {
+      jest.spyOn(Math, 'random').mockReturnValue(0.1)
+      const playerX = CANVAS_WIDTH / 2 - ENTITY_SIZE / 2
+      const loop = new GameLoop({
+        ...mockLevel,
+        levelIndex: 5,
+        params: { ...BASE_PARAMS, numberOfEnemies: 0, enemyShotDelay: 99, fuelDrainRate: 0 },
+        entities: [{ entityTypeId: 'basic-enemy', x: playerX, y: 60, properties: { hp: 20, dropsPickup: null } }],
+      })
+      fireAndTick(loop, 1)
+      expect(loop.getState().fuelPickups.filter(p => p.active)).toHaveLength(0)
+    })
+  })
+
   describe('damage pickup collection', () => {
     it('bulletDamage formula: 20 + 2*20 = 60', () => {
       const loop = new GameLoop(mockLevel)
