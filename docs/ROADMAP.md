@@ -45,19 +45,21 @@ A PR is only valid if it ships something that can be tested end-to-end. Examples
 | 4 | Calibrator MVP | Calibrator | ✅ Done (PR #5) |
 | 5a | Game Mechanics (controls + HUD) | Game | ✅ Done (PR #8) |
 | 5b | Gameplay Foundation (HP + Fuel + XP + HUD) | Game | ✅ Done (PR #9, #10) |
-| 6 | Enemies & Waves | Game | 🚧 In Progress — Wave System pending |
-| 7 | Card System | Game | ⏳ Todo |
-| 8 | Parallax & Terrain | Game | ⏳ Todo |
-| 9 | Planet Structure | Game | ⏳ Todo |
-| 10 | Boss System | Game | ⏳ Todo |
-| 11 | Meta Progression | Game | ⏳ Todo |
-| 12 | Auth + Firestore | Backend | ⏳ Todo |
-| 13 | Supabase + Content Pipeline | Backend | ⏳ Todo |
-| 14 | Monetization | Game | ⏳ Todo |
-| 15 | Navigation + Store | Game | ⏳ Todo |
-| 16 | Analytics + Admin | Backend | ⏳ Todo |
-| 17 | Bonus Missions | Game | ⏳ Todo |
-| 18 | Survival Mode | Game | ⏳ Backlog |
+| 6A | Enemies (asteroid, fast, strong) | Game | ✅ Done (PR #13, #14) |
+| 6B | Wave System (GL-2) | Game | ⏳ Todo — **next gameplay step** |
+| 7 | Dashboard Wave Editor | Calibrator | ✅ Done (PR #16) |
+| 8 | Card System | Game | ⏳ Todo |
+| 9 | Parallax & Terrain | Game | ⏳ Todo |
+| 10 | Planet Structure | Game | ⏳ Todo |
+| 11 | Boss System | Game | ⏳ Todo |
+| 12 | Meta Progression | Game | ⏳ Todo |
+| 13 | Auth + Firestore | Backend | ⏳ Todo |
+| 14 | Supabase + Content Pipeline | Backend | ⏳ Todo |
+| 15 | Monetization | Game | ⏳ Todo |
+| 16 | Navigation + Store | Game | ⏳ Todo |
+| 17 | Analytics + Admin | Backend | ⏳ Todo |
+| 18 | Bonus Missions | Game | ⏳ Todo |
+| 19 | Survival Mode | Game | ⏳ Backlog |
 
 ---
 
@@ -70,6 +72,9 @@ A PR is only valid if it ships something that can be tested end-to-end. Examples
 | 3 | Game MVP | ✅ Done (PR #3) | — | GL, HUD |
 | 4 | Calibrator MVP | ✅ Done (PR #5) | — | CAL |
 | 5a | Game Mechanics (controls + HUD) | ✅ Done (PR #8) | — | GL, HUD |
+| 5b | Gameplay Foundation (HP + Fuel + XP + HUD) | ✅ Done (PR #9, #10) | — | HP, FUEL, XP, HUD |
+| 6A | Enemies (asteroid, fast, strong) | ✅ Done (PR #13, #14) | — | S6-TYPES, ENEMY |
+| 7 | Dashboard Wave Editor | ✅ Done (PR #16) | — | S7 |
 
 ---
 
@@ -110,10 +115,13 @@ A PR is only valid if it ships something that can be tested end-to-end. Examples
 
 ---
 
-## Sprint 6 — Enemies & Waves
+## Sprint 6 — Enemies & Waves (6A ✅ Done · 6B ⏳ Todo)
 
 **Goal:** Add enemy variety (asteroids, fast, strong) and wave system.
 **Deliverable:** 3 enemy types playable with configurable wave patterns per level.
+
+> **➡️ Sprint 6B (Wave System / GL-2) is the NEXT gameplay step.**
+> Plan ready since 2026-04-30: `docs/superpowers/plans/2026-04-30-s6b-waves.md`
 
 | # | Feature | Code | Status | PR | Deliverable |
 |---|---------|------|--------|-----|-------------|
@@ -121,23 +129,23 @@ A PR is only valid if it ships something that can be tested end-to-end. Examples
 | 1 | Asteroids | ENEMY-1 | ✅ Done (PR #14) | #14 | Vertical movement, damage pickup drop |
 | 2 | Fast Enemy | ENEMY-2 | ✅ Done (PR #14) | #14 | Burst fire (3 shots), high speed, low HP |
 | 3 | Strong Enemy | ENEMY-3 | ✅ Done (PR #14) | #14 | High HP (200), low speed, registry-driven |
-| 4 | Wave System | GL-2 | ⏳ Todo | — | Level has wave list; all waves cleared to advance |
+| 4 | Wave System | GL-2 | ⏳ Todo (Sprint 6B) | — | Level has wave list; all waves cleared to advance |
 
 ### Todo List
 
-- [ ] ENEMY-1: Asteroid entity type with destructible flag
-- [ ] ENEMY-1: Asteroid moves top → bottom, blocks player path
-- [ ] ENEMY-1: Player bullet destroys asteroid → drop chance HP/fuel
-- [ ] ENEMY-1: Asteroid collision with player → HP damage
-- [ ] ENEMY-2: Fast enemy entity: high speed param, low HP, burst fire
-- [ ] ENEMY-2: Registered in EntityRegistry with xpValue = 2
-- [ ] ENEMY-3: Strong enemy entity: low speed, high HP (multi-hit), heavy shot
-- [ ] ENEMY-3: Registered in EntityRegistry with xpValue = 3
+- [x] ENEMY-1: Asteroid entity type with destructible flag
+- [x] ENEMY-1: Asteroid moves top → bottom, blocks player path
+- [x] ENEMY-1: Player bullet destroys asteroid → drop chance HP/fuel
+- [x] ENEMY-1: Asteroid collision with player → HP damage
+- [x] ENEMY-2: Fast enemy entity: high speed param, low HP, burst fire
+- [x] ENEMY-2: Registered in EntityRegistry with xpValue = 2
+- [x] ENEMY-3: Strong enemy entity: low speed, high HP (multi-hit), heavy shot
+- [x] ENEMY-3: Registered in EntityRegistry with xpValue = 3
 - [ ] GL-2: `LevelDefinition.waves: Wave[]` — ordered list of spawn patterns
 - [ ] GL-2: Wave advances only when all enemies in wave are dead
 - [ ] GL-2: Level complete only when all waves are cleared
 - [ ] GL-2: Wave pattern types: line, V, diamond, flanks, spiral
-- [ ] GL-2: Pattern editor in calibrator (visual grid)
+- [x] GL-2: Pattern editor in calibrator (visual grid) — delivered in Sprint 7 (PR #16)
 
 ---
 
@@ -154,7 +162,14 @@ A PR is only valid if it ships something that can be tested end-to-end. Examples
 | 4 | Wave Grid Editor | S7-GRID | ✅ Done (PR #16) | #16 | Interactive grid with spawn zones, entity toolbox, pattern picker |
 | 5 | Export to levels.json | S7-EXPORT | ✅ Done (PR #16) | #16 | DB → LevelDefinition[] → JSON with proper mapping |
 
-### Card System (moved to Sprint 8)
+> **Pending decision:** local branch `wip/s7-pattern-picker-ux` holds an unmerged UX
+> refactor of the PatternPicker (dropdown). Decide: open PR, rebase, or discard.
+
+---
+
+## Sprint 8 — Card System
+
+> Moved from the original Sprint 7 slot when Dashboard Wave Editor took priority.
 
 **Goal:** Implement card selection screen triggered by XP level-up.
 **Deliverable:** Player levels up mid-run → pause → pick 1 of 3 cards → effect applied.
@@ -181,7 +196,7 @@ A PR is only valid if it ships something that can be tested end-to-end. Examples
 
 ---
 
-## Sprint 8 — Parallax & Terrain
+## Sprint 9 — Parallax & Terrain
 
 **Goal:** Multi-layer parallax scrolling and terrain-scrolling system.
 **Deliverable:** Game renders scrolling background layers; terrain obstacles scroll with the map.
@@ -205,7 +220,7 @@ A PR is only valid if it ships something that can be tested end-to-end. Examples
 
 ---
 
-## Sprint 9 — Planet Structure
+## Sprint 10 — Planet Structure
 
 **Goal:** Full planet/phase/level progression structure and revive system.
 **Deliverable:** Player can progress through phases 1–10 of Planet 1; planet hub screen exists.
@@ -233,7 +248,7 @@ A PR is only valid if it ships something that can be tested end-to-end. Examples
 
 ---
 
-## Sprint 10 — Boss System
+## Sprint 11 — Boss System
 
 **Goal:** Boss fights at phase 5 level 10, phase 10 level 5, and phase 10 level 10.
 **Deliverable:** 3 boss types functional; dual boss spawns at phase 10 level 10.
@@ -262,7 +277,7 @@ A PR is only valid if it ships something that can be tested end-to-end. Examples
 
 ---
 
-## Sprint 11 — Meta Progression
+## Sprint 12 — Meta Progression
 
 **Goal:** Permanent upgrades (hangar) and equipment system.
 **Deliverable:** Player can buy upgrades with gold and equip items; hangar UI functional.
@@ -301,7 +316,7 @@ A PR is only valid if it ships something that can be tested end-to-end. Examples
 
 ---
 
-## Sprint 12 — Auth + Firestore
+## Sprint 13 — Auth + Firestore
 
 **Goal:** Player data persistence with Firebase.
 **Deliverable:** Player data (gold, upgrades, inventory) persists across sessions offline-first.
@@ -326,7 +341,7 @@ A PR is only valid if it ships something that can be tested end-to-end. Examples
 
 ---
 
-## Sprint 13 — Supabase + Content Pipeline
+## Sprint 14 — Supabase + Content Pipeline
 
 **Goal:** Game content (planets, waves, cards) served from Supabase, no rebuild needed.
 **Deliverable:** Adding a new planet or card in Supabase reflects in app after content refresh.
@@ -348,7 +363,7 @@ A PR is only valid if it ships something that can be tested end-to-end. Examples
 
 ---
 
-## Sprint 14 — Monetization
+## Sprint 15 — Monetization
 
 **Goal:** Energy system, rewarded ads, and IAP.
 **Deliverable:** Energy gates runs; ads and IAP grant energy/diamonds.
@@ -375,7 +390,7 @@ A PR is only valid if it ships something that can be tested end-to-end. Examples
 
 ---
 
-## Sprint 15 — Navigation + Store
+## Sprint 16 — Navigation + Store
 
 **Goal:** Home screen, nav bar, in-game store and player menu.
 **Deliverable:** Full app navigation flow functional; store shows IAP packages.
@@ -399,7 +414,7 @@ A PR is only valid if it ships something that can be tested end-to-end. Examples
 
 ---
 
-## Sprint 16 — Analytics + Admin
+## Sprint 17 — Analytics + Admin
 
 **Goal:** Firebase Analytics events and admin dashboard for calibration.
 **Deliverable:** Game events tracked in Firebase; admin can adjust gold/difficulty in Supabase.
@@ -422,7 +437,7 @@ A PR is only valid if it ships something that can be tested end-to-end. Examples
 
 ---
 
-## Sprint 17 — Bonus Missions
+## Sprint 18 — Bonus Missions
 
 **Goal:** Daily and weekly mission rotation with gold and chest rewards.
 **Deliverable:** Daily missions refresh each midnight; completing all weekly missions grants a chest.
@@ -443,7 +458,7 @@ A PR is only valid if it ships something that can be tested end-to-end. Examples
 
 ---
 
-## Sprint 18 — Survival Mode (Backlog)
+## Sprint 19 — Survival Mode (Backlog)
 
 **Goal:** Infinite procedural mode with seamless phase transitions.
 **Deliverable:** Survival mode playable; phases chain seamlessly with increasing difficulty.
@@ -459,6 +474,28 @@ A PR is only valid if it ships something that can be tested end-to-end. Examples
 - [ ] SURV-1: No pause between phases (seamless transition)
 - [ ] SURV-1: Difficulty scales with score
 - [ ] SURV-1: SurvivalModeScreen added to navigation
+
+---
+
+## Tech Debt & Gaps — audit 2026-06-12
+
+Gaps found in the post-Sprint-7 audit. The two CRITICAL items block the core promise
+of the project (calibrator → levels.json → game) and should be scheduled alongside
+Sprint 6B, before new gameplay features.
+
+| Priority | Item | Detail |
+|----------|------|--------|
+| 🔴 CRITICAL | Close levels.json pipeline end-to-end | `LevelEngine.generate()` always returns `entities: []`; the game never reads `levels.json`; fast/strong/asteroid enemies and fuel pickup never appear in-game |
+| 🔴 CRITICAL | Align game EntityRegistry ↔ calibrator toolbox | Asteroid props diverge: game registers `{pointValue, health}` vs calibrator `{hp, speedMultiplier, burstCount}` — same entity, incompatible contracts |
+| 🟠 High | Dashboard build breaks without Postgres | `apps/calibrator/app/dashboard/page.tsx` runs a Prisma query at build time → add `export const dynamic = 'force-dynamic'` |
+| 🟠 High | No CI | Add GitHub Actions workflow: `npm test` + `npm run build` on every PR |
+| 🟡 Medium | Release infra missing | `eas.json`, bundle id / Android package name, privacy policy, UMP consent |
+| 🟢 Low | Test hygiene | `Sidebar` test triggers act() warning (`Sidebar.tsx:80`); unused imports in `WorldService.test.ts:18` and `schemas.test.ts:11` |
+
+### Pending decisions
+
+- [ ] Branch `wip/s7-pattern-picker-ux` (local, unmerged): PatternPicker UX refactor
+      (dropdown). Decide whether to open a PR, rebase onto current master, or discard.
 
 ---
 

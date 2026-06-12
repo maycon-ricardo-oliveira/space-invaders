@@ -1,5 +1,11 @@
 # Master Implementation Plan
 
+> **⚠️ Sprint numbering outdated (snapshot of 2026-04-28).** On 2026-06-12 the chain
+> was renumbered in `docs/ROADMAP.md` (canonical): Dashboard Wave Editor became
+> Sprint 7 (✅ Done, PR #16), Card System moved to Sprint 8, and every sprint from
+> Parallax onward shifted +1 (Parallax = 9 … Survival = 19). The sprint *content*
+> below is still valid — only the numbers drifted. Always check ROADMAP.md first.
+
 > **For agentic workers:** Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement each sprint task-by-task.
 
 **Goal:** Implement all features from the game design spec v2, sprint by sprint, each delivering working testable software.
