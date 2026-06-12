@@ -54,4 +54,72 @@ describe('validateLevels', () => {
     const bad2 = { ...validLevel, id: 'story-1-3', params: { ...validLevel.params, enemySpeed: 0 } }
     expect(validateLevels([bad1, bad2], KNOWN).length).toBeGreaterThanOrEqual(2)
   })
+
+  // --- New tests (TDD: added before implementation) ---
+
+  it('reports missing required param enemySpeed', () => {
+    const { enemySpeed: _dropped, ...paramsWithout } = validLevel.params
+    const bad = { ...validLevel, params: paramsWithout }
+    const errors = validateLevels([bad], KNOWN)
+    expect(errors.some(e => e.message.includes("missing required param 'enemySpeed'"))).toBe(true)
+  })
+
+  it('reports missing or empty id for level without id', () => {
+    const { id: _dropped, ...withoutId } = validLevel
+    const errors = validateLevels([withoutId], KNOWN)
+    expect(errors.some(e => e.levelId === '(index 0)' && e.message === 'missing or empty id')).toBe(true)
+  })
+
+  it('reports missing or empty id for level with empty-string id', () => {
+    const bad = { ...validLevel, id: '' }
+    const errors = validateLevels([bad], KNOWN)
+    expect(errors.some(e => e.levelId === '(index 0)' && e.message === 'missing or empty id')).toBe(true)
+  })
+
+  it('reports error when entities is not an array', () => {
+    const bad = { ...validLevel, entities: 'not-an-array' }
+    const errors = validateLevels([bad], KNOWN)
+    expect(errors.some(e => e.message.match(/entities must be an array/i))).toBe(true)
+  })
+
+  it('reports error when params is null', () => {
+    const bad = { ...validLevel, params: null }
+    const errors = validateLevels([bad], KNOWN)
+    expect(errors.some(e => e.message === 'params must be an object')).toBe(true)
+  })
+
+  it('rejects NaN enemySpeed with a range/finite error', () => {
+    const bad = { ...validLevel, params: { ...validLevel.params, enemySpeed: NaN } }
+    const errors = validateLevels([bad], KNOWN)
+    expect(errors.some(e => e.message.includes('enemySpeed'))).toBe(true)
+  })
+
+  it('rejects powerUpMinWait > powerUpMaxWait with error mentioning both keys', () => {
+    const bad = { ...validLevel, params: { ...validLevel.params, powerUpMinWait: 20, powerUpMaxWait: 5 } }
+    const errors = validateLevels([bad], KNOWN)
+    expect(errors.some(e => e.message.includes('powerUpMinWait') && e.message.includes('powerUpMaxWait'))).toBe(true)
+  })
+
+  it('accepts boundary positions x=0,y=0 and x=390,y=844 without errors', () => {
+    const levelWithBoundaryEntities = {
+      ...validLevel,
+      entities: [
+        { entityTypeId: 'basic-enemy', x: 0, y: 0 },
+        { entityTypeId: 'basic-enemy', x: 390, y: 844 },
+      ],
+    }
+    expect(validateLevels([levelWithBoundaryEntities], KNOWN)).toEqual([])
+  })
+
+  it('accepts enemySpeed exactly at boundary values 1 and 5 without errors', () => {
+    const level1 = { ...validLevel, id: 'a', params: { ...validLevel.params, enemySpeed: 1 } }
+    const level5 = { ...validLevel, id: 'b', params: { ...validLevel.params, enemySpeed: 5 } }
+    expect(validateLevels([level1, level5], KNOWN)).toEqual([])
+  })
+
+  it('rejects hasPowerUps when it is not a boolean', () => {
+    const bad = { ...validLevel, params: { ...validLevel.params, hasPowerUps: 1 } }
+    const errors = validateLevels([bad], KNOWN)
+    expect(errors.some(e => e.message.includes('hasPowerUps'))).toBe(true)
+  })
 })
