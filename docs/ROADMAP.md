@@ -46,7 +46,6 @@ A PR is only valid if it ships something that can be tested end-to-end. Examples
 | 5a | Game Mechanics (controls + HUD) | Game | ✅ Done (PR #8) |
 | 5b | Gameplay Foundation (HP + Fuel + XP + HUD) | Game | ✅ Done (PR #9, #10) |
 | 6 | Enemies & Waves | Game | 🚧 In Progress — Wave System pending |
-| s7-cal | Dashboard Wave Editor | Calibrator | 🚧 In Progress |
 | 7 | Card System | Game | ⏳ Todo |
 | 8 | Parallax & Terrain | Game | ⏳ Todo |
 | 9 | Planet Structure | Game | ⏳ Todo |
@@ -142,33 +141,20 @@ A PR is only valid if it ships something that can be tested end-to-end. Examples
 
 ---
 
-## Sprint s7-cal — Dashboard Wave Editor (Calibrator)
+## Sprint 7 — Dashboard Wave Editor
 
-**Goal:** Add a visual Wave Editor to the calibrator backed by PostgreSQL (Docker + Prisma).
-**Deliverable:** World → Phase → Level → Wave hierarchy editable in the browser; export to `levels.json`.
+**Goal:** Unified dashboard in calibrator for editing World→Phase→Level→Wave with PostgreSQL backend.
+**Deliverable:** Full content hierarchy editor with wave grid, pattern library, and JSON export.
 
 | # | Feature | Code | Status | PR | Deliverable |
 |---|---------|------|--------|-----|-------------|
-| 1 | Docker + Prisma infra | DB | 🚧 In Progress | — | Postgres schema, Prisma client, migrations |
-| 2 | Zod schemas | SCHEMAS | 🚧 In Progress | — | EntityType, Grid, LevelParams, WaveInput, PatternInput |
-| 3 | WavePatternGenerator | GEN | 🚧 In Progress | — | Random wave pattern generation |
-| 4 | WaveScoreCalculator | SCORE | 🚧 In Progress | — | Difficulty score from entity weights |
-| 5 | WorldService + PhaseService | SVC | 🚧 In Progress | — | CRUD for worlds and phases |
-| 6 | LevelService | SVC | 🚧 In Progress | — | CRUD for levels with LevelParams |
-| 7 | WaveService + PatternService | SVC | 🚧 In Progress | — | CRUD for waves and saved patterns |
-| 8 | ExportService | EXPORT | 🚧 In Progress | — | Export world → levels.json |
-| 9 | Server Actions | ACTIONS | 🚧 In Progress | — | Next.js server actions wrapping services |
-| 10 | Prisma seed | SEED | 🚧 In Progress | — | Dev seed with Planet 1 data |
-| 11 | Dashboard routing + layout | UI | 🚧 In Progress | — | /dashboard/[worldId]/[phaseId]/[levelId] routing |
-| 12 | Sidebar | UI | 🚧 In Progress | — | World → Phase → Level → Wave navigation |
-| 13 | WaveChipBar | UI | 🚧 In Progress | — | Wave tab chips with add/remove |
-| 14 | WaveStatsPanel | UI | 🚧 In Progress | — | Enemy count, difficulty score display |
-| 15 | SpawnZoneGrid + EntityToolbox + PatternPicker | UI | 🚧 In Progress | — | Visual 12×N grid editor |
-| 16 | WaveEditor + EditorPane | UI | 🚧 In Progress | — | Full editor orchestrator with transitions |
+| 1 | Database Schema | S7-DB | ✅ Done (PR #16) | #16 | World, Phase, Level, Wave, Pattern models with Prisma |
+| 2 | Service Layer | S7-SVC | ✅ Done (PR #16) | #16 | CRUD services with Zod validation + WaveScoreCalculator |
+| 3 | Dashboard UI | S7-UI | ✅ Done (PR #16) | #16 | Sidebar + LevelEditor + WaveChipBar + EditorPane |
+| 4 | Wave Grid Editor | S7-GRID | ✅ Done (PR #16) | #16 | Interactive grid with spawn zones, entity toolbox, pattern picker |
+| 5 | Export to levels.json | S7-EXPORT | ✅ Done (PR #16) | #16 | DB → LevelDefinition[] → JSON with proper mapping |
 
----
-
-## Sprint 7 — Card System
+### Card System (moved to Sprint 8)
 
 **Goal:** Implement card selection screen triggered by XP level-up.
 **Deliverable:** Player levels up mid-run → pause → pick 1 of 3 cards → effect applied.
