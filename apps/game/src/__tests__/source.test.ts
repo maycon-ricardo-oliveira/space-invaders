@@ -9,6 +9,7 @@ describe('level source bootstrap', () => {
 
   it('initLevelSource loads the committed levels.json artifact', async () => {
     const source = await initLevelSource()
+    expect(getLevelSource()).toBe(source)
     const summaries = source.listLevels()
     expect(summaries.length).toBeGreaterThanOrEqual(1)
     expect(summaries[0].id).toBe('story-1-1')
