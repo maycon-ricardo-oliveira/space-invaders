@@ -14,6 +14,7 @@ export class LevelContractError extends Error {
 
 export class JsonLevelSource implements LevelSource {
   private levels: LevelDefinition[] = []
+  private loaded = false
 
   constructor(
     private readonly data: unknown,
@@ -39,9 +40,11 @@ export class JsonLevelSource implements LevelSource {
         },
       })),
     }))
+    this.loaded = true
   }
 
   listLevels(): LevelSummary[] {
+    if (!this.loaded) throw new Error('JsonLevelSource: call load() first')
     return this.levels.map(l => ({
       id: l.id,
       phaseIndex: l.phaseIndex ?? 0,
@@ -51,6 +54,7 @@ export class JsonLevelSource implements LevelSource {
   }
 
   getLevel(id: string): LevelDefinition {
+    if (!this.loaded) throw new Error('JsonLevelSource: call load() first')
     const found = this.levels.find(l => l.id === id)
     if (!found) throw new Error(`Level not found: ${id}`)
     return found

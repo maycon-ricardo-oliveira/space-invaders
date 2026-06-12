@@ -61,4 +61,14 @@ describe('JsonLevelSource', () => {
     await source.load()
     expect(() => source.getLevel('story-9-9')).toThrow(/not found/i)
   })
+
+  it('listLevels before load() throws', () => {
+    const source = new JsonLevelSource([level()], makeRegistry())
+    expect(() => source.listLevels()).toThrow(/call load\(\) first/)
+  })
+
+  it('getLevel before load() throws', () => {
+    const source = new JsonLevelSource([level()], makeRegistry())
+    expect(() => source.getLevel('story-1-1')).toThrow(/call load\(\) first/)
+  })
 })
