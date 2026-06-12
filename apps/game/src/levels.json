@@ -1,0 +1,137 @@
+[
+  {
+    "id": "story-1-1",
+    "style": "classic",
+    "difficultyScore": 0,
+    "phaseIndex": 1,
+    "levelIndex": 1,
+    "entities": [
+      {
+        "entityTypeId": "basic-enemy",
+        "x": 17.727272727272727,
+        "y": 20
+      },
+      {
+        "entityTypeId": "basic-enemy",
+        "x": 88.63636363636363,
+        "y": 20
+      },
+      {
+        "entityTypeId": "basic-enemy",
+        "x": 159.54545454545453,
+        "y": 20
+      },
+      {
+        "entityTypeId": "basic-enemy",
+        "x": 230.45454545454544,
+        "y": 20
+      },
+      {
+        "entityTypeId": "fast-enemy",
+        "x": 194.99999999999997,
+        "y": 20
+      },
+      {
+        "entityTypeId": "basic-enemy",
+        "x": 159.54545454545453,
+        "y": 60
+      },
+      {
+        "entityTypeId": "basic-enemy",
+        "x": 230.45454545454544,
+        "y": 60
+      },
+      {
+        "entityTypeId": "strong-enemy",
+        "x": 17.727272727272727,
+        "y": 20
+      },
+      {
+        "entityTypeId": "basic-enemy",
+        "x": 88.63636363636363,
+        "y": 60
+      },
+      {
+        "entityTypeId": "basic-enemy",
+        "x": 159.54545454545453,
+        "y": 60
+      }
+    ],
+    "waves": [
+      {
+        "entities": [
+          {
+            "entityTypeId": "basic-enemy",
+            "x": 17.727272727272727,
+            "y": 20
+          },
+          {
+            "entityTypeId": "basic-enemy",
+            "x": 88.63636363636363,
+            "y": 20
+          },
+          {
+            "entityTypeId": "basic-enemy",
+            "x": 159.54545454545453,
+            "y": 20
+          },
+          {
+            "entityTypeId": "basic-enemy",
+            "x": 230.45454545454544,
+            "y": 20
+          }
+        ]
+      },
+      {
+        "entities": [
+          {
+            "entityTypeId": "fast-enemy",
+            "x": 194.99999999999997,
+            "y": 20
+          },
+          {
+            "entityTypeId": "basic-enemy",
+            "x": 159.54545454545453,
+            "y": 60
+          },
+          {
+            "entityTypeId": "basic-enemy",
+            "x": 230.45454545454544,
+            "y": 60
+          }
+        ]
+      },
+      {
+        "entities": [
+          {
+            "entityTypeId": "strong-enemy",
+            "x": 17.727272727272727,
+            "y": 20
+          },
+          {
+            "entityTypeId": "basic-enemy",
+            "x": 88.63636363636363,
+            "y": 60
+          },
+          {
+            "entityTypeId": "basic-enemy",
+            "x": 159.54545454545453,
+            "y": 60
+          }
+        ]
+      }
+    ],
+    "params": {
+      "numberOfEnemies": 10,
+      "enemySpeed": 2,
+      "enemyShotDelay": 1.5,
+      "enemyShotSpeed": 4,
+      "enemyAngerDelay": 15,
+      "enemySpawnDelay": 1,
+      "hasPowerUps": true,
+      "powerUpMinWait": 5,
+      "powerUpMaxWait": 15,
+      "fuelDrainRate": 8
+    }
+  }
+]
