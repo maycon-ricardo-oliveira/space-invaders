@@ -1,7 +1,7 @@
-import type { Grid } from '../lib/schemas'
+import type { Grid, EntityType } from '../lib/schemas'
 import { MAX_WAVE_SCORE } from '../lib/gridConstants'
 
-const TYPE_WEIGHT: Record<string, number> = {
+const TYPE_WEIGHT: Record<EntityType, number> = {
   'basic-enemy':  1.0,
   'asteroid':     1.5,
   'fast-enemy':   2.0,
