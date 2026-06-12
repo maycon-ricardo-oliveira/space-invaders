@@ -10,6 +10,8 @@ import type {
   ILevelEngine,
   IRenderer,
   Wave,
+  LevelSource,
+  LevelSummary,
 } from '../types'
 
 describe('types', () => {
@@ -138,5 +140,36 @@ describe('types', () => {
       params,
     }
     expect(def.waves).toBeUndefined()
+  })
+
+  describe('LevelSource contract', () => {
+    it('accepts a minimal LevelSource implementation', () => {
+      const summary: LevelSummary = { id: 'story-1-1', phaseIndex: 1, levelIndex: 1, difficultyScore: 10 }
+      const level: LevelDefinition = {
+        id: 'story-1-1',
+        style: 'classic',
+        difficultyScore: 10,
+        phaseIndex: 1,
+        levelIndex: 1,
+        entities: [],
+        params: {
+          numberOfEnemies: 0,
+          enemySpeed: 2,
+          enemyShotDelay: 1.5,
+          enemyShotSpeed: 4,
+          enemyAngerDelay: 15,
+          enemySpawnDelay: 1,
+          hasPowerUps: true,
+          powerUpMinWait: 5,
+          powerUpMaxWait: 15,
+        },
+      }
+      const source: LevelSource = {
+        load: async () => {},
+        listLevels: () => [summary],
+        getLevel: () => level,
+      }
+      expect(source.listLevels()[0].id).toBe('story-1-1')
+    })
   })
 })

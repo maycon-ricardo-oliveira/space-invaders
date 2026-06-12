@@ -13,6 +13,8 @@ export type {
   CalibratorStrategy,
   ILevelEngine,
   IRenderer,
+  LevelSummary,
+  LevelSource,
 } from './types'
 
 export { computeDifficultyScore } from './difficulty'

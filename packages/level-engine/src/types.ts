@@ -50,6 +50,8 @@ export interface LevelDefinition {
   id: string
   style: 'classic' | 'freeRoam' | 'mixed'
   difficultyScore: number
+  phaseIndex?: number
+  levelIndex?: number
   entities: EntityPlacement[]
   params: LevelParams
   waves?: Wave[]
@@ -78,4 +80,18 @@ export interface ILevelEngine {
   generate(request: LevelRequest): LevelDefinition
   setCalibrator(strategy: CalibratorStrategy): void
   registerEntityType(type: EntityType): void
+}
+
+export interface LevelSummary {
+  id: string
+  phaseIndex: number
+  levelIndex: number
+  difficultyScore: number
+}
+
+export interface LevelSource {
+  /** JSON source: validates in-memory data. Future Supabase source: fetches everything at startup. */
+  load(): Promise<void>
+  listLevels(): LevelSummary[]
+  getLevel(id: string): LevelDefinition
 }
