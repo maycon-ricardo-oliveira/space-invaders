@@ -40,7 +40,7 @@ jest.mock('../game/GameLoop', () => ({
 }))
 
 import React from 'react'
-import { render, fireEvent, act } from '@testing-library/react-native'
+import { render, fireEvent } from '@testing-library/react-native'
 import { GameScreen } from '../screens/GameScreen'
 import { initLevelSource, resetLevelSourceForTests } from '../levels/source'
 
