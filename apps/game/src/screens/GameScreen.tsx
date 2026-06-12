@@ -7,9 +7,11 @@ import { registerEntities } from '../entities/registerEntities'
 import { GameLoop, CANVAS_WIDTH, CANVAS_HEIGHT } from '../game/GameLoop'
 import { SkiaRenderer } from '../renderers/SkiaRenderer'
 import type { GameStatus } from '../game/types'
+import { getLevelSource } from '../levels/source'
+import type { LevelSelection } from './StoryModeScreen'
 
 interface Props {
-  levelIndex: number
+  selection: LevelSelection
   totalLevels: number
   onBack: () => void
 }
@@ -32,15 +34,24 @@ const BAR_WIDTH = 140
 const XP_BAR_WIDTH = 180
 const XP_BAR_HEIGHT = 6
 
-function buildLoop(levelIndex: number, totalLevels: number): GameLoop {
+function buildLoop(selection: LevelSelection, totalLevels: number): GameLoop {
+  if (selection.kind === 'authored') {
+    try {
+      return new GameLoop(getLevelSource().getLevel(selection.levelId))
+    } catch (error) {
+      if (__DEV__) throw error
+      console.error(`level ${selection.levelId} failed to load — procedural fallback`, error)
+    }
+  }
+  const levelIndex = selection.kind === 'procedural' ? selection.levelIndex : 0
   const engine = new LevelEngine(new CurveCalibratorStrategy())
   registerEntities(engine)
   const level = engine.generate({ mode: 'story', levelIndex, totalLevels })
   return new GameLoop(level)
 }
 
-export function GameScreen({ levelIndex, totalLevels, onBack }: Props) {
-  const [loop] = useState(() => buildLoop(levelIndex, totalLevels))
+export function GameScreen({ selection, totalLevels, onBack }: Props) {
+  const [loop] = useState(() => buildLoop(selection, totalLevels))
   const [renderer] = useState(() => new SkiaRenderer(CANVAS_WIDTH, CANVAS_HEIGHT))
   const [status, setStatus] = useState<GameStatus>('playing')
   const [picture, setPicture] = useState<SkPicture | null>(null)

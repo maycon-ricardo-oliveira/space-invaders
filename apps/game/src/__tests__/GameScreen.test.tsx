@@ -40,8 +40,9 @@ jest.mock('../game/GameLoop', () => ({
 }))
 
 import React from 'react'
-import { render, fireEvent } from '@testing-library/react-native'
+import { render, fireEvent, act } from '@testing-library/react-native'
 import { GameScreen } from '../screens/GameScreen'
+import { initLevelSource, resetLevelSourceForTests } from '../levels/source'
 
 // Prevent the requestAnimationFrame polyfill from firing asynchronously and
 // triggering React state updates outside act(). The game loop starts but never
@@ -53,6 +54,7 @@ beforeEach(() => {
 
 afterEach(() => {
   jest.restoreAllMocks()
+  resetLevelSourceForTests()
 })
 
 describe('GameScreen — renders without crashing', () => {
@@ -60,9 +62,9 @@ describe('GameScreen — renders without crashing', () => {
     mockGameStatus = 'playing'
   })
 
-  it('renders without crashing', () => {
+  it('renders without crashing (procedural)', () => {
     expect(() =>
-      render(<GameScreen levelIndex={0} totalLevels={20} onBack={jest.fn()} />),
+      render(<GameScreen selection={{ kind: 'procedural', levelIndex: 0 }} totalLevels={20} onBack={jest.fn()} />),
     ).not.toThrow()
   })
 })
@@ -74,21 +76,21 @@ describe('GameScreen — HUD', () => {
 
   it('renders hp value in HUD', () => {
     const { getByText } = render(
-      <GameScreen levelIndex={0} totalLevels={20} onBack={jest.fn()} />,
+      <GameScreen selection={{ kind: 'procedural', levelIndex: 0 }} totalLevels={20} onBack={jest.fn()} />,
     )
     expect(getByText('500')).toBeTruthy()
   })
 
   it('renders fuel value in HUD', () => {
     const { getByText } = render(
-      <GameScreen levelIndex={0} totalLevels={20} onBack={jest.fn()} />,
+      <GameScreen selection={{ kind: 'procedural', levelIndex: 0 }} totalLevels={20} onBack={jest.fn()} />,
     )
     expect(getByText('100')).toBeTruthy()
   })
 
   it('renders score matching the game state', () => {
     const { getAllByText } = render(
-      <GameScreen levelIndex={0} totalLevels={20} onBack={jest.fn()} />,
+      <GameScreen selection={{ kind: 'procedural', levelIndex: 0 }} totalLevels={20} onBack={jest.fn()} />,
     )
     // Score and XP both start at 0; verify at least one "0" is rendered
     expect(getAllByText('0').length).toBeGreaterThanOrEqual(1)
@@ -96,7 +98,7 @@ describe('GameScreen — HUD', () => {
 
   it('does not render heart emoji HUD', () => {
     const { queryByText } = render(
-      <GameScreen levelIndex={0} totalLevels={20} onBack={jest.fn()} />,
+      <GameScreen selection={{ kind: 'procedural', levelIndex: 0 }} totalLevels={20} onBack={jest.fn()} />,
     )
     expect(queryByText('❤️❤️❤️')).toBeNull()
   })
@@ -119,7 +121,7 @@ describe('GameScreen — game-over overlay', () => {
   it('shows "You Win!" overlay when game is won', () => {
     mockGameStatus = 'won'
     const { queryByText } = render(
-      <GameScreen levelIndex={0} totalLevels={20} onBack={jest.fn()} />,
+      <GameScreen selection={{ kind: 'procedural', levelIndex: 0 }} totalLevels={20} onBack={jest.fn()} />,
     )
     expect(queryByText('You Win!')).toBeTruthy()
   })
@@ -127,7 +129,7 @@ describe('GameScreen — game-over overlay', () => {
   it('shows "Game Over" overlay when game is lost', () => {
     mockGameStatus = 'lost'
     const { queryByText } = render(
-      <GameScreen levelIndex={0} totalLevels={20} onBack={jest.fn()} />,
+      <GameScreen selection={{ kind: 'procedural', levelIndex: 0 }} totalLevels={20} onBack={jest.fn()} />,
     )
     expect(queryByText('Game Over')).toBeTruthy()
   })
@@ -135,7 +137,7 @@ describe('GameScreen — game-over overlay', () => {
   it('shows "Game Over" overlay when fuel is empty', () => {
     mockGameStatus = 'fuelEmpty'
     const { queryByText } = render(
-      <GameScreen levelIndex={0} totalLevels={20} onBack={jest.fn()} />,
+      <GameScreen selection={{ kind: 'procedural', levelIndex: 0 }} totalLevels={20} onBack={jest.fn()} />,
     )
     expect(queryByText('Game Over')).toBeTruthy()
   })
@@ -144,7 +146,7 @@ describe('GameScreen — game-over overlay', () => {
     mockGameStatus = 'won'
     const onBack = jest.fn()
     const { getByText } = render(
-      <GameScreen levelIndex={0} totalLevels={20} onBack={onBack} />,
+      <GameScreen selection={{ kind: 'procedural', levelIndex: 0 }} totalLevels={20} onBack={onBack} />,
     )
     fireEvent.press(getByText('Back to Levels'))
     expect(onBack).toHaveBeenCalledTimes(1)
@@ -153,9 +155,40 @@ describe('GameScreen — game-over overlay', () => {
   it('shows card selection overlay when status is card_selection', () => {
     mockGameStatus = 'card_selection'
     const { queryByText } = render(
-      <GameScreen levelIndex={0} totalLevels={20} onBack={jest.fn()} />,
+      <GameScreen selection={{ kind: 'procedural', levelIndex: 0 }} totalLevels={20} onBack={jest.fn()} />,
     )
     expect(queryByText('Level 1!')).toBeTruthy()
     expect(queryByText('Cards coming in Sprint 7')).toBeTruthy()
+  })
+})
+
+describe('GameScreen — authored level path', () => {
+  beforeEach(() => {
+    mockGameStatus = 'playing'
+  })
+
+  it('renders without crashing when loading an authored level', async () => {
+    await initLevelSource()
+    expect(() =>
+      render(
+        <GameScreen
+          selection={{ kind: 'authored', levelId: 'story-1-1' }}
+          totalLevels={20}
+          onBack={jest.fn()}
+        />,
+      ),
+    ).not.toThrow()
+  })
+
+  it('renders HUD when loading an authored level', async () => {
+    await initLevelSource()
+    const { getByText } = render(
+      <GameScreen
+        selection={{ kind: 'authored', levelId: 'story-1-1' }}
+        totalLevels={20}
+        onBack={jest.fn()}
+      />,
+    )
+    expect(getByText('500')).toBeTruthy()
   })
 })
