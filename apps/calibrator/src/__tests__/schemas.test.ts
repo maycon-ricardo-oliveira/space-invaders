@@ -14,10 +14,10 @@ import {
 
 describe('EntityTypeSchema', () => {
   it('accepts valid entity types', () => {
-    expect(EntityTypeSchema.parse('grunt')).toBe('grunt')
-    expect(EntityTypeSchema.parse('rocket')).toBe('rocket')
-    expect(EntityTypeSchema.parse('shield')).toBe('shield')
-    expect(EntityTypeSchema.parse('rock')).toBe('rock')
+    expect(EntityTypeSchema.parse('basic-enemy')).toBe('basic-enemy')
+    expect(EntityTypeSchema.parse('fast-enemy')).toBe('fast-enemy')
+    expect(EntityTypeSchema.parse('strong-enemy')).toBe('strong-enemy')
+    expect(EntityTypeSchema.parse('asteroid')).toBe('asteroid')
   })
   it('rejects unknown entity type', () => {
     expect(() => EntityTypeSchema.parse('boss')).toThrow()
@@ -27,7 +27,7 @@ describe('EntityTypeSchema', () => {
 describe('GridSchema', () => {
   it('accepts a valid 12-column grid with nulls', () => {
     const grid = [
-      ['grunt', null, null, 'grunt', null, null, null, null, null, null, null, null],
+      ['basic-enemy', null, null, 'basic-enemy', null, null, null, null, null, null, null, null],
       Array(12).fill(null),
     ]
     expect(() => GridSchema.parse(grid)).not.toThrow()

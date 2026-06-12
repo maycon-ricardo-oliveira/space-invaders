@@ -3,10 +3,10 @@ import React from 'react'
 import type { EntityType } from '../../lib/schemas'
 
 const ENTITIES: { type: EntityType; label: string; icon: string }[] = [
-  { type: 'grunt',  label: 'Grunt',  icon: '👾' },
-  { type: 'rocket', label: 'Rocket', icon: '🚀' },
-  { type: 'shield', label: 'Shield', icon: '🛡️' },
-  { type: 'rock',   label: 'Rock',   icon: '🪨' },
+  { type: 'basic-enemy',  label: 'Grunt',  icon: '👾' },
+  { type: 'fast-enemy',   label: 'Rocket', icon: '🚀' },
+  { type: 'strong-enemy', label: 'Shield', icon: '🛡️' },
+  { type: 'asteroid',     label: 'Rock',   icon: '🪨' },
 ]
 
 interface EntityToolboxProps {

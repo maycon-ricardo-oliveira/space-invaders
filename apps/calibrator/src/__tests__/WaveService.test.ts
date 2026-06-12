@@ -52,7 +52,7 @@ describe('createWave', () => {
 
 describe('updateWave', () => {
   it('updates wave grid', async () => {
-    const newGrid: Grid = [['grunt', null, null, null, null, null, null, null, null, null, null, null]]
+    const newGrid: Grid = [['basic-enemy', null, null, null, null, null, null, null, null, null, null, null]]
     mock.wave.update.mockResolvedValue({ ...fakeWave, grid: newGrid })
     const result = await updateWave(1, { order: 1, delay: 3.0, grid: newGrid })
     expect(mock.wave.update).toHaveBeenCalledWith({ where: { id: 1 }, data: { order: 1, delay: 3.0, grid: newGrid } })

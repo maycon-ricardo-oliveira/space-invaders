@@ -4,7 +4,7 @@ import type { EntityType, Grid } from '../../lib/schemas'
 import { CELL_SIZE, GRID_COLS, GRID_ROWS, PLAYER_SPAWN_ROW, PLAYER_SPAWN_COL } from '../../lib/gridConstants'
 
 const ENTITY_ICON: Record<EntityType, string> = {
-  grunt: '👾', rocket: '🚀', shield: '🛡️', rock: '🪨',
+  'basic-enemy': '👾', 'fast-enemy': '🚀', 'strong-enemy': '🛡️', 'asteroid': '🪨',
 }
 
 // Always returns exactly GRID_ROWS × GRID_COLS, padding with null or trimming.

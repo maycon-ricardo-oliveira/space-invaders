@@ -35,22 +35,22 @@ async function main() {
     {
       order: 1, delay: 0,
       grid: [
-        ['grunt', null, 'grunt', null, 'grunt', null, 'grunt', null, null, null, null, null],
+        ['basic-enemy', null, 'basic-enemy', null, 'basic-enemy', null, 'basic-enemy', null, null, null, null, null],
         Array(12).fill(null),
       ],
     },
     {
       order: 2, delay: 3.0,
       grid: [
-        [null, null, null, null, null, 'rocket', null, null, null, null, null, null],
-        [null, null, null, null, 'grunt', null, 'grunt', null, null, null, null, null],
+        [null, null, null, null, null, 'fast-enemy', null, null, null, null, null, null],
+        [null, null, null, null, 'basic-enemy', null, 'basic-enemy', null, null, null, null, null],
       ],
     },
     {
       order: 3, delay: 3.0,
       grid: [
-        ['shield', null, null, null, null, null, null, null, null, null, null, null],
-        [null, null, 'grunt', null, 'grunt', null, null, null, null, null, null, null],
+        ['strong-enemy', null, null, null, null, null, null, null, null, null, null, null],
+        [null, null, 'basic-enemy', null, 'basic-enemy', null, null, null, null, null, null, null],
       ],
     },
   ]

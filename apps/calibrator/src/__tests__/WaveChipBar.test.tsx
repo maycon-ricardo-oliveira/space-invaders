@@ -10,7 +10,7 @@ jest.mock('../../app/actions/wave.actions', () => ({
 
 const waves = [
   { id: 1, levelId: 1, order: 1, delay: 0, grid: [Array(12).fill(null)], createdAt: new Date(), updatedAt: new Date() },
-  { id: 2, levelId: 1, order: 2, delay: 3.0, grid: [['grunt', null, null, null, null, null, null, null, null, null, null, null]], createdAt: new Date(), updatedAt: new Date() },
+  { id: 2, levelId: 1, order: 2, delay: 3.0, grid: [['basic-enemy', null, null, null, null, null, null, null, null, null, null, null]], createdAt: new Date(), updatedAt: new Date() },
 ]
 
 describe('WaveChipBar', () => {

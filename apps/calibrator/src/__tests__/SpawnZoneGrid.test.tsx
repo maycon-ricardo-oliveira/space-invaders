@@ -12,26 +12,26 @@ describe('SpawnZoneGrid', () => {
   it('always renders GRID_ROWS × GRID_COLS cells regardless of input size', () => {
     // Pass a smaller grid — normalizeGrid should pad to standard size
     const smallGrid: Grid = [Array(4).fill(null)]
-    render(<SpawnZoneGrid grid={smallGrid} selectedEntity="grunt" onGridChange={jest.fn()} />)
+    render(<SpawnZoneGrid grid={smallGrid} selectedEntity="basic-enemy" onGridChange={jest.fn()} />)
     const cells = screen.getAllByTestId('grid-cell')
     expect(cells).toHaveLength(TOTAL_CELLS)
   })
 
   it('clicking an empty cell calls onGridChange with entity placed', () => {
     const onGridChange = jest.fn()
-    render(<SpawnZoneGrid grid={emptyGrid} selectedEntity="grunt" onGridChange={onGridChange} />)
+    render(<SpawnZoneGrid grid={emptyGrid} selectedEntity="basic-enemy" onGridChange={onGridChange} />)
     fireEvent.click(screen.getAllByTestId('grid-cell')[0])
     expect(onGridChange).toHaveBeenCalledTimes(1)
     const newGrid: Grid = onGridChange.mock.calls[0][0]
-    expect(newGrid[0][0]).toBe('grunt')
+    expect(newGrid[0][0]).toBe('basic-enemy')
   })
 
   it('clicking an occupied cell clears it', () => {
     const grid: Grid = Array.from({ length: GRID_ROWS }, (_, ri) =>
-      Array.from({ length: GRID_COLS }, (_, ci) => (ri === 0 && ci === 0 ? 'grunt' : null))
+      Array.from({ length: GRID_COLS }, (_, ci) => (ri === 0 && ci === 0 ? 'basic-enemy' : null))
     )
     const onGridChange = jest.fn()
-    render(<SpawnZoneGrid grid={grid} selectedEntity="grunt" onGridChange={onGridChange} />)
+    render(<SpawnZoneGrid grid={grid} selectedEntity="basic-enemy" onGridChange={onGridChange} />)
     fireEvent.click(screen.getAllByTestId('grid-cell')[0])
     const newGrid: Grid = onGridChange.mock.calls[0][0]
     expect(newGrid[0][0]).toBeNull()
@@ -39,7 +39,7 @@ describe('SpawnZoneGrid', () => {
 
   it('clicking the player spawn cell does nothing', () => {
     const onGridChange = jest.fn()
-    render(<SpawnZoneGrid grid={emptyGrid} selectedEntity="grunt" onGridChange={onGridChange} />)
+    render(<SpawnZoneGrid grid={emptyGrid} selectedEntity="basic-enemy" onGridChange={onGridChange} />)
     // Player spawn is at PLAYER_SPAWN_ROW × GRID_COLS + PLAYER_SPAWN_COL
     const spawnIndex = PLAYER_SPAWN_ROW * GRID_COLS + PLAYER_SPAWN_COL
     fireEvent.click(screen.getAllByTestId('grid-cell')[spawnIndex])

@@ -60,7 +60,7 @@ const fakeWorld = {
               order: 1,
               delay: 3.0,
               grid: [
-                ['grunt', 'grunt', null, null, null, null, null, null, null, null, null, null],
+                ['basic-enemy', 'basic-enemy', null, null, null, null, null, null, null, null, null, null],
               ],
             },
             {
@@ -115,7 +115,7 @@ describe('exportToJson', () => {
                   delay: 0,
                   // grunt at col=0, row=0
                   grid: [
-                    ['grunt', null, null, null, null, null, null, null, null, null, null, null],
+                    ['basic-enemy', null, null, null, null, null, null, null, null, null, null, null],
                   ],
                 },
               ],
@@ -134,7 +134,7 @@ describe('exportToJson', () => {
 
     // col=0: x = 0 * (390/11) + (390/11)/2 = 390/22 ≈ 17.727
     // row=0: y = 0 * 40 + 20 = 20
-    expect(entity.entityTypeId).toBe('grunt')
+    expect(entity.entityTypeId).toBe('basic-enemy')
     expect(entity.x).toBeCloseTo(390 / 22)
     expect(entity.y).toBe(20)
   })

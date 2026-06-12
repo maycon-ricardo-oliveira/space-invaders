@@ -1,6 +1,6 @@
 import { z } from 'zod'
 
-export const EntityTypeSchema = z.enum(['grunt', 'rocket', 'shield', 'rock'])
+export const EntityTypeSchema = z.enum(['basic-enemy', 'fast-enemy', 'strong-enemy', 'asteroid'])
 export type EntityType = z.infer<typeof EntityTypeSchema>
 
 export const GridSchema = z.array(z.array(EntityTypeSchema.nullable()))

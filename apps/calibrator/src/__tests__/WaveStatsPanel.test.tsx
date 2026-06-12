@@ -4,7 +4,7 @@ import { WaveStatsPanel } from '../components/WaveStatsPanel/WaveStatsPanel'
 
 const wave = {
   id: 1, levelId: 1, order: 1, delay: 3.0,
-  grid: [['grunt', null, null, null, null, null, null, null, null, null, null, null]],
+  grid: [['basic-enemy', null, null, null, null, null, null, null, null, null, null, null]],
   createdAt: new Date(), updatedAt: new Date(),
 }
 const level = {

@@ -2,10 +2,10 @@ import type { Grid } from '../lib/schemas'
 import { MAX_WAVE_SCORE } from '../lib/gridConstants'
 
 const TYPE_WEIGHT: Record<string, number> = {
-  grunt:  1.0,
-  rock:   1.5,
-  rocket: 2.0,
-  shield: 3.0,
+  'basic-enemy':  1.0,
+  'asteroid':     1.5,
+  'fast-enemy':   2.0,
+  'strong-enemy': 3.0,
 }
 
 // delay → multiplier: 0s = 1.5, 3s = 1.0, 6s+ = 0.8

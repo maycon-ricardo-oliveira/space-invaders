@@ -28,7 +28,7 @@ function ensureGrid(raw: unknown): Grid {
 
 export function WaveEditor({ wave, userPatterns, onWaveChange, onSavePattern }: WaveEditorProps) {
   const [grid, setGrid] = useState<Grid>(() => ensureGrid(wave.grid))
-  const [selectedEntity, setSelectedEntity] = useState<EntityType | 'eraser'>('grunt')
+  const [selectedEntity, setSelectedEntity] = useState<EntityType | 'eraser'>('basic-enemy')
 
   const handleGridChange = useCallback((newGrid: Grid) => {
     setGrid(newGrid)
@@ -42,7 +42,7 @@ export function WaveEditor({ wave, userPatterns, onWaveChange, onSavePattern }: 
       <EntityToolbox selected={selectedEntity} onSelect={setSelectedEntity} />
       <PatternPicker
         userPatterns={userPatterns}
-        selectedEntity={selectedEntity === 'eraser' ? 'grunt' : selectedEntity}
+        selectedEntity={selectedEntity === 'eraser' ? 'basic-enemy' : selectedEntity}
         enemyCount={enemyCount || 4}
         onApplyPattern={handleGridChange}
         onSavePattern={name => onSavePattern(name, grid)}
