@@ -1,7 +1,7 @@
 import type { LevelDefinition, EntityPlacement, Wave } from '@si/level-engine'
 import { PHONE_WIDTH, GRID_COLS, CELL_HEIGHT_EXPORT } from '../lib/gridConstants'
 
-export interface PlainWave { order: number; delay: number; grid: (string | null)[][] }
+export interface PlainWave { order: number; delay: number /* reserved for Sprint 6B wave timing */; grid: (string | null)[][] }
 export interface PlainLevel {
   index: number
   enemySpeed: number; shotDelay: number; fuelDrain: number
@@ -34,8 +34,8 @@ function gridToEntityPlacements(grid: (string | null)[][]): EntityPlacement[] {
 
 export function worldToLevelDefinitions(world: PlainWorld): LevelDefinition[] {
   const levels: LevelDefinition[] = []
-  for (const phase of world.phases) {
-    for (const level of phase.levels) {
+  for (const phase of [...world.phases].sort((a, b) => a.index - b.index)) {
+    for (const level of [...phase.levels].sort((a, b) => a.index - b.index)) {
       const waves = [...level.waves].sort((a, b) => a.order - b.order)
       const levelWaves: Wave[] = waves.map(w => ({ entities: gridToEntityPlacements(w.grid) }))
       const allEntities = levelWaves.flatMap(w => w.entities)
