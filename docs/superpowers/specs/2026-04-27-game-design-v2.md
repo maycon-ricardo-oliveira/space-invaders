@@ -175,10 +175,14 @@ Editor = mapa vertical scrollável por fase
 
 - Joystick flutuante (aparece onde o dedo toca)
 - Movimento **2D livre** (X e Y)
-- Tiro **automático** enquanto o dedo está na tela
+- Tiro **automático** quando o player está **parado** — **PARA ao mover** (mecânica Archero)
 - Velocidade base aumentada em relação ao Story Mode clássico
 
-- Tiro automático **continua mesmo ao mover** (diferente do Archero)
+> **Nota de revisão (2026-06-12):** a versão original desta spec previa tiro automático
+> contínuo mesmo em movimento ("diferente do Archero"). Na implementação do Sprint 6A
+> (PR #14) a decisão mudou para a mecânica Archero — atirar parado, parar de atirar ao
+> mover — criando o trade-off posicionamento × dano. Esta seção reflete o comportamento
+> implementado e em vigor.
 
 ### Condição de conclusão de level
 
