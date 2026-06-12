@@ -1,0 +1,78 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model World {
+  id            Int      @id @default(autoincrement())
+  name          String
+  index         Int      @unique
+  image         String?
+  parallaxTheme String?  @default("space")
+
+  phases        Phase[]
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model Phase {
+  id        Int      @id @default(autoincrement())
+  worldId   Int
+  world     World    @relation(fields: [worldId], references: [id], onDelete: Cascade)
+  name      String
+  index     Int
+
+  levels    Level[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([worldId, index])
+}
+
+model Level {
+  id              Int      @id @default(autoincrement())
+  phaseId         Int
+  phase           Phase    @relation(fields: [phaseId], references: [id], onDelete: Cascade)
+  name            String
+  index           Int
+
+  enemySpeed      Float    @default(2.0)
+  shotDelay       Float    @default(1.5)
+  fuelDrain       Float    @default(8.0)
+  enemyShotSpeed  Float    @default(4.0)
+  enemyAngerDelay Float    @default(15.0)
+  enemySpawnDelay Float    @default(1.0)
+  hasPowerUps     Boolean  @default(true)
+  parallaxTheme   String?
+
+  waves           Wave[]
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([phaseId, index])
+}
+
+model Wave {
+  id        Int      @id @default(autoincrement())
+  levelId   Int
+  level     Level    @relation(fields: [levelId], references: [id], onDelete: Cascade)
+  order     Int
+  delay     Float    @default(3.0)
+  grid      Json
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([levelId, order])
+}
+
+model Pattern {
+  id        Int      @id @default(autoincrement())
+  name      String
+  grid      Json
+
+  createdAt DateTime @default(now())
+}

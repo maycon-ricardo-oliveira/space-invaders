@@ -46,6 +46,7 @@ A PR is only valid if it ships something that can be tested end-to-end. Examples
 | 5a | Game Mechanics (controls + HUD) | Game | ✅ Done (PR #8) |
 | 5b | Gameplay Foundation (HP + Fuel + XP + HUD) | Game | ✅ Done (PR #9, #10) |
 | 6 | Enemies & Waves | Game | 🚧 In Progress — Wave System pending |
+| s7-cal | Dashboard Wave Editor | Calibrator | 🚧 In Progress |
 | 7 | Card System | Game | ⏳ Todo |
 | 8 | Parallax & Terrain | Game | ⏳ Todo |
 | 9 | Planet Structure | Game | ⏳ Todo |
@@ -138,6 +139,32 @@ A PR is only valid if it ships something that can be tested end-to-end. Examples
 - [ ] GL-2: Level complete only when all waves are cleared
 - [ ] GL-2: Wave pattern types: line, V, diamond, flanks, spiral
 - [ ] GL-2: Pattern editor in calibrator (visual grid)
+
+---
+
+## Sprint s7-cal — Dashboard Wave Editor (Calibrator)
+
+**Goal:** Add a visual Wave Editor to the calibrator backed by PostgreSQL (Docker + Prisma).
+**Deliverable:** World → Phase → Level → Wave hierarchy editable in the browser; export to `levels.json`.
+
+| # | Feature | Code | Status | PR | Deliverable |
+|---|---------|------|--------|-----|-------------|
+| 1 | Docker + Prisma infra | DB | 🚧 In Progress | — | Postgres schema, Prisma client, migrations |
+| 2 | Zod schemas | SCHEMAS | 🚧 In Progress | — | EntityType, Grid, LevelParams, WaveInput, PatternInput |
+| 3 | WavePatternGenerator | GEN | 🚧 In Progress | — | Random wave pattern generation |
+| 4 | WaveScoreCalculator | SCORE | 🚧 In Progress | — | Difficulty score from entity weights |
+| 5 | WorldService + PhaseService | SVC | 🚧 In Progress | — | CRUD for worlds and phases |
+| 6 | LevelService | SVC | 🚧 In Progress | — | CRUD for levels with LevelParams |
+| 7 | WaveService + PatternService | SVC | 🚧 In Progress | — | CRUD for waves and saved patterns |
+| 8 | ExportService | EXPORT | 🚧 In Progress | — | Export world → levels.json |
+| 9 | Server Actions | ACTIONS | 🚧 In Progress | — | Next.js server actions wrapping services |
+| 10 | Prisma seed | SEED | 🚧 In Progress | — | Dev seed with Planet 1 data |
+| 11 | Dashboard routing + layout | UI | 🚧 In Progress | — | /dashboard/[worldId]/[phaseId]/[levelId] routing |
+| 12 | Sidebar | UI | 🚧 In Progress | — | World → Phase → Level → Wave navigation |
+| 13 | WaveChipBar | UI | 🚧 In Progress | — | Wave tab chips with add/remove |
+| 14 | WaveStatsPanel | UI | 🚧 In Progress | — | Enemy count, difficulty score display |
+| 15 | SpawnZoneGrid + EntityToolbox + PatternPicker | UI | 🚧 In Progress | — | Visual 12×N grid editor |
+| 16 | WaveEditor + EditorPane | UI | 🚧 In Progress | — | Full editor orchestrator with transitions |
 
 ---
 
