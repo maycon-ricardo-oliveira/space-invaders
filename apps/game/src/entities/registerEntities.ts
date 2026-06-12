@@ -1,6 +1,10 @@
-import type { ILevelEngine } from '@si/level-engine'
+import type { EntityType } from '@si/level-engine'
 
-export function registerEntities(engine: ILevelEngine): void {
+export interface EntityTypeRegistrar {
+  registerEntityType(type: EntityType): void
+}
+
+export function registerEntities(engine: EntityTypeRegistrar): void {
   engine.registerEntityType({
     id: 'basic-enemy',
     label: 'Basic Enemy',
