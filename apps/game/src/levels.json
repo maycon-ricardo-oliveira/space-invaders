@@ -55,6 +55,11 @@
         "entityTypeId": "basic-enemy",
         "x": 159.54545454545453,
         "y": 60
+      },
+      {
+        "entityTypeId": "asteroid",
+        "x": 230.45454545454544,
+        "y": 60
       }
     ],
     "waves": [
@@ -117,12 +122,17 @@
             "entityTypeId": "basic-enemy",
             "x": 159.54545454545453,
             "y": 60
+          },
+          {
+            "entityTypeId": "asteroid",
+            "x": 230.45454545454544,
+            "y": 60
           }
         ]
       }
     ],
     "params": {
-      "numberOfEnemies": 10,
+      "numberOfEnemies": 11,
       "enemySpeed": 2,
       "enemyShotDelay": 1.5,
       "enemyShotSpeed": 4,

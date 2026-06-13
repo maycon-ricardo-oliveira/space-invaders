@@ -25,7 +25,7 @@ export const SEED_WORLD: PlainWorld = {
         {
           order: 3, delay: 3.0, grid: [
             ['strong-enemy', null, null, null, null, null, null, null, null, null, null, null],
-            [null, null, 'basic-enemy', null, 'basic-enemy', null, null, null, null, null, null, null],
+            [null, null, 'basic-enemy', null, 'basic-enemy', null, 'asteroid', null, null, null, null, null],
           ],
         },
       ],

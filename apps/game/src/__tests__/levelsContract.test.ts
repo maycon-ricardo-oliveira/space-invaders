@@ -3,6 +3,7 @@ import { registerEntities } from '../entities/registerEntities'
 import { GameLoop } from '../game/GameLoop'
 import levelsData from '../levels.json'
 
+
 describe('levels.json artifact contract (the test that was missing for 7 sprints)', () => {
   async function loadedSource() {
     const registry = new EntityRegistry()
@@ -26,5 +27,13 @@ describe('levels.json artifact contract (the test that was missing for 7 sprints
     expect(fast).toMatchObject({ hp: 40, burstCount: 3, xpValue: 2, speedMultiplier: 2.5 })
     const strong = state.enemies.find(e => e.typeId === 'strong-enemy')
     expect(strong).toMatchObject({ hp: 200, burstCount: 1, xpValue: 3 })
+    const asteroid = state.enemies.find(e => e.typeId === 'asteroid')
+    expect(asteroid).toMatchObject({ hp: 60, movementType: 'vertical', speedMultiplier: 0.8, dropsPickup: 'damage' })
+  })
+
+  it('the game registry is exactly the canonical set', () => {
+    const registry = new EntityRegistry()
+    registerEntities({ registerEntityType: t => registry.register(t) })
+    expect(registry.getAll().map(t => t.id).sort()).toEqual(['asteroid', 'basic-enemy', 'fast-enemy', 'strong-enemy'])
   })
 })

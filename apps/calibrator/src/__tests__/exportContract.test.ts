@@ -20,4 +20,8 @@ describe('export contract', () => {
     const errors = validateLevels(worldToLevelDefinitions(world), knownIds)
     expect(errors).toEqual([])
   })
+
+  it('the dashboard entity set is exactly the canonical game set', () => {
+    expect([...EntityTypeSchema.options].sort()).toEqual(['asteroid', 'basic-enemy', 'fast-enemy', 'strong-enemy'])
+  })
 })
