@@ -102,7 +102,7 @@ A PR is only valid if it ships something that can be tested end-to-end. Examples
 - [x] FUEL-1: Add `fuel: number` to GameState
 - [x] FUEL-1: Fuel drains at configurable rate per level tick
 - [x] FUEL-1: Fuel = 0 → game over (fuel starvation)
-- [ ] FUEL-1: Fuel collectible spawns from asteroids at level 5+
+- [x] FUEL-1: Fuel collectible spawns from asteroids at level 5+ (PR #19)
 - [x] FUEL-1: Collecting fuel restores tank to full
 - [x] XP-1: Add `xp: number, xpToNext: number, playerLevel: number` to GameState
 - [x] XP-1: Enemy kill increments xp by type's xpValue
@@ -485,8 +485,8 @@ Sprint 6B, before new gameplay features.
 
 | Priority | Item | Detail |
 |----------|------|--------|
-| 🔴 CRITICAL | Close levels.json pipeline end-to-end | `LevelEngine.generate()` always returns `entities: []`; the game never reads `levels.json`; fast/strong/asteroid enemies and fuel pickup never appear in-game |
-| 🔴 CRITICAL | Align game EntityRegistry ↔ calibrator toolbox | Asteroid props diverge: game registers `{pointValue, health}` vs calibrator `{hp, speedMultiplier, burstCount}` — same entity, incompatible contracts |
+| 🔴 CRITICAL 🚧 In Progress (PR #19) | Close levels.json pipeline end-to-end | `LevelEngine.generate()` always returns `entities: []`; the game never reads `levels.json`; fast/strong/asteroid enemies and fuel pickup never appear in-game |
+| 🔴 CRITICAL 🚧 In Progress (PR #19) | Align game EntityRegistry ↔ calibrator toolbox | Asteroid props diverge: game registers `{pointValue, health}` vs calibrator `{hp, speedMultiplier, burstCount}` — same entity, incompatible contracts |
 | 🟠 High | Dashboard build breaks without Postgres | `apps/calibrator/app/dashboard/page.tsx` runs a Prisma query at build time → add `export const dynamic = 'force-dynamic'` |
 | 🟠 High | No CI | Add GitHub Actions workflow: `npm test` + `npm run build` on every PR |
 | 🟡 Medium | Release infra missing | `eas.json`, bundle id / Android package name, privacy policy, UMP consent |
