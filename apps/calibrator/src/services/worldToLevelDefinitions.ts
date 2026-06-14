@@ -1,5 +1,5 @@
 import type { LevelDefinition, EntityPlacement, Wave } from '@si/level-engine'
-import { PHONE_WIDTH, GRID_COLS, CELL_HEIGHT_EXPORT } from '../lib/gridConstants'
+import { PHONE_WIDTH, GRID_COLS, CELL_HEIGHT_EXPORT, PLAYER_SPAWN_ROW } from '../lib/gridConstants'
 
 export interface PlainWave { order: number; delay: number /* reserved for Sprint 6B wave timing */; grid: (string | null)[][] }
 export interface PlainLevel {
@@ -9,7 +9,7 @@ export interface PlainLevel {
   hasPowerUps: boolean
   waves: PlainWave[]
 }
-export interface PlainPhase { index: number; levels: PlainLevel[] }
+export interface PlainPhase { index: number; status: string; levels: PlainLevel[] }
 export interface PlainWorld { phases: PlainPhase[] }
 
 const CELL_WIDTH = PHONE_WIDTH / GRID_COLS
@@ -18,6 +18,7 @@ const CELL_HEIGHT = CELL_HEIGHT_EXPORT
 function gridToEntityPlacements(grid: (string | null)[][]): EntityPlacement[] {
   const placements: EntityPlacement[] = []
   for (let row = 0; row < grid.length; row++) {
+    if (row === PLAYER_SPAWN_ROW) continue // player spawn row is reserved — never export (y out of bounds)
     for (let col = 0; col < grid[row].length; col++) {
       const cell = grid[row][col]
       if (cell !== null) {
@@ -34,10 +35,12 @@ function gridToEntityPlacements(grid: (string | null)[][]): EntityPlacement[] {
 
 export function worldToLevelDefinitions(world: PlainWorld): LevelDefinition[] {
   const levels: LevelDefinition[] = []
-  for (const phase of [...world.phases].sort((a, b) => a.index - b.index)) {
+  // Publication gate: only published phases reach the artifact; drafts are skipped.
+  const publishedPhases = world.phases.filter((p) => p.status === 'published')
+  for (const phase of [...publishedPhases].sort((a, b) => a.index - b.index)) {
     for (const level of [...phase.levels].sort((a, b) => a.index - b.index)) {
       const waves = [...level.waves].sort((a, b) => a.order - b.order)
-      const levelWaves: Wave[] = waves.map(w => ({ entities: gridToEntityPlacements(w.grid) }))
+      const levelWaves: Wave[] = waves.map(w => ({ order: w.order, delay: w.delay, entities: gridToEntityPlacements(w.grid) }))
       const allEntities = levelWaves.flatMap(w => w.entities)
       levels.push({
         id: `story-${phase.index + 1}-${level.index + 1}`,

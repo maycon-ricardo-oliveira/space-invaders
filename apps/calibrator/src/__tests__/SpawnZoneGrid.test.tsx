@@ -45,4 +45,31 @@ describe('SpawnZoneGrid', () => {
     fireEvent.click(screen.getAllByTestId('grid-cell')[spawnIndex])
     expect(onGridChange).not.toHaveBeenCalled()
   })
+
+  // Regression (PLAYER-ROW): the WHOLE player spawn row is reserved, not just
+  // the center cell. The player row maps to y = 21*40 + 20 = 860, which is OUTSIDE
+  // the game canvas (CANVAS_HEIGHT 844) — so no entity may land anywhere on it.
+  // Clicking ANY non-center cell of the player row must be a no-op too. Esse bug
+  // (entidade caindo na última linha e estourando os bounds) não volta.
+  it('clicking a non-center cell of the player row does nothing', () => {
+    const onGridChange = jest.fn()
+    render(<SpawnZoneGrid grid={emptyGrid} selectedEntity="basic-enemy" onGridChange={onGridChange} />)
+    // Column 0 of the player row — NOT the locked center cell, but still reserved.
+    expect(PLAYER_SPAWN_COL).not.toBe(0) // sanity: col 0 is a different cell than the center
+    const cellIndex = PLAYER_SPAWN_ROW * GRID_COLS + 0
+    fireEvent.click(screen.getAllByTestId('grid-cell')[cellIndex])
+    expect(onGridChange).not.toHaveBeenCalled()
+  })
+
+  // Counterpart: a normal row (row 0) must still accept placement after the fix —
+  // the row guard must not over-block. Locks the GREEN path so the fix can't just
+  // freeze the whole grid.
+  it('clicking a normal-row cell still places an entity (player-row guard is scoped)', () => {
+    const onGridChange = jest.fn()
+    render(<SpawnZoneGrid grid={emptyGrid} selectedEntity="fast-enemy" onGridChange={onGridChange} />)
+    fireEvent.click(screen.getAllByTestId('grid-cell')[0]) // row 0, col 0
+    expect(onGridChange).toHaveBeenCalledTimes(1)
+    const newGrid: Grid = onGridChange.mock.calls[0][0]
+    expect(newGrid[0][0]).toBe('fast-enemy')
+  })
 })

@@ -24,7 +24,7 @@ export function SpawnZoneGrid({ grid, selectedEntity, onGridChange }: SpawnZoneG
   const normalized = normalizeGrid(grid)
 
   function handleClick(row: number, col: number) {
-    if (row === PLAYER_SPAWN_ROW && col === PLAYER_SPAWN_COL) return // player spawn — locked
+    if (row === PLAYER_SPAWN_ROW) return // player spawn row — whole row reserved
     const newGrid: Grid = normalized.map((r, ri) =>
       r.map((cell, ci) => {
         if (ri !== row || ci !== col) return cell
@@ -41,7 +41,8 @@ export function SpawnZoneGrid({ grid, selectedEntity, onGridChange }: SpawnZoneG
       {normalized.map((row, ri) => (
         <div key={ri} style={{ display: 'flex', gap: 2 }}>
           {row.map((cell, ci) => {
-            const isPlayerSpawn = ri === PLAYER_SPAWN_ROW && ci === PLAYER_SPAWN_COL
+            const isPlayerRow = ri === PLAYER_SPAWN_ROW
+            const isPlayerCenter = isPlayerRow && ci === PLAYER_SPAWN_COL
             return (
               <div
                 key={ci}
@@ -49,17 +50,17 @@ export function SpawnZoneGrid({ grid, selectedEntity, onGridChange }: SpawnZoneG
                 onClick={() => handleClick(ri, ci)}
                 style={{
                   width: CELL_SIZE, height: CELL_SIZE,
-                  background: isPlayerSpawn ? '#0d0d1a' : cell ? '#1e2d1e' : '#1a1a2e',
-                  border: `1px solid ${isPlayerSpawn ? '#1e1e3e' : cell ? '#2ecc71' : '#2c2c3e'}`,
+                  background: isPlayerRow ? '#0d0d1a' : cell ? '#1e2d1e' : '#1a1a2e',
+                  border: `1px solid ${isPlayerRow ? '#1e1e3e' : cell ? '#2ecc71' : '#2c2c3e'}`,
                   borderRadius: 2,
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  cursor: isPlayerSpawn ? 'default' : 'pointer',
+                  cursor: isPlayerRow ? 'default' : 'pointer',
                   fontSize: 14, userSelect: 'none',
-                  opacity: isPlayerSpawn ? 0.4 : 1,
+                  opacity: isPlayerRow ? 0.4 : 1,
                 }}
-                title={isPlayerSpawn ? 'Player spawn — locked' : undefined}
+                title={isPlayerRow ? 'Player spawn row — reserved' : undefined}
               >
-                {isPlayerSpawn ? '🚁' : cell ? ENTITY_ICON[cell] : ''}
+                {isPlayerCenter ? '🚁' : isPlayerRow ? '' : cell ? ENTITY_ICON[cell] : ''}
               </div>
             )
           })}
