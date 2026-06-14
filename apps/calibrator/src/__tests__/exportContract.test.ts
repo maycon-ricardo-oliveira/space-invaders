@@ -5,6 +5,7 @@ import { EntityTypeSchema } from '../lib/schemas'
 const world: PlainWorld = {
   phases: [{
     index: 0,
+    status: 'published',
     levels: [{
       index: 0,
       enemySpeed: 2, shotDelay: 1.5, fuelDrain: 8,
