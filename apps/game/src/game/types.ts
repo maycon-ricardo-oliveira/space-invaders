@@ -54,4 +54,6 @@ export interface GameState {
   damagePickups: DamagePickup[]
   score: number
   status: GameStatus
+  currentWave: number
+  totalWaves: number
 }

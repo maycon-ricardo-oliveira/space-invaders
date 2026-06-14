@@ -1044,4 +1044,184 @@ describe('GameLoop', () => {
       expect(loop.getState().damagePickups.every(p => !p.active)).toBe(true)
     })
   })
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // WAVE SYSTEM (Sprint 6B) — RED battery, written before implementation.
+  // Behavior decided with Maycon:
+  //   - GameLoop spawns ONLY wave[0] at start (no longer flattens all waves).
+  //   - When the last enemy of the current wave dies AND more waves remain:
+  //     emit 'wave:cleared', stay 'playing' (suspend update()), do NOT spawn next.
+  //   - advanceWave() spawns the next wave and emits 'wave:started'.
+  //   - Win condition is wave-aware: 'won' only when the LAST wave is cleared.
+  //   - The next wave's `delay` is exposed via getNextWaveDelay() so GameScreen
+  //     can wait that long before calling advanceWave().
+  //   - GameState gains currentWave (1-based) and totalWaves.
+  //   - Legacy levels with only `entities` (no `waves`) keep the old behavior.
+  // ──────────────────────────────────────────────────────────────────────────
+  describe('wave system', () => {
+    const enemyAt = (y: number) => ({
+      entityTypeId: 'basic-enemy',
+      x: CANVAS_WIDTH / 2 - ENTITY_SIZE / 2,
+      y,
+      properties: { hp: 20 }, // 1-hit kill (20 = 1 × bulletDamage)
+    })
+
+    // Two-wave level: wave 1 has one enemy at y=60, wave 2 one enemy at y=120.
+    // delays are distinct so the getNextWaveDelay() contract asserts a real value.
+    function twoWaveLevel(): LevelDefinition {
+      return {
+        ...mockLevel,
+        params: { ...BASE_PARAMS, numberOfEnemies: 0, fuelDrainRate: 0, enemyShotDelay: 9999 },
+        entities: [],
+        waves: [
+          { order: 1, delay: 0, entities: [enemyAt(60)] },
+          { order: 2, delay: 1500, entities: [enemyAt(120)] },
+        ],
+      }
+    }
+
+    function singleWaveLevel(): LevelDefinition {
+      return {
+        ...mockLevel,
+        params: { ...BASE_PARAMS, numberOfEnemies: 0, fuelDrainRate: 0, enemyShotDelay: 9999 },
+        entities: [],
+        waves: [{ order: 1, delay: 0, entities: [enemyAt(60)] }],
+      }
+    }
+
+    describe('event emitter', () => {
+      it('on() registers a handler and emit (via wave clear) invokes it', () => {
+        const loop = new GameLoop(twoWaveLevel())
+        const handler = jest.fn()
+        loop.on('wave:cleared', handler)
+        fireAndTick(loop, 1) // kill wave 1 enemy → wave:cleared
+        expect(handler).toHaveBeenCalledTimes(1)
+      })
+
+      it('off() removes a handler so it is not invoked on clear', () => {
+        const loop = new GameLoop(twoWaveLevel())
+        const handler = jest.fn()
+        loop.on('wave:cleared', handler)
+        loop.off('wave:cleared', handler)
+        fireAndTick(loop, 1) // kill wave 1 enemy → wave:cleared, but handler removed
+        expect(handler).not.toHaveBeenCalled()
+      })
+    })
+
+    it('spawns only wave[0] enemies at start (does not flatten all waves)', () => {
+      const loop = new GameLoop(twoWaveLevel())
+      const enemies = loop.getState().enemies
+      expect(enemies).toHaveLength(1)
+      expect(enemies[0].y).toBe(60) // wave 1's enemy, not wave 2's (y=120)
+    })
+
+    it('getState exposes currentWave=1 and totalWaves=2 at start', () => {
+      const state = new GameLoop(twoWaveLevel()).getState()
+      expect(state.currentWave).toBe(1)
+      expect(state.totalWaves).toBe(2)
+    })
+
+    it('clearing wave 1 of 2 emits wave:cleared, stays playing, and does NOT spawn wave 2', () => {
+      const loop = new GameLoop(twoWaveLevel())
+      const handler = jest.fn()
+      loop.on('wave:cleared', handler)
+
+      fireAndTick(loop, 1) // kill wave 1's only enemy
+
+      expect(handler).toHaveBeenCalledTimes(1)
+      expect(loop.getState().status).toBe('playing') // NOT 'won'
+      // wave 2 enemy must not be on screen until advanceWave()
+      const aliveAtWave2Y = loop.getState().enemies.filter(e => e.alive && e.y === 120)
+      expect(aliveAtWave2Y).toHaveLength(0)
+    })
+
+    it('suspends update() after wave:cleared until advanceWave (score frozen)', () => {
+      const loop = new GameLoop(twoWaveLevel())
+      fireAndTick(loop, 1) // clear wave 1 → suspended
+      const scoreBefore = loop.getState().score
+      for (let i = 0; i < 30; i++) loop.update(16) // should be a no-op while suspended
+      expect(loop.getState().score).toBe(scoreBefore)
+    })
+
+    it('getNextWaveDelay() returns the delay of the upcoming wave after a clear', () => {
+      const loop = new GameLoop(twoWaveLevel())
+      fireAndTick(loop, 1) // clear wave 1 → next is wave 2 (delay 1500)
+      expect(loop.getNextWaveDelay()).toBe(1500)
+    })
+
+    it('advanceWave() spawns the next wave enemies and resumes (currentWave=2)', () => {
+      const loop = new GameLoop(twoWaveLevel())
+      loop.on('wave:cleared', () => loop.advanceWave())
+
+      fireAndTick(loop, 1) // clear wave 1 → handler advances to wave 2
+
+      const state = loop.getState()
+      expect(state.currentWave).toBe(2)
+      const aliveEnemies = state.enemies.filter(e => e.alive)
+      expect(aliveEnemies).toHaveLength(1)
+      expect(aliveEnemies[0].y).toBe(120) // wave 2's enemy is now on screen
+    })
+
+    it('advanceWave() emits wave:started exactly once', () => {
+      const loop = new GameLoop(twoWaveLevel())
+      const started = jest.fn()
+      loop.on('wave:started', started)
+      loop.on('wave:cleared', () => loop.advanceWave())
+
+      fireAndTick(loop, 1)
+
+      expect(started).toHaveBeenCalledTimes(1)
+    })
+
+    it('clearing the LAST wave sets status to won (no wave:cleared)', () => {
+      const loop = new GameLoop(singleWaveLevel())
+      const cleared = jest.fn()
+      loop.on('wave:cleared', cleared)
+
+      fireAndTick(loop, 1) // kill the only enemy of the only wave
+
+      expect(loop.getState().status).toBe('won')
+      expect(cleared).not.toHaveBeenCalled()
+    })
+
+    it('wins only after the last wave is cleared via advanceWave (not after wave 1)', () => {
+      const loop = new GameLoop(twoWaveLevel())
+      loop.on('wave:cleared', () => loop.advanceWave())
+
+      fireAndTick(loop, 1) // clear wave 1, auto-advance to wave 2
+      expect(loop.getState().status).toBe('playing')
+      expect(loop.getState().currentWave).toBe(2)
+
+      fireAndTick(loop, 1) // clear wave 2 (last) → won
+      expect(loop.getState().status).toBe('won')
+    })
+
+    describe('legacy compat (no waves)', () => {
+      it('flat-entities level spawns all enemies at once and wins when all die', () => {
+        const playerX = CANVAS_WIDTH / 2 - ENTITY_SIZE / 2
+        const loop = new GameLoop({
+          ...mockLevel,
+          params: { ...BASE_PARAMS, numberOfEnemies: 0, fuelDrainRate: 0, enemyShotDelay: 9999 },
+          entities: [enemyAt(60), enemyAt(110)], // two enemies, no waves
+        })
+        // all spawn together
+        expect(loop.getState().enemies).toHaveLength(2)
+
+        const cleared = jest.fn()
+        loop.on('wave:cleared', cleared)
+        fireAndTick(loop, 1) // kills both (same column, same x), each 1-hit
+        fireAndTick(loop, 1)
+
+        expect(loop.getState().enemies.every(e => !e.alive)).toBe(true)
+        expect(loop.getState().status).toBe('won')
+        expect(cleared).not.toHaveBeenCalled()
+      })
+
+      it('legacy level reports currentWave=1 and totalWaves=1', () => {
+        const state = new GameLoop(oneHitLevel()).getState()
+        expect(state.currentWave).toBe(1)
+        expect(state.totalWaves).toBe(1)
+      })
+    })
+  })
 })

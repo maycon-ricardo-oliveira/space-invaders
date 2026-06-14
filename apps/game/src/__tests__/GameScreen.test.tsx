@@ -24,6 +24,10 @@ jest.mock('../game/GameLoop', () => ({
     moveLeft: jest.fn(),
     moveRight: jest.fn(),
     resumeFromCardSelection: jest.fn(),
+    on: jest.fn(),
+    off: jest.fn(),
+    advanceWave: jest.fn(),
+    getNextWaveDelay: jest.fn(() => 0),
     getState: jest.fn().mockImplementation(() => ({
       status: mockGameStatus,
       player: { x: 0, y: 0, hp: 500, maxHp: 500, fuel: 100, invincibilityTimer: 0, xp: 0, xpToNext: 10, playerLevel: 1 },
@@ -32,6 +36,8 @@ jest.mock('../game/GameLoop', () => ({
       enemyBullets: [],
       fuelPickups: [],
       score: 0,
+      currentWave: 1,
+      totalWaves: 1,
     })),
   })),
   CANVAS_WIDTH: 390,
@@ -40,9 +46,21 @@ jest.mock('../game/GameLoop', () => ({
 }))
 
 import React from 'react'
-import { render, fireEvent } from '@testing-library/react-native'
+import { render, fireEvent, act } from '@testing-library/react-native'
+import { GameLoop } from '../game/GameLoop'
 import { GameScreen } from '../screens/GameScreen'
 import { initLevelSource, resetLevelSourceForTests } from '../levels/source'
+
+// Reach the GameLoop mock instance the rendered GameScreen is driving, so wave
+// tests can capture the listeners GameScreen subscribes and trigger them.
+function lastLoopInstance() {
+  const results = (GameLoop as unknown as jest.Mock).mock.results
+  return results[results.length - 1].value as {
+    on: jest.Mock
+    advanceWave: jest.Mock
+    getNextWaveDelay: jest.Mock
+  }
+}
 
 // Prevent the requestAnimationFrame polyfill from firing asynchronously and
 // triggering React state updates outside act(). The game loop starts but never
@@ -159,6 +177,52 @@ describe('GameScreen — game-over overlay', () => {
     )
     expect(queryByText('Level 1!')).toBeTruthy()
     expect(queryByText('Cards coming in Sprint 7')).toBeTruthy()
+  })
+})
+
+describe('GameScreen — wave transition contract', () => {
+  beforeEach(() => {
+    mockGameStatus = 'playing'
+    ;(GameLoop as unknown as jest.Mock).mockClear()
+  })
+
+  it('subscribes to wave:cleared on mount and unsubscribes on unmount', () => {
+    const { unmount } = render(
+      <GameScreen selection={{ kind: 'procedural', levelIndex: 0 }} totalLevels={20} onBack={jest.fn()} />,
+    )
+    const loop = lastLoopInstance() as unknown as { on: jest.Mock; off: jest.Mock }
+    expect(loop.on).toHaveBeenCalledWith('wave:cleared', expect.any(Function))
+    const [, handler] = loop.on.mock.calls.find(([evt]: [string]) => evt === 'wave:cleared')!
+    unmount()
+    expect(loop.off).toHaveBeenCalledWith('wave:cleared', handler)
+  })
+
+  it('drives the turbo transition then calls advanceWave() exactly once when a wave clears', () => {
+    jest.useFakeTimers()
+    try {
+      render(
+        <GameScreen selection={{ kind: 'procedural', levelIndex: 0 }} totalLevels={20} onBack={jest.fn()} />,
+      )
+      const loop = lastLoopInstance()
+      // getNextWaveDelay drives the transition duration; default mock returns 0
+      // so GameScreen clamps to its 600ms floor.
+      const [, handler] = loop.on.mock.calls.find(([evt]: [string]) => evt === 'wave:cleared')!
+
+      // wave:cleared fired by the loop → GameScreen begins the boost, defers advance.
+      act(() => {
+        handler()
+      })
+      expect(loop.advanceWave).not.toHaveBeenCalled()
+
+      // After the transition window elapses, the Animated.timing completion
+      // callback runs advanceWave() to spawn the next wave.
+      act(() => {
+        jest.advanceTimersByTime(700)
+      })
+      expect(loop.advanceWave).toHaveBeenCalledTimes(1)
+    } finally {
+      jest.useRealTimers()
+    }
   })
 })
 

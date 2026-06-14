@@ -1,5 +1,7 @@
-import type { IRenderer, LevelDefinition } from '@si/level-engine'
+import type { EntityPlacement, IRenderer, LevelDefinition, Wave } from '@si/level-engine'
 import type { Bullet, DamagePickup, Enemy, FuelPickup, GameState } from './types'
+
+type GameEvent = 'wave:cleared' | 'wave:started'
 
 export const CANVAS_WIDTH = 390
 export const CANVAS_HEIGHT = 844
@@ -30,10 +32,15 @@ export class GameLoop {
   private autoFireTimer = 0
   private burstQueue: Array<{ enemy: Enemy; remaining: number; burstTimer: number }> = []
   private readonly BURST_INTERVAL_MS = 50
+  private readonly waves: Wave[]
+  private currentWaveIndex = 0
+  private waitingForWaveAdvance = false
+  private readonly listeners: Map<GameEvent, Array<() => void>> = new Map()
 
   constructor(level: LevelDefinition) {
     this.params = level.params
     this.levelIndex = level.levelIndex ?? 0
+    this.waves = level.waves ?? []
     this.shotCooldown = level.params.enemyShotDelay
     this.state = {
       player: {
@@ -55,6 +62,8 @@ export class GameLoop {
       damagePickups: [],
       score: 0,
       status: 'playing',
+      currentWave: 1,
+      totalWaves: this.waves.length > 0 ? this.waves.length : 1,
     }
   }
 
@@ -64,23 +73,30 @@ export class GameLoop {
       .map(e => ({ x: e.x, y: e.y, active: true }))
   }
 
+  private mapPlacementsToEnemies(placements: EntityPlacement[]): Enemy[] {
+    return placements
+      .filter(e => e.entityTypeId !== 'fuel-pickup')
+      .map(e => ({
+        x: e.x,
+        y: e.y,
+        alive: true,
+        killed: false,
+        typeId: e.entityTypeId,
+        hp: (e.properties?.hp as number) ?? 100,
+        xpValue: (e.properties?.xpValue as number) ?? 1,
+        movementType: ((e.properties?.movementType as string) ?? 'horizontal') as 'horizontal' | 'vertical',
+        burstCount: (e.properties?.burstCount as number) ?? 1,
+        dropsPickup: ((e.properties?.dropsPickup as string) ?? null) as 'damage' | null,
+        speedMultiplier: (e.properties?.speedMultiplier as number) ?? 1.0,
+      }))
+  }
+
   private buildEnemies(level: LevelDefinition): Enemy[] {
+    if (this.waves.length > 0) {
+      return this.mapPlacementsToEnemies(this.waves[0].entities)
+    }
     if (level.entities.length > 0) {
-      return level.entities
-        .filter(e => e.entityTypeId !== 'fuel-pickup')
-        .map(e => ({
-          x: e.x,
-          y: e.y,
-          alive: true,
-          killed: false,
-          typeId: e.entityTypeId,
-          hp: (e.properties?.hp as number) ?? 100,
-          xpValue: (e.properties?.xpValue as number) ?? 1,
-          movementType: ((e.properties?.movementType as string) ?? 'horizontal') as 'horizontal' | 'vertical',
-          burstCount: (e.properties?.burstCount as number) ?? 1,
-          dropsPickup: ((e.properties?.dropsPickup as string) ?? null) as 'damage' | null,
-          speedMultiplier: (e.properties?.speedMultiplier as number) ?? 1.0,
-        }))
+      return this.mapPlacementsToEnemies(level.entities)
     }
     const count = level.params.numberOfEnemies
     if (count <= 0) return []
@@ -112,6 +128,40 @@ export class GameLoop {
     return enemies
   }
 
+  on(event: GameEvent, handler: () => void): void {
+    const handlers = this.listeners.get(event)
+    if (handlers) handlers.push(handler)
+    else this.listeners.set(event, [handler])
+  }
+
+  off(event: GameEvent, handler: () => void): void {
+    const handlers = this.listeners.get(event)
+    if (!handlers) return
+    const idx = handlers.indexOf(handler)
+    if (idx !== -1) handlers.splice(idx, 1)
+  }
+
+  private emit(event: GameEvent): void {
+    const handlers = this.listeners.get(event)
+    if (!handlers) return
+    for (const h of handlers) h()
+  }
+
+  /** Delay (ms) of the wave that advanceWave() would spawn next. 0 if none. */
+  getNextWaveDelay(): number {
+    const next = this.waves[this.currentWaveIndex + 1]
+    return next ? next.delay : 0
+  }
+
+  /** Spawns the next wave's enemies and resumes update(). Emits 'wave:started'. */
+  advanceWave(): void {
+    if (!this.waitingForWaveAdvance) return
+    this.currentWaveIndex++
+    this.state.enemies = this.mapPlacementsToEnemies(this.waves[this.currentWaveIndex].entities)
+    this.waitingForWaveAdvance = false
+    this.emit('wave:started')
+  }
+
   getState(): GameState {
     return {
       player: { ...this.state.player },
@@ -122,6 +172,8 @@ export class GameLoop {
       damagePickups: this.state.damagePickups.map(d => ({ ...d })),
       score: this.state.score,
       status: this.state.status,
+      currentWave: this.currentWaveIndex + 1,
+      totalWaves: this.waves.length > 0 ? this.waves.length : 1,
     }
   }
 
@@ -158,6 +210,7 @@ export class GameLoop {
 
   update(deltaMs: number): void {
     if (this.state.status !== 'playing') return
+    if (this.waitingForWaveAdvance) return
     const dt = deltaMs / 1000
     this.drainFuel(dt)
     this.moveBullets(dt)
@@ -368,6 +421,12 @@ export class GameLoop {
     const allDead = this.state.enemies.length > 0 && this.state.enemies.every(e => !e.alive)
     const anyKilled = this.state.enemies.some(e => e.killed)
     if (allDead && anyKilled) {
+      if (this.waves.length > 0 && this.currentWaveIndex < this.waves.length - 1) {
+        // More waves remain — suspend update() and signal GameScreen.
+        this.waitingForWaveAdvance = true
+        this.emit('wave:cleared')
+        return
+      }
       this.state.status = 'won'
       return
     }
