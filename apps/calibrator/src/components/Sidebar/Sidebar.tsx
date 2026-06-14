@@ -1,12 +1,12 @@
 'use client'
 import React, { useState, useEffect } from 'react'
-import { getPhases, createPhaseAction, deletePhaseAction } from '../../../app/actions/phase.actions'
+import { getPhases, createPhaseAction, deletePhaseAction, setPhaseStatusAction } from '../../../app/actions/phase.actions'
 import { getLevels, createLevelAction, deleteLevelAction } from '../../../app/actions/level.actions'
 import { getWorlds, createWorldAction } from '../../../app/actions/world.actions'
 import { useRouter, usePathname } from 'next/navigation'
 
 type World = { id: number; name: string; index: number; image: string | null; parallaxTheme: string | null }
-type Phase = { id: number; worldId: number; name: string; index: number }
+type Phase = { id: number; worldId: number; name: string; index: number; status: 'draft' | 'published' }
 type Level = { id: number; phaseId: number; name: string; index: number }
 
 interface SidebarProps {
@@ -40,6 +40,25 @@ const s = {
     marginBottom: 2,
   }),
   deleteBtn: { color: '#555', fontSize: 12, cursor: 'pointer', background: 'none', border: 'none', padding: '0 2px', lineHeight: 1 },
+  statusBadge: (published: boolean) => ({
+    fontSize: 9,
+    textTransform: 'uppercase' as const,
+    letterSpacing: 0.5,
+    padding: '1px 5px',
+    borderRadius: 3,
+    color: published ? '#0e2f23' : '#888',
+    background: published ? '#2ecc71' : '#2c2c3e',
+    border: published ? 'none' : '1px solid #3c3c4e',
+  }),
+  publishBtn: (published: boolean) => ({
+    fontSize: 10,
+    cursor: 'pointer',
+    background: 'none',
+    border: 'none',
+    color: published ? '#888' : '#2ecc71',
+    padding: '0 2px',
+    lineHeight: 1,
+  }),
   emptyHint: { color: '#555', fontSize: 12, padding: '4px 0' },
   depHint: { color: '#444', fontSize: 11, padding: '4px 0', fontStyle: 'italic' as const },
 }
@@ -74,6 +93,17 @@ export function Sidebar({ worlds: initialWorlds, selectedWorldId, selectedPhaseI
     router.push(`/dashboard/${worldId}/${phaseId}/${lvl.id}`)
   }
 
+  // Clicking a phase selects it and opens its FIRST level so the editor on the
+  // right follows. If the phase has no levels, do NOT push a stale level URL.
+  async function handleSelectPhase(p: Phase) {
+    setPhaseId(p.id)
+    const lvls = (await getLevels(p.id)) as Level[]
+    setLevels(lvls)
+    const first = lvls[0]
+    if (first) router.push(`/dashboard/${worldId}/${p.id}/${first.id}`)
+    else router.push('/dashboard')
+  }
+
   // ── World ──────────────────────────────────────────────
   async function handleCreateWorld() {
     const name = `World ${worldsList.length + 1}`
@@ -82,16 +112,34 @@ export function Sidebar({ worlds: initialWorlds, selectedWorldId, selectedPhaseI
     setWorldsList(updated as World[])
     const newest = (updated as World[]).at(-1)
     if (newest) setWorldId(newest.id)
+    router.refresh()
   }
 
   // ── Phase ──────────────────────────────────────────────
   async function handleCreatePhase() {
     if (!worldId) return
     const name = `Phase ${phases.length + 1}`
-    await createPhaseAction(worldId, { name, index: phases.length })
+    // Cascade: the action returns the freshly-created phase (born with Level 1).
+    const created = (await createPhaseAction(worldId, { name })) as Phase
     const updated = await getPhases(worldId)
     setPhases(updated as Phase[])
-    setPhaseId((updated as Phase[]).at(-1)?.id)
+    setPhaseId(created.id)
+    // Navigate straight to the new phase's first level (the cascade guarantees one).
+    const lvls = (await getLevels(created.id)) as Level[]
+    setLevels(lvls)
+    const first = lvls[0]
+    if (first) router.push(`/dashboard/${worldId}/${created.id}/${first.id}`)
+    router.refresh()
+  }
+
+  async function handleTogglePublish(p: Phase, e: React.MouseEvent) {
+    e.stopPropagation()
+    const next = p.status === 'draft' ? 'published' : 'draft'
+    await setPhaseStatusAction(p.id, next)
+    // Re-sync local phases so the status badge flips without an F5.
+    const updated = await getPhases(p.worldId)
+    setPhases(updated as Phase[])
+    router.refresh()
   }
 
   async function handleDeletePhase(id: number, e: React.MouseEvent) {
@@ -112,6 +160,7 @@ export function Sidebar({ worlds: initialWorlds, selectedWorldId, selectedPhaseI
     setLevels(updated as Level[])
     const newLevel = (updated as Level[]).at(-1)
     if (newLevel) router.push(`/dashboard/${worldId}/${phaseId}/${newLevel.id}`)
+    router.refresh()
   }
 
   async function handleDeleteLevel(id: number, e: React.MouseEvent) {
@@ -175,8 +224,15 @@ export function Sidebar({ worlds: initialWorlds, selectedWorldId, selectedPhaseI
         ) : (
           <>
             {phases.map(p => (
-              <div key={p.id} style={s.item(phaseId === p.id)} onClick={() => setPhaseId(p.id)}>
-                <span>{p.name}</span>
+              <div key={p.id} style={s.item(phaseId === p.id)} onClick={() => handleSelectPhase(p)}>
+                <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name}</span>
+                <span data-testid={`phase-status-${p.id}`} style={s.statusBadge(p.status === 'published')}>{p.status}</span>
+                <button
+                  data-testid={`phase-publish-${p.id}`}
+                  style={s.publishBtn(p.status === 'published')}
+                  onClick={e => handleTogglePublish(p, e)}
+                  title={p.status === 'published' ? 'Despublicar' : 'Publicar'}
+                >{p.status === 'published' ? 'Despublicar' : 'Publicar'}</button>
                 <button style={s.deleteBtn} onClick={e => handleDeletePhase(p.id, e)} title="Deletar fase">✕</button>
               </div>
             ))}
@@ -226,17 +282,19 @@ export function Sidebar({ worlds: initialWorlds, selectedWorldId, selectedPhaseI
 
 function ExportButton({ worldId }: { worldId: number }) {
   const [status, setStatus] = React.useState<'idle' | 'loading' | 'done' | 'error'>('idle')
+  const [error, setError] = React.useState('')
 
   async function handleExport() {
     setStatus('loading')
+    setError('')
     try {
       const { exportToJsonAction } = await import('../../../app/actions/export.actions')
       await exportToJsonAction(worldId)
       setStatus('done')
       setTimeout(() => setStatus('idle'), 2000)
-    } catch {
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Erro ao exportar')
       setStatus('error')
-      setTimeout(() => setStatus('idle'), 3000)
     }
   }
 
@@ -244,12 +302,19 @@ function ExportButton({ worldId }: { worldId: number }) {
   const bg = status === 'done' ? '#2ecc71' : status === 'error' ? '#e74c3c' : '#2c2c3e'
 
   return (
-    <button
-      onClick={handleExport}
-      disabled={status === 'loading'}
-      style={{ width: '100%', background: bg, color: status === 'done' ? '#111' : '#eee', border: 'none', borderRadius: 4, padding: '8px 0', fontSize: 13, cursor: 'pointer' }}
-    >
-      {label}
-    </button>
+    <>
+      <button
+        onClick={handleExport}
+        disabled={status === 'loading'}
+        style={{ width: '100%', background: bg, color: status === 'done' ? '#111' : '#eee', border: 'none', borderRadius: 4, padding: '8px 0', fontSize: 13, cursor: 'pointer' }}
+      >
+        {label}
+      </button>
+      {status === 'error' && error && (
+        <div style={{ color: '#e74c3c', fontSize: 11, marginTop: 6, lineHeight: 1.4, wordBreak: 'break-word' }}>
+          {error}
+        </div>
+      )}
+    </>
   )
 }
