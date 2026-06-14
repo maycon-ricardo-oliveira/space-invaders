@@ -8,131 +8,191 @@
     "entities": [
       {
         "entityTypeId": "basic-enemy",
-        "x": 17.727272727272727,
+        "x": 16.25,
         "y": 20
       },
       {
         "entityTypeId": "basic-enemy",
-        "x": 88.63636363636363,
+        "x": 81.25,
         "y": 20
       },
       {
         "entityTypeId": "basic-enemy",
-        "x": 159.54545454545453,
+        "x": 146.25,
         "y": 20
       },
       {
         "entityTypeId": "basic-enemy",
-        "x": 230.45454545454544,
+        "x": 211.25,
+        "y": 20
+      },
+      {
+        "entityTypeId": "basic-enemy",
+        "x": 276.25,
+        "y": 20
+      },
+      {
+        "entityTypeId": "basic-enemy",
+        "x": 341.25,
+        "y": 20
+      },
+      {
+        "entityTypeId": "strong-enemy",
+        "x": 16.25,
         "y": 20
       },
       {
         "entityTypeId": "fast-enemy",
-        "x": 194.99999999999997,
+        "x": 81.25,
         "y": 20
       },
       {
-        "entityTypeId": "basic-enemy",
-        "x": 159.54545454545453,
-        "y": 60
+        "entityTypeId": "fast-enemy",
+        "x": 146.25,
+        "y": 20
       },
       {
-        "entityTypeId": "basic-enemy",
-        "x": 230.45454545454544,
-        "y": 60
+        "entityTypeId": "fast-enemy",
+        "x": 211.25,
+        "y": 20
       },
       {
         "entityTypeId": "strong-enemy",
-        "x": 17.727272727272727,
+        "x": 276.25,
+        "y": 20
+      },
+      {
+        "entityTypeId": "asteroid",
+        "x": 341.25,
         "y": 20
       },
       {
         "entityTypeId": "basic-enemy",
-        "x": 88.63636363636363,
+        "x": 48.75,
         "y": 60
       },
       {
         "entityTypeId": "basic-enemy",
-        "x": 159.54545454545453,
+        "x": 113.75,
         "y": 60
       },
       {
-        "entityTypeId": "asteroid",
-        "x": 230.45454545454544,
+        "entityTypeId": "basic-enemy",
+        "x": 178.75,
+        "y": 60
+      },
+      {
+        "entityTypeId": "basic-enemy",
+        "x": 243.75,
+        "y": 60
+      },
+      {
+        "entityTypeId": "basic-enemy",
+        "x": 308.75,
         "y": 60
       }
     ],
     "waves": [
       {
+        "order": 1,
+        "delay": 0,
         "entities": [
           {
             "entityTypeId": "basic-enemy",
-            "x": 17.727272727272727,
+            "x": 16.25,
             "y": 20
           },
           {
             "entityTypeId": "basic-enemy",
-            "x": 88.63636363636363,
+            "x": 81.25,
             "y": 20
           },
           {
             "entityTypeId": "basic-enemy",
-            "x": 159.54545454545453,
+            "x": 146.25,
             "y": 20
           },
           {
             "entityTypeId": "basic-enemy",
-            "x": 230.45454545454544,
+            "x": 211.25,
+            "y": 20
+          },
+          {
+            "entityTypeId": "basic-enemy",
+            "x": 276.25,
+            "y": 20
+          },
+          {
+            "entityTypeId": "basic-enemy",
+            "x": 341.25,
             "y": 20
           }
         ]
       },
       {
-        "entities": [
-          {
-            "entityTypeId": "fast-enemy",
-            "x": 194.99999999999997,
-            "y": 20
-          },
-          {
-            "entityTypeId": "basic-enemy",
-            "x": 159.54545454545453,
-            "y": 60
-          },
-          {
-            "entityTypeId": "basic-enemy",
-            "x": 230.45454545454544,
-            "y": 60
-          }
-        ]
-      },
-      {
+        "order": 2,
+        "delay": 3,
         "entities": [
           {
             "entityTypeId": "strong-enemy",
-            "x": 17.727272727272727,
+            "x": 16.25,
+            "y": 20
+          },
+          {
+            "entityTypeId": "fast-enemy",
+            "x": 81.25,
+            "y": 20
+          },
+          {
+            "entityTypeId": "fast-enemy",
+            "x": 146.25,
+            "y": 20
+          },
+          {
+            "entityTypeId": "fast-enemy",
+            "x": 211.25,
+            "y": 20
+          },
+          {
+            "entityTypeId": "strong-enemy",
+            "x": 276.25,
+            "y": 20
+          },
+          {
+            "entityTypeId": "asteroid",
+            "x": 341.25,
             "y": 20
           },
           {
             "entityTypeId": "basic-enemy",
-            "x": 88.63636363636363,
+            "x": 48.75,
             "y": 60
           },
           {
             "entityTypeId": "basic-enemy",
-            "x": 159.54545454545453,
+            "x": 113.75,
             "y": 60
           },
           {
-            "entityTypeId": "asteroid",
-            "x": 230.45454545454544,
+            "entityTypeId": "basic-enemy",
+            "x": 178.75,
+            "y": 60
+          },
+          {
+            "entityTypeId": "basic-enemy",
+            "x": 243.75,
+            "y": 60
+          },
+          {
+            "entityTypeId": "basic-enemy",
+            "x": 308.75,
             "y": 60
           }
         ]
       }
     ],
     "params": {
-      "numberOfEnemies": 11,
+      "numberOfEnemies": 17,
       "enemySpeed": 2,
       "enemyShotDelay": 1.5,
       "enemyShotSpeed": 4,
