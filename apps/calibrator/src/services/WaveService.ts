@@ -20,9 +20,34 @@ export async function deleteWave(id: number) {
 }
 
 export async function reorderWaves(levelId: number, orderedIds: number[]) {
-  return prisma.$transaction(
-    orderedIds.map((id, i) =>
+  // IDOR guard — never trust the caller's id list. Only reorder when orderedIds
+  // is EXACTLY the set of waves owned by levelId (same count, same ids, no
+  // duplicates). A foreign id, a missing id, or a dupe means the request is not
+  // a legitimate reorder of this level — reject before touching the database.
+  const existing = await prisma.wave.findMany({ where: { levelId }, select: { id: true } })
+  const ownedIds = new Set(existing.map((w) => w.id))
+  const seen = new Set<number>()
+  const sameSet =
+    orderedIds.length === ownedIds.size &&
+    orderedIds.every((id) => {
+      if (seen.has(id) || !ownedIds.has(id)) return false
+      seen.add(id)
+      return true
+    })
+  if (!sameSet) {
+    throw new Error('Reordenação inválida: as waves não pertencem a este nível')
+  }
+
+  // @@unique([levelId, order]) makes a single-pass assignment of final orders
+  // collide on any swap (P2002). Two-phase inside one transaction: first park
+  // every affected row at a non-colliding negative offset, then set the final
+  // 1..n orders. Atomic via $transaction.
+  return prisma.$transaction([
+    ...orderedIds.map((id, i) =>
+      prisma.wave.update({ where: { id }, data: { order: -(i + 1) } })
+    ),
+    ...orderedIds.map((id, i) =>
       prisma.wave.update({ where: { id }, data: { order: i + 1 } })
-    )
-  )
+    ),
+  ])
 }
