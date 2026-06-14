@@ -1,5 +1,5 @@
 'use client'
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { WaveChipBar } from './WaveChipBar/WaveChipBar'
 import { EditorPane } from './WaveEditor/EditorPane'
 
@@ -20,6 +20,13 @@ interface LevelEditorClientProps {
 
 export function LevelEditorClient({ level, patterns }: LevelEditorClientProps) {
   const [selectedWave, setSelectedWave] = useState<Wave | null>(level.waves[0] ?? null)
+
+  // Re-derive the selected wave when switching levels — the inner EditorPane key
+  // alone can't fix this because selectedWave itself stays pinned to the old level.
+  useEffect(() => {
+    setSelectedWave(level.waves[0] ?? null)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [level.id])
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
