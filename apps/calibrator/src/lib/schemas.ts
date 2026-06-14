@@ -1,9 +1,15 @@
 import { z } from 'zod'
+import { GRID_COLS, GRID_ROWS } from './gridConstants'
 
-export const EntityTypeSchema = z.enum(['grunt', 'rocket', 'shield', 'rock'])
+export const EntityTypeSchema = z.enum(['basic-enemy', 'fast-enemy', 'strong-enemy', 'asteroid'])
 export type EntityType = z.infer<typeof EntityTypeSchema>
 
-export const GridSchema = z.array(z.array(EntityTypeSchema.nullable()))
+// Lock the grid dimensions server-side: every row must be exactly GRID_COLS wide,
+// and the grid may hold up to GRID_ROWS rows. Defense in depth — a tampered front
+// can never push an arbitrarily large grid into the database.
+export const GridSchema = z
+  .array(z.array(EntityTypeSchema.nullable()).length(GRID_COLS))
+  .max(GRID_ROWS)
 export type Grid = z.infer<typeof GridSchema>
 
 export const LevelParamsSchema = z.object({
@@ -38,9 +44,18 @@ export const WorldInputSchema = z.object({
 })
 export type WorldInput = z.infer<typeof WorldInputSchema>
 
+// Phase publication status. String-backed enum so future states ('review') can be
+// added through Zod without a DB migration — only values in the enum are accepted.
+export const PhaseStatusSchema = z.enum(['draft', 'published'])
+export type PhaseStatus = z.infer<typeof PhaseStatusSchema>
+
 export const PhaseInputSchema = z.object({
-  name:  z.string().min(1).max(100),
-  index: z.number().int().min(0).max(9),
+  name:   z.string().min(1).max(100),
+  // The backend derives the index server-side (max+1), so the front no longer
+  // needs to send it. Optional and uncapped: a "too-high" index can never 422
+  // (the old .max(9) cap made the 11th phase throw). Esse bug não volta.
+  index:  z.number().int().min(0).optional(),
+  status: PhaseStatusSchema.optional(),
 })
 export type PhaseInput = z.infer<typeof PhaseInputSchema>
 

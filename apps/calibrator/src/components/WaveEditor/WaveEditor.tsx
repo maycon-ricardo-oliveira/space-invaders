@@ -1,6 +1,6 @@
 // apps/calibrator/src/components/WaveEditor/WaveEditor.tsx
 'use client'
-import React, { useState, useCallback } from 'react'
+import React, { useState, useCallback, useEffect } from 'react'
 import { EntityToolbox } from './EntityToolbox'
 import { PatternPicker } from './PatternPicker'
 import { SpawnZoneGrid } from './SpawnZoneGrid'
@@ -28,7 +28,14 @@ function ensureGrid(raw: unknown): Grid {
 
 export function WaveEditor({ wave, userPatterns, onWaveChange, onSavePattern }: WaveEditorProps) {
   const [grid, setGrid] = useState<Grid>(() => ensureGrid(wave.grid))
-  const [selectedEntity, setSelectedEntity] = useState<EntityType | 'eraser'>('grunt')
+  const [selectedEntity, setSelectedEntity] = useState<EntityType | 'eraser'>('basic-enemy')
+
+  // Re-seed the local grid when the wave changes (swap waves / fresh server data).
+  // This is NOT a user edit — bypass onWaveChange so the debounced auto-save stays quiet.
+  useEffect(() => {
+    setGrid(ensureGrid(wave.grid))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [wave.id])
 
   const handleGridChange = useCallback((newGrid: Grid) => {
     setGrid(newGrid)
@@ -42,7 +49,7 @@ export function WaveEditor({ wave, userPatterns, onWaveChange, onSavePattern }: 
       <EntityToolbox selected={selectedEntity} onSelect={setSelectedEntity} />
       <PatternPicker
         userPatterns={userPatterns}
-        selectedEntity={selectedEntity === 'eraser' ? 'grunt' : selectedEntity}
+        selectedEntity={selectedEntity === 'eraser' ? 'basic-enemy' : selectedEntity}
         enemyCount={enemyCount || 4}
         onApplyPattern={handleGridChange}
         onSavePattern={name => onSavePattern(name, grid)}

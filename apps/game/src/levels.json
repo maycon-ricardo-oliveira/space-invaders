@@ -1,0 +1,207 @@
+[
+  {
+    "id": "story-1-1",
+    "style": "classic",
+    "difficultyScore": 0,
+    "phaseIndex": 1,
+    "levelIndex": 1,
+    "entities": [
+      {
+        "entityTypeId": "basic-enemy",
+        "x": 16.25,
+        "y": 20
+      },
+      {
+        "entityTypeId": "basic-enemy",
+        "x": 81.25,
+        "y": 20
+      },
+      {
+        "entityTypeId": "basic-enemy",
+        "x": 146.25,
+        "y": 20
+      },
+      {
+        "entityTypeId": "basic-enemy",
+        "x": 211.25,
+        "y": 20
+      },
+      {
+        "entityTypeId": "basic-enemy",
+        "x": 276.25,
+        "y": 20
+      },
+      {
+        "entityTypeId": "basic-enemy",
+        "x": 341.25,
+        "y": 20
+      },
+      {
+        "entityTypeId": "strong-enemy",
+        "x": 16.25,
+        "y": 20
+      },
+      {
+        "entityTypeId": "fast-enemy",
+        "x": 81.25,
+        "y": 20
+      },
+      {
+        "entityTypeId": "fast-enemy",
+        "x": 146.25,
+        "y": 20
+      },
+      {
+        "entityTypeId": "fast-enemy",
+        "x": 211.25,
+        "y": 20
+      },
+      {
+        "entityTypeId": "strong-enemy",
+        "x": 276.25,
+        "y": 20
+      },
+      {
+        "entityTypeId": "asteroid",
+        "x": 341.25,
+        "y": 20
+      },
+      {
+        "entityTypeId": "basic-enemy",
+        "x": 48.75,
+        "y": 60
+      },
+      {
+        "entityTypeId": "basic-enemy",
+        "x": 113.75,
+        "y": 60
+      },
+      {
+        "entityTypeId": "basic-enemy",
+        "x": 178.75,
+        "y": 60
+      },
+      {
+        "entityTypeId": "basic-enemy",
+        "x": 243.75,
+        "y": 60
+      },
+      {
+        "entityTypeId": "basic-enemy",
+        "x": 308.75,
+        "y": 60
+      }
+    ],
+    "waves": [
+      {
+        "order": 1,
+        "delay": 0,
+        "entities": [
+          {
+            "entityTypeId": "basic-enemy",
+            "x": 16.25,
+            "y": 20
+          },
+          {
+            "entityTypeId": "basic-enemy",
+            "x": 81.25,
+            "y": 20
+          },
+          {
+            "entityTypeId": "basic-enemy",
+            "x": 146.25,
+            "y": 20
+          },
+          {
+            "entityTypeId": "basic-enemy",
+            "x": 211.25,
+            "y": 20
+          },
+          {
+            "entityTypeId": "basic-enemy",
+            "x": 276.25,
+            "y": 20
+          },
+          {
+            "entityTypeId": "basic-enemy",
+            "x": 341.25,
+            "y": 20
+          }
+        ]
+      },
+      {
+        "order": 2,
+        "delay": 3,
+        "entities": [
+          {
+            "entityTypeId": "strong-enemy",
+            "x": 16.25,
+            "y": 20
+          },
+          {
+            "entityTypeId": "fast-enemy",
+            "x": 81.25,
+            "y": 20
+          },
+          {
+            "entityTypeId": "fast-enemy",
+            "x": 146.25,
+            "y": 20
+          },
+          {
+            "entityTypeId": "fast-enemy",
+            "x": 211.25,
+            "y": 20
+          },
+          {
+            "entityTypeId": "strong-enemy",
+            "x": 276.25,
+            "y": 20
+          },
+          {
+            "entityTypeId": "asteroid",
+            "x": 341.25,
+            "y": 20
+          },
+          {
+            "entityTypeId": "basic-enemy",
+            "x": 48.75,
+            "y": 60
+          },
+          {
+            "entityTypeId": "basic-enemy",
+            "x": 113.75,
+            "y": 60
+          },
+          {
+            "entityTypeId": "basic-enemy",
+            "x": 178.75,
+            "y": 60
+          },
+          {
+            "entityTypeId": "basic-enemy",
+            "x": 243.75,
+            "y": 60
+          },
+          {
+            "entityTypeId": "basic-enemy",
+            "x": 308.75,
+            "y": 60
+          }
+        ]
+      }
+    ],
+    "params": {
+      "numberOfEnemies": 17,
+      "enemySpeed": 2,
+      "enemyShotDelay": 1.5,
+      "enemyShotSpeed": 4,
+      "enemyAngerDelay": 15,
+      "enemySpawnDelay": 1,
+      "hasPowerUps": true,
+      "powerUpMinWait": 5,
+      "powerUpMaxWait": 15,
+      "fuelDrainRate": 8
+    }
+  }
+]

@@ -1,22 +1,32 @@
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
+import type { LevelSummary } from '@si/level-engine'
 import { TOTAL_STORY_LEVELS } from '../game/GameLoop'
 
+export type LevelSelection = { kind: 'authored'; levelId: string } | { kind: 'procedural'; levelIndex: number }
+
 interface Props {
-  onSelectLevel: (levelIndex: number) => void
+  summaries: LevelSummary[]
+  onSelectLevel: (selection: LevelSelection) => void
 }
 
-const levels = Array.from({ length: TOTAL_STORY_LEVELS }, (_, i) => i)
+const fallbackLevels = Array.from({ length: TOTAL_STORY_LEVELS }, (_, i) => i)
 
-export function StoryModeScreen({ onSelectLevel }: Props) {
+export function StoryModeScreen({ summaries, onSelectLevel }: Props) {
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Story Mode</Text>
       <ScrollView>
-        {levels.map(i => (
-          <TouchableOpacity key={i} onPress={() => onSelectLevel(i)} style={styles.row}>
-            <Text style={styles.levelText}>Level {i + 1}</Text>
-          </TouchableOpacity>
-        ))}
+        {summaries.length > 0
+          ? summaries.map(s => (
+              <TouchableOpacity key={s.id} onPress={() => onSelectLevel({ kind: 'authored', levelId: s.id })} style={styles.row}>
+                <Text style={styles.levelText}>{`Fase ${s.phaseIndex} — Level ${s.levelIndex}`}</Text>
+              </TouchableOpacity>
+            ))
+          : fallbackLevels.map(i => (
+              <TouchableOpacity key={i} onPress={() => onSelectLevel({ kind: 'procedural', levelIndex: i })} style={styles.row}>
+                <Text style={styles.levelText}>Level {i + 1}</Text>
+              </TouchableOpacity>
+            ))}
       </ScrollView>
     </View>
   )

@@ -13,9 +13,14 @@ export type {
   CalibratorStrategy,
   ILevelEngine,
   IRenderer,
+  LevelSummary,
+  LevelSource,
 } from './types'
 
 export { computeDifficultyScore } from './difficulty'
 export { EntityRegistry } from './registry/EntityRegistry'
 export { CurveCalibratorStrategy } from './strategies/CurveCalibratorStrategy'
 export { LevelEngine } from './LevelEngine'
+export { JsonLevelSource, LevelContractError } from './sources/JsonLevelSource'
+export { validateLevels } from './sources/validateLevels'
+export type { LevelValidationError, Bounds } from './sources/validateLevels'

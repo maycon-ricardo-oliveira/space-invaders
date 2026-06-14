@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Platform, PanResponder, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
+import { Animated, Easing, Platform, PanResponder, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
 import { Canvas, Picture, Skia } from '@shopify/react-native-skia'
 import type { SkPicture } from '@shopify/react-native-skia'
 import { LevelEngine, CurveCalibratorStrategy } from '@si/level-engine'
@@ -7,9 +7,11 @@ import { registerEntities } from '../entities/registerEntities'
 import { GameLoop, CANVAS_WIDTH, CANVAS_HEIGHT } from '../game/GameLoop'
 import { SkiaRenderer } from '../renderers/SkiaRenderer'
 import type { GameStatus } from '../game/types'
+import { getLevelSource } from '../levels/source'
+import type { LevelSelection } from './StoryModeScreen'
 
 interface Props {
-  levelIndex: number
+  selection: LevelSelection
   totalLevels: number
   onBack: () => void
 }
@@ -32,23 +34,52 @@ const BAR_WIDTH = 140
 const XP_BAR_WIDTH = 180
 const XP_BAR_HEIGHT = 6
 
-function buildLoop(levelIndex: number, totalLevels: number): GameLoop {
+// Parallax speed-lines for the wave turbo transition. Each streak flies from above
+// the screen to below it, stretching mid-flight to fake hyperspeed acceleration.
+const TURBO_STREAKS = Array.from({ length: 14 }, (_, i) => {
+  const left = ((i * 79) % 100) / 100 * CANVAS_WIDTH
+  const width = 2 + (i % 3)
+  const height = 60 + (i % 5) * 30
+  return {
+    key: `streak-${i}`,
+    left,
+    width,
+    height,
+    from: -CANVAS_HEIGHT * (0.4 + (i % 4) * 0.15),
+    to: CANVAS_HEIGHT * (1 + (i % 3) * 0.2),
+    stretch: 3 + (i % 4),
+  }
+})
+
+function buildLoop(selection: LevelSelection, totalLevels: number): GameLoop {
+  if (selection.kind === 'authored') {
+    try {
+      return new GameLoop(getLevelSource().getLevel(selection.levelId))
+    } catch (error) {
+      if (__DEV__) throw error
+      console.error(`level ${selection.levelId} failed to load — procedural fallback`, error)
+    }
+  }
+  const levelIndex = selection.kind === 'procedural' ? selection.levelIndex : 0
   const engine = new LevelEngine(new CurveCalibratorStrategy())
   registerEntities(engine)
   const level = engine.generate({ mode: 'story', levelIndex, totalLevels })
   return new GameLoop(level)
 }
 
-export function GameScreen({ levelIndex, totalLevels, onBack }: Props) {
-  const [loop] = useState(() => buildLoop(levelIndex, totalLevels))
+export function GameScreen({ selection, totalLevels, onBack }: Props) {
+  const [loop] = useState(() => buildLoop(selection, totalLevels))
   const [renderer] = useState(() => new SkiaRenderer(CANVAS_WIDTH, CANVAS_HEIGHT))
   const [status, setStatus] = useState<GameStatus>('playing')
   const [picture, setPicture] = useState<SkPicture | null>(null)
-  const [hud, setHud] = useState({ hp: 500, maxHp: 500, fuel: 100, score: 0, xp: 0, xpToNext: 10, playerLevel: 1 })
+  const [hud, setHud] = useState({ hp: 500, maxHp: 500, fuel: 100, score: 0, xp: 0, xpToNext: 10, playerLevel: 1, currentWave: 1, totalWaves: 1 })
   const [joystick, setJoystick] = useState<JoystickState | null>(null)
+  const [waveTransition, setWaveTransition] = useState<{ active: boolean; nextWave: number }>({ active: false, nextWave: 1 })
+  const turboAnim = useRef(new Animated.Value(0)).current
 
   const statusRef = useRef<GameStatus>('playing')
-  const hudRef = useRef({ hp: 500, maxHp: 500, fuel: 100, score: 0, xp: 0, xpToNext: 10, playerLevel: 1 })
+  const isWaveTransitionRef = useRef(false)
+  const hudRef = useRef({ hp: 500, maxHp: 500, fuel: 100, score: 0, xp: 0, xpToNext: 10, playerLevel: 1, currentWave: 1, totalWaves: 1 })
   const isPlayingRef = useRef(true)
   const rafRef = useRef<number | null>(null)
   const lastTimeRef = useRef<number | null>(null)
@@ -58,8 +89,8 @@ export function GameScreen({ levelIndex, totalLevels, onBack }: Props) {
 
   const panResponder = useRef(
     PanResponder.create({
-      onStartShouldSetPanResponder: () => true,
-      onMoveShouldSetPanResponder: () => true,
+      onStartShouldSetPanResponder: () => !isWaveTransitionRef.current,
+      onMoveShouldSetPanResponder: () => !isWaveTransitionRef.current,
       onPanResponderGrant: (evt) => {
         const j: JoystickState = {
           baseX: evt.nativeEvent.pageX,
@@ -146,6 +177,8 @@ export function GameScreen({ levelIndex, totalLevels, onBack }: Props) {
         xp: state.player.xp,
         xpToNext: state.player.xpToNext,
         playerLevel: state.player.playerLevel,
+        currentWave: state.currentWave,
+        totalWaves: state.totalWaves,
       }
       const prev = hudRef.current
       if (
@@ -155,7 +188,9 @@ export function GameScreen({ levelIndex, totalLevels, onBack }: Props) {
         nextHud.score !== prev.score ||
         nextHud.xp !== prev.xp ||
         nextHud.xpToNext !== prev.xpToNext ||
-        nextHud.playerLevel !== prev.playerLevel
+        nextHud.playerLevel !== prev.playerLevel ||
+        nextHud.currentWave !== prev.currentWave ||
+        nextHud.totalWaves !== prev.totalWaves
       ) {
         hudRef.current = nextHud
         setHud(nextHud)
@@ -183,6 +218,42 @@ export function GameScreen({ levelIndex, totalLevels, onBack }: Props) {
     }
   }, [tick, loop])
 
+  // Wave transition: turbo "boost" animation between waves. The GameLoop suspends
+  // its own update() after wave:cleared (waitingForWaveAdvance), so the field stays
+  // frozen while the ship boosts forward. We drive the overlay for getNextWaveDelay()
+  // ms, then advanceWave() spawns the next wave and the loop resumes.
+  useEffect(() => {
+    const handleWaveCleared = () => {
+      const delayMs = Math.max(600, loop.getNextWaveDelay())
+      const nextWave = loop.getState().currentWave + 1
+
+      isWaveTransitionRef.current = true
+      loop.setFiring(false)            // pause auto-fire during the boost
+      joystickRef.current = null       // drop any in-flight joystick input
+      setJoystick(null)
+      setWaveTransition({ active: true, nextWave })
+
+      turboAnim.setValue(0)
+      Animated.timing(turboAnim, {
+        toValue: 1,
+        duration: delayMs,
+        easing: Easing.inOut(Easing.cubic),
+        useNativeDriver: true,
+      }).start(({ finished }) => {
+        if (!finished) return
+        loop.advanceWave()             // spawn next wave, loop resumes
+        loop.setFiring(true)           // stationary → resume auto-fire
+        isWaveTransitionRef.current = false
+        setWaveTransition({ active: false, nextWave })
+      })
+    }
+
+    loop.on('wave:cleared', handleWaveCleared)
+    return () => {
+      loop.off('wave:cleared', handleWaveCleared)
+    }
+  }, [loop, turboAnim])
+
   const isPlaying = status === 'playing'
   const hpPct = hud.maxHp > 0 ? (hud.hp / hud.maxHp) * 100 : 0
   const fuelPct = Math.max(0, Math.min(100, hud.fuel))
@@ -198,6 +269,66 @@ export function GameScreen({ levelIndex, totalLevels, onBack }: Props) {
       <Canvas style={{ width: CANVAS_WIDTH, height: CANVAS_HEIGHT }}>
         {picture && <Picture picture={picture} />}
       </Canvas>
+
+      {/* Wave transition — turbo boost. Streak lines accelerate down the screen
+          (parallax speed lines) and a WAVE N banner zooms in, conveying the ship
+          jumping to hyperspeed toward the next wave. */}
+      {waveTransition.active && (
+        <View style={styles.turboOverlay} pointerEvents="none">
+          {TURBO_STREAKS.map((streak) => (
+            <Animated.View
+              key={streak.key}
+              style={[
+                styles.turboStreak,
+                {
+                  left: streak.left,
+                  width: streak.width,
+                  height: streak.height,
+                  opacity: turboAnim.interpolate({
+                    inputRange: [0, 0.15, 0.85, 1],
+                    outputRange: [0, 1, 1, 0],
+                  }),
+                  transform: [
+                    {
+                      translateY: turboAnim.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: [streak.from, streak.to],
+                      }),
+                    },
+                    {
+                      scaleY: turboAnim.interpolate({
+                        inputRange: [0, 0.5, 1],
+                        outputRange: [1, streak.stretch, 1],
+                      }),
+                    },
+                  ],
+                },
+              ]}
+            />
+          ))}
+          <Animated.Text
+            style={[
+              styles.turboText,
+              {
+                opacity: turboAnim.interpolate({
+                  inputRange: [0, 0.2, 0.8, 1],
+                  outputRange: [0, 1, 1, 0],
+                }),
+                transform: [
+                  {
+                    scale: turboAnim.interpolate({
+                      inputRange: [0, 0.5, 1],
+                      outputRange: [0.6, 1.3, 0.9],
+                    }),
+                  },
+                ],
+              },
+            ]}
+          >
+            {`WAVE ${waveTransition.nextWave}`}
+          </Animated.Text>
+        </View>
+      )}
 
       {/* HUD overlay — pointerEvents none so touches fall through to PanResponder */}
       <View style={styles.hudTopLeft} pointerEvents="none">
@@ -216,6 +347,9 @@ export function GameScreen({ levelIndex, totalLevels, onBack }: Props) {
       </View>
       <View style={styles.hudTopRight} pointerEvents="none">
         <Text style={styles.hudText}>{hud.score}</Text>
+        {hud.totalWaves > 1 && (
+          <Text style={styles.hudWaveText}>{`Wave ${hud.currentWave}/${hud.totalWaves}`}</Text>
+        )}
       </View>
 
       {/* XP bar */}
@@ -308,6 +442,29 @@ const styles = StyleSheet.create({
     right: 12,
   },
   hudText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
+  hudWaveText: { color: '#00e5ff', fontSize: 13, fontWeight: 'bold', marginTop: 4, textAlign: 'right' },
+  turboOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,8,0.55)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  turboStreak: {
+    position: 'absolute',
+    top: 0,
+    borderRadius: 2,
+    backgroundColor: 'rgba(120,200,255,0.85)',
+  },
+  turboText: {
+    color: '#00e5ff',
+    fontSize: 40,
+    fontWeight: 'bold',
+    letterSpacing: 6,
+    textShadowColor: '#0066ff',
+    textShadowRadius: 12,
+    textShadowOffset: { width: 0, height: 0 },
+  },
   barRow: {
     flexDirection: 'row',
     alignItems: 'center',

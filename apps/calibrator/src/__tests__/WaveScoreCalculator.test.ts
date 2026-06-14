@@ -10,18 +10,18 @@ describe('computeWaveScore', () => {
     expect(computeWaveScore(grid, 3.0)).toBe(0)
   })
 
-  it('shield enemies score higher than grunts', () => {
+  it('strong-enemy enemies score higher than basic-enemy', () => {
     // Use a full row so scores survive rounding
-    const fullRowGrunts = Array(11).fill('grunt') as Grid[0]
-    const fullRowShields = Array(11).fill('shield') as Grid[0]
-    const grunts: Grid = [fullRowGrunts]
-    const shields: Grid = [fullRowShields]
-    expect(computeWaveScore(shields, 3.0)).toBeGreaterThan(computeWaveScore(grunts, 3.0))
+    const fullRowBasic = Array(11).fill('basic-enemy') as Grid[0]
+    const fullRowStrong = Array(11).fill('strong-enemy') as Grid[0]
+    const basics: Grid = [fullRowBasic]
+    const strongs: Grid = [fullRowStrong]
+    expect(computeWaveScore(strongs, 3.0)).toBeGreaterThan(computeWaveScore(basics, 3.0))
   })
 
   it('lower delay produces higher score', () => {
     // Use enough enemies so scores don't round to the same integer
-    const row = Array(11).fill('grunt') as Grid[0]
+    const row = Array(11).fill('basic-enemy') as Grid[0]
     const grid: Grid = [row, row, row]
     const scoreHighDelay = computeWaveScore(grid, 6.0)
     const scoreLowDelay = computeWaveScore(grid, 1.0)
@@ -29,13 +29,13 @@ describe('computeWaveScore', () => {
   })
 
   it('more enemies = higher score', () => {
-    const few: Grid = [['grunt', null, null, null, null, null, null, null, null, null, null, null]]
-    const many: Grid = [['grunt', 'grunt', 'grunt', 'grunt', 'grunt', 'grunt', null, null, null, null, null, null]]
+    const few: Grid = [['basic-enemy', null, null, null, null, null, null, null, null, null, null, null]]
+    const many: Grid = [['basic-enemy', 'basic-enemy', 'basic-enemy', 'basic-enemy', 'basic-enemy', 'basic-enemy', null, null, null, null, null, null]]
     expect(computeWaveScore(many, 3.0)).toBeGreaterThan(computeWaveScore(few, 3.0))
   })
 
   it('returns score in range [0, 100]', () => {
-    const grid: Grid = Array.from({ length: 4 }, () => Array(12).fill('shield'))
+    const grid: Grid = Array.from({ length: 4 }, () => Array(12).fill('strong-enemy'))
     const score = computeWaveScore(grid, 0)
     expect(score).toBeGreaterThanOrEqual(0)
     expect(score).toBeLessThanOrEqual(100)

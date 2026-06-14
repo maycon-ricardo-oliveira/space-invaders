@@ -1,6 +1,7 @@
 // apps/calibrator/src/components/WaveChipBar/WaveChipBar.tsx
 'use client'
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { WaveChip } from './WaveChip'
 import { createWaveAction, deleteWaveAction, getWaves } from '../../../app/actions/wave.actions'
 import type { Grid } from '../../lib/schemas'
@@ -17,8 +18,17 @@ interface WaveChipBarProps {
 }
 
 export function WaveChipBar({ initialWaves, levelId, onSelectWave }: WaveChipBarProps) {
+  const router = useRouter()
+  // Derive the displayed list from props so a parent re-render (after the server
+  // revalidates) re-syncs the chips instead of staying frozen on first mount.
   const [waves, setWaves] = useState<Wave[]>(initialWaves)
   const [activeId, setActiveId] = useState(initialWaves[0]?.id)
+
+  useEffect(() => {
+    setWaves(initialWaves)
+    // Re-sync selection if the active wave vanished from the fresh list.
+    setActiveId(prev => (initialWaves.some(w => w.id === prev) ? prev : initialWaves[0]?.id))
+  }, [initialWaves])
 
   function select(wave: Wave) {
     setActiveId(wave.id)
@@ -34,6 +44,7 @@ export function WaveChipBar({ initialWaves, levelId, onSelectWave }: WaveChipBar
     setWaves(typedWaves)
     const newest = typedWaves.at(-1)
     if (newest) select(newest)
+    router.refresh()
   }
 
   async function handleDeleteWave(id: number, e: React.MouseEvent) {
@@ -48,6 +59,7 @@ export function WaveChipBar({ initialWaves, levelId, onSelectWave }: WaveChipBar
       setActiveId(next?.id)
       onSelectWave?.(next)
     }
+    router.refresh()
   }
 
   return (

@@ -43,6 +43,8 @@ export interface LevelParams {
 }
 
 export interface Wave {
+  order: number
+  delay: number
   entities: EntityPlacement[]
 }
 
@@ -50,6 +52,8 @@ export interface LevelDefinition {
   id: string
   style: 'classic' | 'freeRoam' | 'mixed'
   difficultyScore: number
+  phaseIndex?: number
+  levelIndex?: number
   entities: EntityPlacement[]
   params: LevelParams
   waves?: Wave[]
@@ -78,4 +82,19 @@ export interface ILevelEngine {
   generate(request: LevelRequest): LevelDefinition
   setCalibrator(strategy: CalibratorStrategy): void
   registerEntityType(type: EntityType): void
+}
+
+export interface LevelSummary {
+  id: string
+  phaseIndex: number
+  levelIndex: number
+  difficultyScore: number
+}
+
+export interface LevelSource {
+  /** Must resolve before listLevels()/getLevel() are called. */
+  load(): Promise<void>
+  listLevels(): LevelSummary[]
+  /** @throws Error if id is unknown. */
+  getLevel(id: string): LevelDefinition
 }

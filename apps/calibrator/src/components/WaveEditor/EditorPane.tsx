@@ -7,6 +7,16 @@ import { updateWaveAction } from '../../../app/actions/wave.actions'
 import { updateLevelParamsAction } from '../../../app/actions/level.actions'
 import { savePatternAction } from '../../../app/actions/pattern.actions'
 import type { Grid } from '../../lib/schemas'
+import { GRID_COLS, GRID_ROWS } from '../../lib/gridConstants'
+
+// Normalizes any stored grid to exactly GRID_ROWS × GRID_COLS (same shape the
+// WaveEditor uses internally) so the stats panel always reads a full grid.
+function ensureGrid(raw: unknown): Grid {
+  const src = Array.isArray(raw) ? (raw as Grid) : []
+  return Array.from({ length: GRID_ROWS }, (_, ri) =>
+    Array.from({ length: GRID_COLS }, (_, ci) => src[ri]?.[ci] ?? null)
+  )
+}
 
 type Wave = { id: number; levelId: number; order: number; delay: number; grid: unknown }
 type Level = {
@@ -28,10 +38,20 @@ type SaveStatus = 'idle' | 'unsaved' | 'saving' | 'saved'
 
 export function EditorPane({ level, initialWave, patterns }: EditorPaneProps) {
   const [currentLevel, setCurrentLevel] = useState(level)
-  const [selectedWave] = useState(initialWave)  // controlled by parent via key prop
+  // Derive directly from the prop so a new initialWave (even with the same id) is
+  // reflected without a remount. This is a prop sync, not a user edit, so it must
+  // NOT trigger auto-save — only handleWaveChange (user edits) saves.
+  const selectedWave = initialWave
   const [userPatterns, setUserPatterns] = useState(patterns)
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle')
   const [, startTransition] = useTransition()
+
+  // The grid being EDITED, lifted up from the WaveEditor so the stats panel
+  // reflects live edits instead of the frozen server prop.
+  const [currentGrid, setCurrentGrid] = useState<Grid>(() => ensureGrid(initialWave.grid))
+
+  // Floating save toast — own element, fades in on 'saved' and out after ~2s.
+  const [toastVisible, setToastVisible] = useState(false)
 
   const debounceRef = React.useRef<ReturnType<typeof setTimeout> | null>(null)
   const latestGridRef = React.useRef<{ waveId: number; grid: Grid } | null>(null)
@@ -42,8 +62,24 @@ export function EditorPane({ level, initialWave, patterns }: EditorPaneProps) {
     }
   }, [])
 
+  // Swap waves / fresh server data → re-seed the lifted grid. NOT a user edit:
+  // never triggers auto-save.
+  useEffect(() => {
+    setCurrentGrid(ensureGrid(initialWave.grid))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialWave.id])
+
+  // Show the floating toast when a save completes; auto-hide after ~2s.
+  useEffect(() => {
+    if (saveStatus !== 'saved') return
+    setToastVisible(true)
+    const t = setTimeout(() => setToastVisible(false), 2000)
+    return () => clearTimeout(t)
+  }, [saveStatus])
+
   const handleWaveChange = useCallback((waveId: number, grid: Grid) => {
     latestGridRef.current = { waveId, grid }
+    setCurrentGrid(grid)
     setSaveStatus('unsaved')
     if (debounceRef.current) clearTimeout(debounceRef.current)
     debounceRef.current = setTimeout(() => {
@@ -82,20 +118,43 @@ export function EditorPane({ level, initialWave, patterns }: EditorPaneProps) {
     }
   }
 
-  const saveLabel =
-    saveStatus === 'saving'  ? 'Salvando...' :
-    saveStatus === 'saved'   ? '✓ Salvo' :
-    saveStatus === 'unsaved' ? 'Salvar' :
-    'Salvo'
+  // The button no longer carries the "saved" state — success lives in the toast.
+  const saveLabel = saveStatus === 'saving' ? 'Salvando...' : 'Salvar'
 
   const saveBg =
-    saveStatus === 'saved'   ? '#2ecc71' :
     saveStatus === 'unsaved' ? '#e67e22' :
     saveStatus === 'saving'  ? '#555' :
     '#2c2c3e'
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
+      {/* Floating save toast — neon, own element, never affects layout */}
+      <div
+        data-testid="save-toast"
+        style={{
+          position: 'fixed',
+          bottom: 20,
+          right: 20,
+          zIndex: 9999,
+          background: '#0d0d1a',
+          border: '1px solid #5eead4',
+          color: '#5eead4',
+          boxShadow: '0 0 16px rgba(94,234,212,.55)',
+          borderRadius: 8,
+          padding: '10px 16px',
+          fontSize: 13,
+          fontWeight: 700,
+          letterSpacing: 0.5,
+          whiteSpace: 'nowrap',
+          pointerEvents: 'none',
+          opacity: toastVisible ? 1 : 0,
+          transform: toastVisible ? 'translateY(0)' : 'translateY(8px)',
+          transition: 'opacity .25s ease, transform .25s ease',
+        }}
+      >
+        ✓ Salvo
+      </div>
+
       {/* Save bar */}
       <div style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -106,10 +165,10 @@ export function EditorPane({ level, initialWave, patterns }: EditorPaneProps) {
         </span>
         <button
           onClick={handleManualSave}
-          disabled={saveStatus === 'saving' || saveStatus === 'idle' || saveStatus === 'saved'}
+          disabled={saveStatus !== 'unsaved'}
           style={{
             background: saveBg,
-            color: saveStatus === 'saved' ? '#111' : '#eee',
+            color: '#eee',
             border: 'none', borderRadius: 4, padding: '4px 12px',
             fontSize: 12, cursor: saveStatus === 'unsaved' ? 'pointer' : 'default',
           }}
@@ -120,7 +179,7 @@ export function EditorPane({ level, initialWave, patterns }: EditorPaneProps) {
 
       <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
         <WaveStatsPanel
-          wave={selectedWave}
+          wave={{ ...selectedWave, grid: currentGrid }}
           level={currentLevel}
           onLevelParamChange={handleLevelParamChange}
         />

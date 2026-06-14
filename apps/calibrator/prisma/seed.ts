@@ -1,6 +1,7 @@
 import { PrismaClient } from '@prisma/client'
 import { PrismaPg } from '@prisma/adapter-pg'
 import * as dotenv from 'dotenv'
+import { SEED_WORLD, SEED_WORLD_NAME } from './seedData'
 dotenv.config()
 
 const connectionString = process.env.DATABASE_URL!
@@ -11,51 +12,29 @@ async function main() {
   const world = await prisma.world.upsert({
     where: { index: 0 },
     update: {},
-    create: { name: 'Planeta Xeron', index: 0, parallaxTheme: 'space' },
+    create: { name: SEED_WORLD_NAME, index: 0, parallaxTheme: 'space' },
   })
 
+  const seedPhase = SEED_WORLD.phases[0]
   const phase = await prisma.phase.upsert({
-    where: { worldId_index: { worldId: world.id, index: 0 } },
+    where: { worldId_index: { worldId: world.id, index: seedPhase.index } },
     update: {},
-    create: { worldId: world.id, name: 'Fase 1', index: 0 },
+    create: { worldId: world.id, name: 'Fase 1', index: seedPhase.index, status: seedPhase.status },
   })
 
+  const seedLevel = seedPhase.levels[0]
   const level = await prisma.level.upsert({
-    where: { phaseId_index: { phaseId: phase.id, index: 0 } },
+    where: { phaseId_index: { phaseId: phase.id, index: seedLevel.index } },
     update: {},
     create: {
-      phaseId: phase.id, name: 'Level 1', index: 0,
-      enemySpeed: 2.0, shotDelay: 1.5, fuelDrain: 8.0,
-      enemyShotSpeed: 4.0, enemyAngerDelay: 15.0,
-      enemySpawnDelay: 1.0, hasPowerUps: true,
+      phaseId: phase.id, name: 'Level 1', index: seedLevel.index,
+      enemySpeed: seedLevel.enemySpeed, shotDelay: seedLevel.shotDelay, fuelDrain: seedLevel.fuelDrain,
+      enemyShotSpeed: seedLevel.enemyShotSpeed, enemyAngerDelay: seedLevel.enemyAngerDelay,
+      enemySpawnDelay: seedLevel.enemySpawnDelay, hasPowerUps: seedLevel.hasPowerUps,
     },
   })
 
-  const waves = [
-    {
-      order: 1, delay: 0,
-      grid: [
-        ['grunt', null, 'grunt', null, 'grunt', null, 'grunt', null, null, null, null, null],
-        Array(12).fill(null),
-      ],
-    },
-    {
-      order: 2, delay: 3.0,
-      grid: [
-        [null, null, null, null, null, 'rocket', null, null, null, null, null, null],
-        [null, null, null, null, 'grunt', null, 'grunt', null, null, null, null, null],
-      ],
-    },
-    {
-      order: 3, delay: 3.0,
-      grid: [
-        ['shield', null, null, null, null, null, null, null, null, null, null, null],
-        [null, null, 'grunt', null, 'grunt', null, null, null, null, null, null, null],
-      ],
-    },
-  ]
-
-  for (const wave of waves) {
+  for (const wave of seedLevel.waves) {
     await prisma.wave.upsert({
       where: { levelId_order: { levelId: level.id, order: wave.order } },
       update: {},
@@ -63,7 +42,7 @@ async function main() {
     })
   }
 
-  console.log(`Seed complete — World: ${world.name}, Phase: ${phase.name}, Level: ${level.name}, Waves: ${waves.length}`)
+  console.log(`Seed complete — World: ${world.name}, Phase: ${phase.name}, Level: ${level.name}, Waves: ${seedLevel.waves.length}`)
 }
 
 main()

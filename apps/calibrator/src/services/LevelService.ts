@@ -18,7 +18,10 @@ export async function getLevel(id: number) {
 
 export async function createLevel(phaseId: number, input: LevelInput) {
   const data = LevelInputSchema.parse(input)
-  return prisma.level.create({ data: { phaseId, ...data } })
+  // Backend never trusts the front-end index: derive next index = max(scope) + 1.
+  const top = await prisma.level.findFirst({ where: { phaseId }, orderBy: { index: 'desc' } })
+  const index = top ? top.index + 1 : 0
+  return prisma.level.create({ data: { phaseId, ...data, index } })
 }
 
 export async function updateLevelParams(id: number, input: Partial<LevelInput>) {

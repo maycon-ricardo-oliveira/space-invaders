@@ -2,6 +2,9 @@ import { getLevel } from '../../../../actions/level.actions'
 import { getPatterns } from '../../../../actions/pattern.actions'
 import { LevelEditorClient } from '../../../../../src/components/LevelEditorClient'
 
+// Reads from Postgres at request time — never prerender statically (causes hydration mismatch + stale data).
+export const dynamic = 'force-dynamic'
+
 export default async function LevelEditorPage({
   params,
 }: {
