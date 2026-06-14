@@ -3,6 +3,9 @@ import { getWorlds } from '../actions/world.actions'
 import { getPhases } from '../actions/phase.actions'
 import { getLevels } from '../actions/level.actions'
 
+// Reads from Postgres at request time — never prerender statically (causes hydration mismatch + stale data).
+export const dynamic = 'force-dynamic'
+
 export default async function DashboardPage() {
   const worlds = await getWorlds()
   if (worlds.length === 0) {

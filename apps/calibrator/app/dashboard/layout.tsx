@@ -1,6 +1,9 @@
 import { getWorlds } from '../actions/world.actions'
 import { Sidebar } from '../../src/components/Sidebar/Sidebar'
 
+// Reads from Postgres at request time — never prerender statically (causes hydration mismatch + stale data).
+export const dynamic = 'force-dynamic'
+
 export default async function DashboardLayout({
   children,
   params,
