@@ -46,7 +46,7 @@ A PR is only valid if it ships something that can be tested end-to-end. Examples
 | 5a | Game Mechanics (controls + HUD) | Game | ✅ Done (PR #8) |
 | 5b | Gameplay Foundation (HP + Fuel + XP + HUD) | Game | ✅ Done (PR #9, #10) |
 | 6A | Enemies (asteroid, fast, strong) | Game | ✅ Done (PR #13, #14) |
-| 6B | Wave System (GL-2) | Game | ⏳ Todo — **next gameplay step** |
+| 6B | Wave System (GL-2) | Game | ✅ Done (PR #19) |
 | 7 | Dashboard Wave Editor | Calibrator | ✅ Done (PR #16) |
 | 8 | Card System | Game | ⏳ Todo |
 | 9 | Parallax & Terrain | Game | ⏳ Todo |
@@ -485,9 +485,9 @@ Sprint 6B, before new gameplay features.
 
 | Priority | Item | Detail |
 |----------|------|--------|
-| 🔴 CRITICAL 🚧 In Progress (PR #19) | Close levels.json pipeline end-to-end | `LevelEngine.generate()` always returns `entities: []`; the game never reads `levels.json`; fast/strong/asteroid enemies and fuel pickup never appear in-game |
-| 🔴 CRITICAL 🚧 In Progress (PR #19) | Align game EntityRegistry ↔ calibrator toolbox | Asteroid props diverge: game registers `{pointValue, health}` vs calibrator `{hp, speedMultiplier, burstCount}` — same entity, incompatible contracts |
-| 🟠 High | Dashboard build breaks without Postgres | `apps/calibrator/app/dashboard/page.tsx` runs a Prisma query at build time → add `export const dynamic = 'force-dynamic'` |
+| ✅ Done (PR #19) | Close levels.json pipeline end-to-end | Game consumes `levels.json` via LevelSource; wave timing contract, validation fences (waves/collision/empty/player-row), registry props resolved per wave |
+| ✅ Done (PR #19) | Align game EntityRegistry ↔ calibrator toolbox | Registry props resolved inside waves; contracts match; covered by the levels.json contract test |
+| ✅ Done (PR #19) | Dashboard hardening | revalidate + clean error handling, error boundary, reorderWaves IDOR guard, export publication fence, phase draft status + publish, client state re-sync |
 | 🟠 High | No CI | Add GitHub Actions workflow: `npm test` + `npm run build` on every PR |
 | 🟡 Medium | Release infra missing | `eas.json`, bundle id / Android package name, privacy policy, UMP consent |
 | 🟢 Low | Test hygiene | `Sidebar` test triggers act() warning (`Sidebar.tsx:80`); unused imports in `WorldService.test.ts:18` and `schemas.test.ts:11` |
