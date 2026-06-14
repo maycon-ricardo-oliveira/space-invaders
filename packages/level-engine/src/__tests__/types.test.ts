@@ -82,6 +82,8 @@ describe('types', () => {
 
   it('Wave has entities array', () => {
     const wave: Wave = {
+      order: 1,
+      delay: 0,
       entities: [{ entityTypeId: 'basic-enemy', x: 0, y: 0 }],
     }
     expect(wave.entities).toHaveLength(1)
@@ -89,7 +91,7 @@ describe('types', () => {
   })
 
   it('Wave accepts empty entities array', () => {
-    const wave: Wave = { entities: [] }
+    const wave: Wave = { order: 1, delay: 0, entities: [] }
     expect(wave.entities).toHaveLength(0)
   })
 
@@ -106,6 +108,8 @@ describe('types', () => {
       powerUpMaxWait: 10,
     }
     const wave: Wave = {
+      order: 1,
+      delay: 0,
       entities: [{ entityTypeId: 'fast-enemy', x: 100, y: 0 }],
     }
     const def: LevelDefinition = {

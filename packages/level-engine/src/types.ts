@@ -43,6 +43,8 @@ export interface LevelParams {
 }
 
 export interface Wave {
+  order: number
+  delay: number
   entities: EntityPlacement[]
 }
 
