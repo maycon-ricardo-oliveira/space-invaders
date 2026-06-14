@@ -30,14 +30,19 @@ export class JsonLevelSource implements LevelSource {
     const errors = validateLevels(this.data, known)
     if (errors.length > 0) throw new LevelContractError(errors)
 
+    const resolve = (placement: LevelDefinition['entities'][number]) => ({
+      ...placement,
+      properties: {
+        ...this.registry.get(placement.entityTypeId)!.properties,
+        ...(placement.properties ?? {}),
+      },
+    })
     this.levels = (this.data as LevelDefinition[]).map(level => ({
       ...level,
-      entities: level.entities.map(placement => ({
-        ...placement,
-        properties: {
-          ...this.registry.get(placement.entityTypeId)!.properties,
-          ...(placement.properties ?? {}),
-        },
+      entities: level.entities.map(resolve),
+      waves: level.waves?.map(wave => ({
+        ...wave,
+        entities: wave.entities.map(resolve),
       })),
     }))
     this.loaded = true

@@ -46,6 +46,46 @@ describe('JsonLevelSource', () => {
     expect(e.properties).toMatchObject({ hp: 90, xpValue: 2, burstCount: 3 })
   })
 
+  // Regression: wave entities used to be passed through raw — load() resolved
+  // properties only for the flat `entities` list, so per-wave spawns shipped
+  // GameLoop fallback stats (every enemy hp 100, burstCount 1) instead of the
+  // registry values. This bug does not come back.
+  it('resolves entity properties inside each wave from the registry', async () => {
+    const source = new JsonLevelSource(
+      [level({
+        waves: [
+          { order: 1, delay: 0, entities: [{ entityTypeId: 'basic-enemy', x: 10, y: 10 }] },
+          { order: 2, delay: 3, entities: [{ entityTypeId: 'fast-enemy', x: 20, y: 20 }] },
+        ],
+      })],
+      makeRegistry(),
+    )
+    await source.load()
+    const loaded = source.getLevel('story-1-1')
+    expect(loaded.waves![0].entities[0].properties).toMatchObject({ hp: 100, xpValue: 1, burstCount: 1 })
+    expect(loaded.waves![1].entities[0].properties).toMatchObject({ hp: 40, xpValue: 2, burstCount: 3 })
+  })
+
+  it('JSON partial properties override registry defaults per key inside a wave', async () => {
+    const source = new JsonLevelSource(
+      [level({
+        waves: [
+          { order: 1, delay: 0, entities: [{ entityTypeId: 'fast-enemy', x: 20, y: 20, properties: { hp: 90 } }] },
+        ],
+      })],
+      makeRegistry(),
+    )
+    await source.load()
+    const e = source.getLevel('story-1-1').waves![0].entities[0]
+    expect(e.properties).toMatchObject({ hp: 90, xpValue: 2, burstCount: 3 })
+  })
+
+  it('leaves waves undefined when the level has none', async () => {
+    const source = new JsonLevelSource([level()], makeRegistry())
+    await source.load()
+    expect(source.getLevel('story-1-1').waves).toBeUndefined()
+  })
+
   it('listLevels returns summaries in file order', async () => {
     const source = new JsonLevelSource(
       [level(), level({ id: 'story-1-2', levelIndex: 2 })],
