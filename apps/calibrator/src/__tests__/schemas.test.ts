@@ -9,6 +9,7 @@ import {
   PatternInputSchema,
   WorldInputSchema,
   PhaseInputSchema,
+  PhaseStatusSchema,
   LevelInputSchema,
 } from '../lib/schemas'
 
@@ -35,6 +36,27 @@ describe('GridSchema', () => {
   it('rejects invalid entity type in grid', () => {
     const grid = [['boss', null, null, null, null, null, null, null, null, null, null, null]]
     expect(() => GridSchema.parse(grid)).toThrow()
+  })
+
+  // Fix 3 — GridSchema must lock the column dimension at GRID_COLS (12).
+  it('rejects a row with 11 columns (one short of the 12-column grid)', () => {
+    const grid = [Array(11).fill(null)]
+    expect(() => GridSchema.parse(grid)).toThrow()
+  })
+
+  it('rejects a row with 13 columns (one over the 12-column grid)', () => {
+    const grid = [Array(13).fill(null)]
+    expect(() => GridSchema.parse(grid)).toThrow()
+  })
+
+  it('rejects a grid with mixed row widths (one row 12, one row 11)', () => {
+    const grid = [Array(12).fill(null), Array(11).fill(null)]
+    expect(() => GridSchema.parse(grid)).toThrow()
+  })
+
+  it('accepts a grid where every row has exactly 12 columns', () => {
+    const grid = [Array(12).fill(null), Array(12).fill(null)]
+    expect(() => GridSchema.parse(grid)).not.toThrow()
   })
 })
 
@@ -81,6 +103,70 @@ describe('WorldInputSchema', () => {
   })
   it('rejects empty name', () => {
     expect(() => WorldInputSchema.parse({ name: '', index: 0 })).toThrow()
+  })
+})
+
+// Phase publication status. String-backed enum so future states ('review') can be
+// added through Zod without a DB migration — but only the values currently in the
+// enum are accepted. 'review' is NOT in the enum yet and must be rejected today.
+describe('PhaseStatusSchema', () => {
+  it("accepts 'draft'", () => {
+    expect(PhaseStatusSchema.parse('draft')).toBe('draft')
+  })
+  it("accepts 'published'", () => {
+    expect(PhaseStatusSchema.parse('published')).toBe('published')
+  })
+  it("rejects 'review' (not in the enum yet)", () => {
+    expect(() => PhaseStatusSchema.parse('review')).toThrow()
+  })
+  it("rejects an unknown value 'foo'", () => {
+    expect(() => PhaseStatusSchema.parse('foo')).toThrow()
+  })
+  it('rejects an empty string', () => {
+    expect(() => PhaseStatusSchema.parse('')).toThrow()
+  })
+  it('rejects null', () => {
+    expect(() => PhaseStatusSchema.parse(null)).toThrow()
+  })
+})
+
+describe('PhaseInputSchema — optional status', () => {
+  it("accepts a phase input with a valid status 'published'", () => {
+    expect(() => PhaseInputSchema.parse({ name: 'Fase 1', index: 0, status: 'published' })).not.toThrow()
+  })
+  it("accepts a phase input with status 'draft'", () => {
+    expect(() => PhaseInputSchema.parse({ name: 'Fase 1', index: 0, status: 'draft' })).not.toThrow()
+  })
+  it('accepts a phase input with no status (optional)', () => {
+    expect(() => PhaseInputSchema.parse({ name: 'Fase 1', index: 0 })).not.toThrow()
+  })
+  it('rejects a phase input with an invalid status', () => {
+    expect(() => PhaseInputSchema.parse({ name: 'Fase 1', index: 0, status: 'foo' })).toThrow()
+  })
+})
+
+// ── regression: the Sidebar sent `index: phases.length`, but PhaseInputSchema
+//    capped index at <= 9, so creating the 11th phase (index 10) threw a 422.
+//    The backend already derives the index server-side (max+1), so the front's
+//    index is dead weight. Make `index` OPTIONAL: a phase input with no index
+//    is valid, and a "too-high" index can no longer 422 (the field is dropped
+//    from the contract). Esse bug (11ª fase estoura 422) não volta. ──
+describe('PhaseInputSchema — optional index', () => {
+  it('accepts a phase input with NO index (backend derives it server-side)', () => {
+    expect(() => PhaseInputSchema.parse({ name: 'Fase 1' })).not.toThrow()
+  })
+
+  it('accepts a phase input with no index but with a status', () => {
+    expect(() => PhaseInputSchema.parse({ name: 'Fase 1', status: 'draft' })).not.toThrow()
+  })
+
+  it('still accepts a phase input that does carry an index (back-compat)', () => {
+    expect(() => PhaseInputSchema.parse({ name: 'Fase 1', index: 0 })).not.toThrow()
+  })
+
+  it('does not 422 on a high index like 10 (the old cap of 9 is gone)', () => {
+    // This was the field bug: phases.length === 10 → index 10 → ZodError.
+    expect(() => PhaseInputSchema.parse({ name: 'Fase 11', index: 10 })).not.toThrow()
   })
 })
 

@@ -24,6 +24,9 @@ model Phase {
   world     World    @relation(fields: [worldId], references: [id], onDelete: Cascade)
   name      String
   index     Int
+  // Publication status. String (not enum) so new states like 'review' can be
+  // added later without a schema migration — validated by Zod in the app layer.
+  status    String   @default("draft")
 
   levels    Level[]
   createdAt DateTime @default(now())

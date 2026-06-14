@@ -19,7 +19,7 @@ async function main() {
   const phase = await prisma.phase.upsert({
     where: { worldId_index: { worldId: world.id, index: seedPhase.index } },
     update: {},
-    create: { worldId: world.id, name: 'Fase 1', index: seedPhase.index },
+    create: { worldId: world.id, name: 'Fase 1', index: seedPhase.index, status: seedPhase.status },
   })
 
   const seedLevel = seedPhase.levels[0]
