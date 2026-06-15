@@ -489,6 +489,7 @@ Sprint 6B, before new gameplay features.
 | ✅ Done (PR #19) | Align game EntityRegistry ↔ calibrator toolbox | Registry props resolved inside waves; contracts match; covered by the levels.json contract test |
 | ✅ Done (PR #19) | Dashboard hardening | revalidate + clean error handling, error boundary, reorderWaves IDOR guard, export publication fence, phase draft status + publish, client state re-sync |
 | ✅ Done (PR #20) | Game feel | 2D joystick (GL-1), enemy micro-movement per type + multidirectional asteroid, contact damage, win ignores asteroids, conditional fuel drain |
+| ✅ Done (PR #21) | GameLoop refactor | God Object → conductor + pure systems (aabb/buildEnemy/movement/shooting/bullets/fuel/pickups/collisions/invincibility/autoFire); movement & shooting as Strategy maps; explicit resolveStatus; enables pluggable shot/movement types, no behavior change |
 | 🟠 High | No CI | Add GitHub Actions workflow: `npm test` + `npm run build` on every PR |
 | 🟡 Medium | Release infra missing | `eas.json`, bundle id / Android package name, privacy policy, UMP consent |
 | 🟢 Low | Test hygiene | `Sidebar` test triggers act() warning (`Sidebar.tsx:80`); unused imports in `WorldService.test.ts:18` and `schemas.test.ts:11` |

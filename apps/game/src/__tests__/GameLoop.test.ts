@@ -725,6 +725,72 @@ describe('GameLoop', () => {
         }
       })
     })
+
+    // ── CHARACTERIZATION: untested union members 'static' / 'drift-return' ──────
+    // Pre-refactor safety net for the MOVEMENT_PATTERNS extraction (plan step 4,
+    // gap F). Today `patternOffset` (GameLoop.ts) handles oscillate-h / bob-v /
+    // orbit explicitly and folds EVERYTHING else (including 'static' and
+    // 'drift-return') into the `default` branch = stay on the anchor (offset 0).
+    // The compiler does not catch the missing cases because of that `default`.
+    //
+    // These tests PIN THE CURRENT BEHAVIOR so the refactor (which makes the union
+    // exhaustive with explicit map entries) provably preserves it. When someone
+    // later implements a REAL drift-return motion on purpose, the drift-return
+    // test below is the one that must be updated — until then, "stays on anchor"
+    // is the contract.  amplitudes are non-zero on purpose: a buggy refactor that
+    // routed these through an oscillation would move the enemy and fail here.
+    describe('static / drift-return sit on the anchor (current behavior)', () => {
+      // even at full amplitude these patterns must NOT translate the enemy today
+      const STATIC_PROPS = {
+        movementPattern: 'static', amplitudeX: 25, amplitudeY: 25, frequency: 2, phase: 0,
+      }
+      const DRIFT_PROPS = {
+        movementPattern: 'drift-return', amplitudeX: 25, amplitudeY: 25, frequency: 2, phase: 0,
+      }
+
+      it("'static' enemy spawns exactly on its anchor (offset 0)", () => {
+        const loop = new GameLoop(singleEnemyLevel('basic-enemy', 100, 50, STATIC_PROPS))
+        const e = loop.getState().enemies[0]
+        expect(e.movementPattern).toBe('static')
+        expect(e.x).toBe(100)
+        expect(e.y).toBe(50)
+        expect(e.anchorX).toBe(100)
+        expect(e.anchorY).toBe(50)
+      })
+
+      it("'static' enemy stays pinned on the anchor across ~9.6s of ticks", () => {
+        const loop = new GameLoop(singleEnemyLevel('basic-enemy', 100, 50, STATIC_PROPS))
+        for (let i = 0; i < 600; i++) {
+          loop.update(16)
+          const e = loop.getState().enemies[0]
+          expect(e.x).toBe(100) // never deviates from the anchor — offset is exactly 0
+          expect(e.y).toBe(50)
+        }
+      })
+
+      it("'drift-return' enemy spawns exactly on its anchor (offset 0)", () => {
+        // CHARACTERIZATION of CURRENT state, not the final design: 'drift-return'
+        // has no implementation yet, so it falls through to default = anchor.
+        const loop = new GameLoop(singleEnemyLevel('basic-enemy', 100, 50, DRIFT_PROPS))
+        const e = loop.getState().enemies[0]
+        expect(e.movementPattern).toBe('drift-return')
+        expect(e.x).toBe(100)
+        expect(e.y).toBe(50)
+      })
+
+      it("'drift-return' enemy stays pinned on the anchor across ~9.6s (no drift today)", () => {
+        // CHARACTERIZATION of CURRENT state: the refactor must preserve this until
+        // someone implements a real drift-return motion on purpose — at which
+        // point THIS test is the one to change.
+        const loop = new GameLoop(singleEnemyLevel('basic-enemy', 100, 50, DRIFT_PROPS))
+        for (let i = 0; i < 600; i++) {
+          loop.update(16)
+          const e = loop.getState().enemies[0]
+          expect(e.x).toBe(100)
+          expect(e.y).toBe(50)
+        }
+      })
+    })
   })
 
   describe('render', () => {
@@ -1113,6 +1179,87 @@ describe('GameLoop', () => {
       const loop = new GameLoop(level)
       loop.update(16)
       expect(loop.getState().player.fuel).toBe(100)
+    })
+  })
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // STATUS PRECEDENCE (resolveStatus — plan step 8 target)
+  //
+  // Today drainFuel() (sets 'fuelEmpty') and checkWinLose() (sets 'won'/'lost')
+  // both write `state.status` within the SAME update() tick, ordered implicitly.
+  // The refactor will collapse them into one resolveStatus() decision point.
+  //
+  // Decision (Maycon): when the SAME tick both empties the fuel AND clears the
+  // last combat enemy, the player WINS. RULE:  won  >  fuelEmpty.
+  // (killing the final enemy on the tick fuel hits 0 = victory; favors the player.)
+  //
+  // These pin the TARGET behavior of step 8. They lock the win-favoring outcome
+  // and the unambiguous cases around it so the resolveStatus rewrite cannot
+  // regress any of them.
+  // ──────────────────────────────────────────────────────────────────────────
+  describe('status precedence: won > fuelEmpty (resolveStatus target)', () => {
+    const PLAYER_SPAWN_X = CANVAS_WIDTH / 2 - ENTITY_SIZE / 2
+
+    // fuelDrainRate 6250 drains 6250 * 0.016 = 100 in a single 16ms tick → fuel
+    // crosses to exactly 0 on the very tick the kill lands. The enemy sits high
+    // enough (y=760) that the freshly-fired bullet, after one moveBullets step,
+    // overlaps it on that same first update() — kill + fuel-zero collide.
+    function fuelEmptyAtKillLevel(): LevelDefinition {
+      return {
+        ...mockLevel,
+        params: { ...BASE_PARAMS, numberOfEnemies: 0, fuelDrainRate: 6250 },
+        entities: [{ entityTypeId: 'basic-enemy', x: PLAYER_SPAWN_X, y: 760, properties: { hp: 20 } }],
+      }
+    }
+
+    it('AMBIGUOUS tick — last enemy dies AND fuel hits 0 → status is won (NOT fuelEmpty)', () => {
+      // The whole point of step 8. won must win the tie over fuelEmpty.
+      const loop = new GameLoop(fuelEmptyAtKillLevel())
+      loop.fire()
+      loop.update(16)
+      const s = loop.getState()
+      expect(s.player.fuel).toBe(0)            // fuel really did empty this tick
+      expect(s.enemies[0].alive).toBe(false)   // last combat enemy really died this tick
+      expect(s.status).toBe('won')             // tie resolves to won (favors the player)
+      expect(s.status).not.toBe('fuelEmpty')
+    })
+
+    it('fuel empties WITHOUT clearing enemies → status is fuelEmpty (no false win)', () => {
+      // Same drain, but the enemy is never hit (no fire). Only fuel ends it.
+      const loop = new GameLoop(fuelEmptyAtKillLevel())
+      loop.update(16)
+      const s = loop.getState()
+      expect(s.player.fuel).toBe(0)
+      expect(s.enemies[0].alive).toBe(true)    // enemy untouched
+      expect(s.status).toBe('fuelEmpty')
+    })
+
+    it('all enemies cleared with fuel to spare → status is won', () => {
+      // Unambiguous win path with drain ON but far from empty. 1-hit enemy,
+      // killed within ~88 ticks (~1.4s); at 10/s that is ~14 fuel spent.
+      const loop = new GameLoop({
+        ...mockLevel,
+        params: { ...BASE_PARAMS, numberOfEnemies: 0, fuelDrainRate: 10 },
+        entities: [{ entityTypeId: 'basic-enemy', x: PLAYER_SPAWN_X, y: 60, properties: { hp: 20 } }],
+      })
+      loop.fire()
+      for (let i = 0; i < 120; i++) loop.update(16)
+      const s = loop.getState()
+      expect(s.enemies[0].alive).toBe(false)
+      expect(s.player.fuel).toBeGreaterThan(0) // fuel was NOT the deciding factor
+      expect(s.status).toBe('won')
+    })
+
+    it('hp drops to 0 → status is lost (lost path unaffected by drain wiring)', () => {
+      // Confirms the third terminal status still resolves; pinned alongside the
+      // won/fuelEmpty pair so resolveStatus keeps all three.
+      const loop = new GameLoop({
+        ...mockLevel,
+        params: { ...BASE_PARAMS, numberOfEnemies: 1, enemyShotDelay: 0.001, enemyShotSpeed: 8, fuelDrainRate: 0 },
+      })
+      for (let i = 0; i < 60000; i++) loop.update(16)
+      expect(loop.getState().player.hp).toBe(0)
+      expect(loop.getState().status).toBe('lost')
     })
   })
 
