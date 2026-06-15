@@ -1,5 +1,5 @@
 import type { EntityPlacement, IRenderer, LevelDefinition, Wave } from '@si/level-engine'
-import type { Bullet, DamagePickup, Enemy, FuelPickup, GameState } from './types'
+import type { Bullet, DamagePickup, Enemy, FuelPickup, GameState, MovementPattern } from './types'
 
 type GameEvent = 'wave:cleared' | 'wave:started'
 
@@ -8,7 +8,7 @@ export const CANVAS_HEIGHT = 844
 export const ENTITY_SIZE = 32
 export const TOTAL_STORY_LEVELS = 20
 
-const PLAYER_SPEED = 200           // px/s
+const PLAYER_SPEED = 300           // px/s
 const BULLET_SPEED = 500           // px/s
 const BULLET_WIDTH = 4
 const BULLET_HEIGHT = 8
@@ -18,18 +18,19 @@ const AUTO_FIRE_INTERVAL = 400     // ms between auto-fire shots
 const INVINCIBILITY_DURATION = 1500 // ms of player invincibility after a hit
 const PLAYER_INITIAL_HP = 500
 const PLAYER_INITIAL_FUEL = 100
-const DEFAULT_FUEL_DRAIN_RATE = 12  // fuel units per second
 const ASTEROID_FUEL_DROP_CHANCE = 0.3
 const ASTEROID_FUEL_DROP_MIN_LEVEL = 5
+const SQRT2_2 = Math.SQRT1_2 // √2/2 = sin(45°) = cos(45°); unit diagonal component
 
 export class GameLoop {
   private state: GameState
-  private enemyDirection = 1 // 1 = right, -1 = left
+  private movementTime = 0 // seconds accumulated, drives the micro-movement sines
   private shotCooldown: number
   private readonly params: LevelDefinition['params']
   private readonly levelIndex: number
   private isFiring = false
   private autoFireTimer = 0
+  private hitThisTick = false
   private burstQueue: Array<{ enemy: Enemy; remaining: number; burstTimer: number }> = []
   private readonly BURST_INTERVAL_MS = 50
   private readonly waves: Wave[]
@@ -76,19 +77,86 @@ export class GameLoop {
   private mapPlacementsToEnemies(placements: EntityPlacement[]): Enemy[] {
     return placements
       .filter(e => e.entityTypeId !== 'fuel-pickup')
-      .map(e => ({
-        x: e.x,
-        y: e.y,
-        alive: true,
-        killed: false,
-        typeId: e.entityTypeId,
-        hp: (e.properties?.hp as number) ?? 100,
-        xpValue: (e.properties?.xpValue as number) ?? 1,
-        movementType: ((e.properties?.movementType as string) ?? 'horizontal') as 'horizontal' | 'vertical',
-        burstCount: (e.properties?.burstCount as number) ?? 1,
-        dropsPickup: ((e.properties?.dropsPickup as string) ?? null) as 'damage' | null,
-        speedMultiplier: (e.properties?.speedMultiplier as number) ?? 1.0,
-      }))
+      .map(e => {
+        const props = e.properties ?? {}
+        // Prefer an explicit movementPattern; otherwise fall back from the legacy
+        // movementType ('vertical' → asteroid 'descend', else 'oscillate-h').
+        const movementPattern = (props.movementPattern as MovementPattern)
+          ?? (props.movementType === 'vertical' ? 'descend' : 'oscillate-h')
+        // phase: honor an explicit value, otherwise derive from the spawn
+        // position so neighbors at distinct cells never oscillate in unison.
+        const phase = (props.phase as number) ?? e.x * 0.7 + e.y * 1.3
+        // Asteroids ('descend') sample their travel direction once, here at
+        // spawn, BEFORE any per-tick shooter/drop RNG runs. 1/3 each.
+        const { dirX, dirY } = movementPattern === 'descend'
+          ? this.rollAsteroidDirection()
+          : { dirX: 0, dirY: 0 }
+        const amplitudeX = (props.amplitudeX as number) ?? 0
+        const amplitudeY = (props.amplitudeY as number) ?? 0
+        // Initial position = the pattern evaluated at t=0 (angle = phase), so a
+        // freshly spawned orbiter already sits at its cos-offset, not the bare anchor.
+        const { x: x0, y: y0 } = this.patternOffset(
+          movementPattern, e.x, e.y, amplitudeX, amplitudeY, phase,
+        )
+        return {
+          x: x0,
+          y: y0,
+          alive: true,
+          killed: false,
+          typeId: e.entityTypeId,
+          hp: (props.hp as number) ?? 100,
+          xpValue: (props.xpValue as number) ?? 1,
+          movementType: ((props.movementType as string) ?? 'horizontal') as 'horizontal' | 'vertical',
+          burstCount: (props.burstCount as number) ?? 1,
+          dropsPickup: ((props.dropsPickup as string) ?? null) as 'damage' | null,
+          speedMultiplier: (props.speedMultiplier as number) ?? 1.0,
+          anchorX: e.x,
+          anchorY: e.y,
+          movementPattern,
+          amplitudeX,
+          amplitudeY,
+          frequency: (props.frequency as number) ?? 0,
+          phase,
+          dirX,
+          dirY,
+        }
+      })
+  }
+
+  /**
+   * Position of a combat enemy = anchor + offset(pattern, amplitude, angle).
+   * `angle` already folds in 2π·f·t + phase (at spawn t=0, angle = phase).
+   * Non-combat patterns ('descend'/'static') stay on the anchor here.
+   */
+  private patternOffset(
+    pattern: MovementPattern,
+    anchorX: number,
+    anchorY: number,
+    amplitudeX: number,
+    amplitudeY: number,
+    angle: number,
+  ): { x: number; y: number } {
+    switch (pattern) {
+      case 'oscillate-h':
+        return { x: anchorX + amplitudeX * Math.sin(angle), y: anchorY }
+      case 'bob-v':
+        return { x: anchorX, y: anchorY + amplitudeY * Math.sin(angle) }
+      case 'orbit':
+        return {
+          x: anchorX + amplitudeX * Math.cos(angle),
+          y: anchorY + amplitudeY * Math.sin(angle),
+        }
+      default:
+        return { x: anchorX, y: anchorY }
+    }
+  }
+
+  /** 1/3 each: r<1/3 straight, 1/3<=r<2/3 diag-left, r>=2/3 diag-right. */
+  private rollAsteroidDirection(): { dirX: number; dirY: number } {
+    const r = Math.random()
+    if (r < 1 / 3) return { dirX: 0, dirY: 1 }
+    if (r < 2 / 3) return { dirX: -SQRT2_2, dirY: SQRT2_2 }
+    return { dirX: SQRT2_2, dirY: SQRT2_2 }
   }
 
   private buildEnemies(level: LevelDefinition): Enemy[] {
@@ -109,9 +177,11 @@ export class GameLoop {
     let placed = 0
     for (let row = 0; row < rows && placed < count; row++) {
       for (let col = 0; col < cols && placed < count; col++) {
+        const ex = startX + col * (ENTITY_SIZE + gap)
+        const ey = 60 + row * (ENTITY_SIZE + gap)
         enemies.push({
-          x: startX + col * (ENTITY_SIZE + gap),
-          y: 60 + row * (ENTITY_SIZE + gap),
+          x: ex,
+          y: ey,
           alive: true,
           killed: false,
           typeId: 'basic-enemy',
@@ -121,6 +191,15 @@ export class GameLoop {
           burstCount: 1,
           dropsPickup: null,
           speedMultiplier: 1.0,
+          anchorX: ex,
+          anchorY: ey,
+          movementPattern: 'oscillate-h' as const,
+          amplitudeX: 10,
+          amplitudeY: 0,
+          frequency: 0.5,
+          phase: ex * 0.7 + ey * 1.3,
+          dirX: 0,
+          dirY: 0,
         })
         placed++
       }
@@ -177,20 +256,34 @@ export class GameLoop {
     }
   }
 
-  moveLeft(deltaMs: number): void {
+  /**
+   * 2D free movement. Normalizes (dirX, dirY) and applies PLAYER_SPEED in that
+   * direction, so speed is constant in any direction (diagonals don't accelerate).
+   * A zero vector is a no-op (deadzone). Blocked unless status is 'playing'.
+   */
+  move(dirX: number, dirY: number, deltaMs: number): void {
     if (this.state.status !== 'playing') return
+    const magnitude = Math.hypot(dirX, dirY)
+    if (magnitude === 0) return
+    const distance = (PLAYER_SPEED * deltaMs) / 1000
+    const nx = dirX / magnitude
+    const ny = dirY / magnitude
     this.state.player.x = Math.max(
       0,
-      this.state.player.x - (PLAYER_SPEED * deltaMs) / 1000,
+      Math.min(CANVAS_WIDTH - ENTITY_SIZE, this.state.player.x + nx * distance),
+    )
+    this.state.player.y = Math.max(
+      0,
+      Math.min(CANVAS_HEIGHT - ENTITY_SIZE, this.state.player.y + ny * distance),
     )
   }
 
+  moveLeft(deltaMs: number): void {
+    this.move(-1, 0, deltaMs)
+  }
+
   moveRight(deltaMs: number): void {
-    if (this.state.status !== 'playing') return
-    this.state.player.x = Math.min(
-      CANVAS_WIDTH - ENTITY_SIZE,
-      this.state.player.x + (PLAYER_SPEED * deltaMs) / 1000,
-    )
+    this.move(1, 0, deltaMs)
   }
 
   /** Archero mechanic: true = auto-fire (stationary), false = stop firing (moving). */
@@ -212,6 +305,7 @@ export class GameLoop {
     if (this.state.status !== 'playing') return
     if (this.waitingForWaveAdvance) return
     const dt = deltaMs / 1000
+    this.hitThisTick = false
     this.drainFuel(dt)
     this.moveBullets(dt)
     this.moveEnemies(dt)
@@ -231,8 +325,11 @@ export class GameLoop {
   }
 
   private drainFuel(dt: number): void {
-    const rate = this.params.fuelDrainRate ?? DEFAULT_FUEL_DRAIN_RATE
-    this.state.player.fuel = Math.max(0, this.state.player.fuel - rate * dt)
+    const rate = this.params.fuelDrainRate
+    if (!rate || rate <= 0) return // no drain unless the level defines a positive rate
+    const p = this.state.player
+    p.fuel = Math.max(0, Math.min(PLAYER_INITIAL_FUEL, p.fuel - rate * dt))
+    if (p.fuel === 0) this.state.status = 'fuelEmpty'
   }
 
   private checkFuelPickupCollisions(): void {
@@ -282,30 +379,34 @@ export class GameLoop {
   }
 
   private moveEnemies(dt: number): void {
+    this.movementTime += dt
+    const t = this.movementTime
     const baseSpeed = this.params.enemySpeed * ENEMY_SPEED_SCALE
+    const r = ENTITY_SIZE / 2
 
-    // Horizontal enemies: side-to-side bounce (skipped when speed is zero)
-    if (baseSpeed > 0) {
-      const horizontal = this.state.enemies.filter(e => e.alive && e.movementType === 'horizontal')
-      if (horizontal.length > 0) {
-        let hitEdge = false
-        for (const e of horizontal) {
-          e.x += baseSpeed * e.speedMultiplier * this.enemyDirection * dt
-          if (this.enemyDirection === 1 && e.x + ENTITY_SIZE > CANVAS_WIDTH) hitEdge = true
-          if (this.enemyDirection === -1 && e.x < 0) hitEdge = true
+    for (const e of this.state.enemies) {
+      if (!e.alive) continue
+
+      if (e.movementPattern === 'descend') {
+        // Obstacle: travels in a straight line along its fixed (dirX, dirY) unit
+        // vector. Same speed in any direction (vector is normalized). Removed
+        // once it leaves ANY edge, not just the bottom.
+        const speed = baseSpeed * e.speedMultiplier
+        e.x += e.dirX * speed * dt
+        e.y += e.dirY * speed * dt
+        if (e.x < -r || e.x > CANVAS_WIDTH + r || e.y > CANVAS_HEIGHT + r) {
+          e.alive = false
         }
-        if (hitEdge) {
-          this.enemyDirection *= -1
-          for (const e of horizontal) e.y += ENTITY_SIZE
-        }
+        continue
       }
-    }
 
-    // Vertical enemies (asteroids): always process regardless of base speed
-    const vertical = this.state.enemies.filter(e => e.alive && e.movementType === 'vertical')
-    for (const e of vertical) {
-      e.y += baseSpeed * e.speedMultiplier * dt
-      if (e.y > CANVAS_HEIGHT) e.alive = false
+      // Combat enemies: anchored micro-movement around the spawn cell.
+      const angle = 2 * Math.PI * e.frequency * t + e.phase
+      const { x, y } = this.patternOffset(
+        e.movementPattern, e.anchorX, e.anchorY, e.amplitudeX, e.amplitudeY, angle,
+      )
+      e.x = x
+      e.y = y
     }
   }
 
@@ -394,11 +495,33 @@ export class GameLoop {
         bullet.active = false
         p.hp = Math.max(0, p.hp - 1)
         p.invincibilityTimer = INVINCIBILITY_DURATION
+        this.hitThisTick = true
+      }
+    }
+    // Body contact: any live enemy (including obstacles) overlapping the player
+    // deals 1 hp and triggers i-frames, mirroring the bullet-hit path.
+    if (p.invincibilityTimer <= 0) {
+      for (const enemy of this.state.enemies) {
+        if (!enemy.alive) continue
+        if (
+          enemy.x < p.x + ENTITY_SIZE &&
+          enemy.x + ENTITY_SIZE > p.x &&
+          enemy.y < p.y + ENTITY_SIZE &&
+          enemy.y + ENTITY_SIZE > p.y
+        ) {
+          p.hp = Math.max(0, p.hp - 1)
+          p.invincibilityTimer = INVINCIBILITY_DURATION
+          this.hitThisTick = true
+          break
+        }
       }
     }
   }
 
   private updateInvincibility(deltaMs: number): void {
+    // Don't decrement on the same tick the hit landed — keeps the timer at its
+    // full INVINCIBILITY_DURATION for the frame in which i-frames were granted.
+    if (this.hitThisTick) return
     if (this.state.player.invincibilityTimer > 0) {
       this.state.player.invincibilityTimer = Math.max(
         0,
@@ -416,10 +539,16 @@ export class GameLoop {
     }
   }
 
+  /** Obstacles (asteroids / vertical movers) are not combat targets and never count toward the win. */
+  private isObstacle(enemy: Enemy): boolean {
+    return enemy.typeId === 'asteroid' || enemy.movementType === 'vertical'
+  }
+
   private checkWinLose(): void {
     if (this.state.status === 'card_selection') return
-    const allDead = this.state.enemies.length > 0 && this.state.enemies.every(e => !e.alive)
-    const anyKilled = this.state.enemies.some(e => e.killed)
+    const combat = this.state.enemies.filter(e => !this.isObstacle(e))
+    const allDead = combat.length > 0 && combat.every(e => !e.alive)
+    const anyKilled = combat.some(e => e.killed)
     if (allDead && anyKilled) {
       if (this.waves.length > 0 && this.currentWaveIndex < this.waves.length - 1) {
         // More waves remain — suspend update() and signal GameScreen.
@@ -432,10 +561,6 @@ export class GameLoop {
     }
     if (this.state.player.hp <= 0) {
       this.state.status = 'lost'
-      return
-    }
-    if (this.state.player.fuel <= 0) {
-      this.state.status = 'fuelEmpty'
     }
   }
 
