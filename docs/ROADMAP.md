@@ -204,7 +204,7 @@ A PR is only valid if it ships something that can be tested end-to-end. Examples
 | # | Feature | Code | Status | PR | Deliverable |
 |---|---------|------|--------|-----|-------------|
 | 1 | Parallax Scrolling | PARA-1 | ⏳ Todo | — | N background layers at different speeds per planet |
-| 2 | 2D Free Movement | GL-1 | ⏳ Todo | — | Joystick → full X+Y movement, higher speed |
+| 2 | 2D Free Movement | GL-1 | ✅ Done (PR #20) | #20 | Joystick full X+Y, tela toda, +50% speed |
 
 ### Todo List
 
@@ -214,9 +214,9 @@ A PR is only valid if it ships something that can be tested end-to-end. Examples
 - [ ] PARA-1: `ParallaxLayer` type: imageKey, scrollSpeed, offsetY
 - [ ] PARA-1: Layers configurable per planet in calibrator
 - [ ] PARA-1: Boss level → parallax pauses during boss fight → resumes on kill
-- [ ] GL-1: Joystick Y-axis movement implemented (currently X-only)
-- [ ] GL-1: Player speed constant increased
-- [ ] GL-1: Player bounded within CANVAS bounds on both axes
+- [x] GL-1: Joystick Y-axis movement implemented (full 2D, PR #20)
+- [x] GL-1: Player speed constant increased (+50%, 200→300, PR #20)
+- [x] GL-1: Player bounded within CANVAS bounds on both axes (PR #20)
 
 ---
 
@@ -488,6 +488,7 @@ Sprint 6B, before new gameplay features.
 | ✅ Done (PR #19) | Close levels.json pipeline end-to-end | Game consumes `levels.json` via LevelSource; wave timing contract, validation fences (waves/collision/empty/player-row), registry props resolved per wave |
 | ✅ Done (PR #19) | Align game EntityRegistry ↔ calibrator toolbox | Registry props resolved inside waves; contracts match; covered by the levels.json contract test |
 | ✅ Done (PR #19) | Dashboard hardening | revalidate + clean error handling, error boundary, reorderWaves IDOR guard, export publication fence, phase draft status + publish, client state re-sync |
+| ✅ Done (PR #20) | Game feel | 2D joystick (GL-1), enemy micro-movement per type + multidirectional asteroid, contact damage, win ignores asteroids, conditional fuel drain |
 | 🟠 High | No CI | Add GitHub Actions workflow: `npm test` + `npm run build` on every PR |
 | 🟡 Medium | Release infra missing | `eas.json`, bundle id / Android package name, privacy policy, UMP consent |
 | 🟢 Low | Test hygiene | `Sidebar` test triggers act() warning (`Sidebar.tsx:80`); unused imports in `WorldService.test.ts:18` and `schemas.test.ts:11` |
