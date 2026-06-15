@@ -152,6 +152,14 @@ O jogo usa **terrain scrolling** — os obstáculos fazem parte do scroll junto 
 - Cada planeta pode ter N camadas de parallax em velocidades diferentes
 - Exemplos: fundo estelar lento, nebulosa média, debris rápidos
 
+**Câmera reativa (ver `CAMERA-1`):** incremento puramente visual sobre o parallax —
+quando a nave se move, as camadas deslizam com profundidade (estilo Sky Force): mover
+para os lados desliza o mundo, avançar/recuar muda a sensação de velocidade. As camadas
+de fundo deslocam menos que as da frente (fator de profundidade crescente bg→fg). Não
+altera hitbox, colisão nem spawn — é só render. **Pré-requisito honesto:** depende de o
+parallax estar de fato renderizado no jogo (hoje o MVP desenha retângulos); o efeito
+reativo vem por cima disso. Configurável/desativável por planeta.
+
 **Terrain design (editado no calibrador):**
 ```
 Editor = mapa vertical scrollável por fase
@@ -170,6 +178,40 @@ Editor = mapa vertical scrollável por fase
 - Asteroids destrutíveis: tiro → explode → chance de dropar HP/fuel
 - Paredes de tunel / terrain fixo: colisão = dano ao player
 - Sem punição = sem tensão nos tuneis
+
+**Camada de terreno (decisão de design — catálogo curado):**
+
+O terreno é uma **camada própria com scroll vertical independente** dos inimigos —
+tem velocidade de descida própria e é desenhada/editada como segmentos no calibrador.
+A modelagem evita criar um sistema de colisão novo por elemento, reusando o que já existe:
+
+- **"Ameaça mas não bloqueia" → modelado como entity (reusa o sistema de tiro/dano).**
+  Lava, cospe de vulcão, estalactite que cai: causam dano por contato/projétil mas a
+  nave atravessa por cima. Reaproveitam o pipeline de dano já implementado (canal de
+  dano de terreno) — barato, sem collider sólido.
+- **Sólida → só onde precisa bloquear a passagem.** Apenas o túnel exige colisão
+  sólida de verdade (a nave não atravessa a parede). É o único custo "médio".
+- **Destrutível → reusa o asteroide.** Destroços somem ao serem atingidos por tiro,
+  podendo dropar item, exatamente como o asteroide.
+
+**Catálogo dos 6 elementos (planeta / comportamento / colisão / custo):**
+
+| Elemento | Planeta | Comportamento | Tipo de colisão | Custo |
+|----------|---------|---------------|-----------------|-------|
+| Rio de lava | Vorath | Faixa de lava que rola; dano enquanto a nave está em cima | Dano por contato (entity, não bloqueia) | Baixo |
+| Vulcão | Vorath | Cospe bolas de lava periodicamente (vira projétil do cenário) | Dano por projétil (entity, não bloqueia) | Baixo |
+| Túnel | Vorath | Passagem estreita com paredes laterais | Parede sólida (bloqueia) | Médio |
+| Estalactite (Glacius) | Glacius | Cai do topo da tela; desvio é a tensão | Dano por contato (entity, não bloqueia) | Baixo |
+| Destroços (Xeron) | Xeron | Sucata flutuante destrutível; pode dropar item | Obstáculo destrutível (reusa asteroide) | Baixo |
+| Cipó (Sylva) | Sylva | Barreira que fecha a passagem; abre ao receber tiro | Barreira destrutível por tiro | Médio |
+
+**Ordem de implementação (MVP → expansão):**
+1. **Rio de lava (Vorath)** — primeiro: mais barato, ensina "encostar dói" (ver `TERRAIN-1`).
+2. **Vulcão (Vorath)** — depois: reusa o sistema de tiro.
+3. **Túnel reto (Vorath)** — só então: único que precisa de parede sólida.
+
+> Estimativa de construção: ~1 sprint (scroll de terreno + collider + segmento no editor
+> + testes). Os sprites de terreno são produzidos em paralelo, fora desta spec.
 
 ### Movimento do jogador
 
