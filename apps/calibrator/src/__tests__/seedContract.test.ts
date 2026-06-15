@@ -73,6 +73,30 @@ describe('seed → canonical contract parity', () => {
     expect(levels[0].id).toBe('story-1-1')
   })
 
+  // FUEL default = "não drena". The Xeron seed must NOT suffocate the player on
+  // the very first world: padrão = não drena. That means every seed level is born
+  // with fuelDrain 0, and the exported LevelDefinition must OMIT fuelDrainRate
+  // (absent, not 0 — validateLevels caps it at [1,20]). Hoje o seed manda
+  // fuelDrain 8 e o export sempre emite fuelDrainRate → esses dois vão VERMELHO.
+  describe('fuel default: Xeron seed does not drain', () => {
+    it('every seed level is born with fuelDrain 0 (não drena)', () => {
+      for (const phase of SEED_WORLD.phases) {
+        for (const level of phase.levels) {
+          expect(level.fuelDrain).toBe(0)
+        }
+      }
+    })
+
+    it('exported seed levels OMIT fuelDrainRate (absent, never 0)', () => {
+      const levels = worldToLevelDefinitions(SEED_WORLD)
+      expect(levels.length).toBeGreaterThan(0)
+      for (const level of levels) {
+        expect('fuelDrainRate' in level.params).toBe(false)
+        expect(level.params.fuelDrainRate).toBeUndefined()
+      }
+    })
+  })
+
   it('seed grid rows are all the same width within a wave', () => {
     for (const phase of SEED_WORLD.phases) {
       for (const level of phase.levels) {

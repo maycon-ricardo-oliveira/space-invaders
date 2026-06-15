@@ -60,7 +60,9 @@ export function worldToLevelDefinitions(world: PlainWorld): LevelDefinition[] {
           hasPowerUps: level.hasPowerUps,
           powerUpMinWait: 5,
           powerUpMaxWait: 15,
-          fuelDrainRate: level.fuelDrain,
+          // Default = não drena: omit the field entirely when fuelDrain <= 0.
+          // Emit the exact value only when it drains (validateLevels caps [1,20]).
+          ...(level.fuelDrain > 0 ? { fuelDrainRate: level.fuelDrain } : {}),
         },
       })
     }
