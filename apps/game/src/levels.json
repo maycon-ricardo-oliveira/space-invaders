@@ -200,8 +200,7 @@
       "enemySpawnDelay": 1,
       "hasPowerUps": true,
       "powerUpMinWait": 5,
-      "powerUpMaxWait": 15,
-      "fuelDrainRate": 8
+      "powerUpMaxWait": 15
     }
   }
 ]

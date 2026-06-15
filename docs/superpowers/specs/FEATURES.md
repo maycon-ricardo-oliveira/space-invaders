@@ -226,6 +226,54 @@ Asteroids are destructible terrain obstacles. They scroll with the map, can dama
 
 ---
 
+## TERRAIN-1: Lava River (MVP)
+
+**Sprint:** TBD | **Domain:** TERRAIN | **Dependencies:** GameLoop, GameState, HP-1, EntityRegistry
+
+**Description:**
+First terrain element of the game. Introduces the **terrain layer** — a vertical-scrolling layer independent from enemies, with its own scroll speed, authored as segments in the calibrator. The lava river is a band of lava that scrolls down the map; while the player ship overlaps it, it deals continuous damage. It is the cheapest terrain element ("threatens but does not block") and teaches the "touching hurts" mechanic of the Vorath planet. Modeled as a damaging entity that reuses the existing damage pipeline — no solid collider.
+
+**Details:**
+- Terrain layer scrolls vertically, decoupled from the enemy/asteroid spawn flow (own speed)
+- Lava river is a damaging zone, NOT a solid wall — the ship passes over it but takes damage while overlapping
+- Damage applied via a dedicated **terrain damage channel** that bypasses the 1.5s invincibility window (HP-1) — invincibility is for discrete hits; continuous terrain damage must tick every frame the ship is over the lava
+- River is authored in the calibrator: the editor draws the lava segment (width + horizontal position) on the vertical map
+- All numbers calibratable per level (no hardcoded values)
+- Boss levels: terrain scroll pauses with the rest of parallax (existing boss behavior)
+
+**Acceptance Criteria:**
+- [ ] Terrain layer scrolls vertically with its own speed, independent of enemy spawning
+- [ ] Ship overlapping the lava river loses HP via the terrain damage channel
+- [ ] Terrain damage ignores the 1.5s invincibility window (ticks while overlapping, not once per 1.5s)
+- [ ] Lava damage-per-second, river width, and river horizontal position are calibratable per level
+- [ ] Calibrator editor can draw a lava river segment on the level map
+- [ ] Ship leaving the lava river stops taking terrain damage
+- [ ] HP reaching 0 from lava → status = 'dead' (same game over flow)
+
+**Calibratable Parameters:**
+1. `lavaDamagePerSecond` — HP drained per second while overlapping the river
+2. `riverWidth` — horizontal width of the lava band (grid units / screen fraction)
+3. `riverPositionX` — horizontal position (offset) of the river on the map
+   - (segment length/placement on the vertical axis is authored as the drawn segment in the editor)
+
+**Test Cases:**
+- Ship over lava for 1s with lavaDamagePerSecond = 50 → hp reduced by ~50
+- Ship NOT over lava → no terrain damage
+- Terrain damage applies across consecutive frames within a 1.5s window (invincibility does NOT suppress it)
+- Discrete enemy-bullet hit still respects the 1.5s invincibility (terrain channel is separate)
+- Terrain layer scroll speed independent from enemy scroll/spawn rate
+- HP reduced to 0 by lava → status = 'dead'
+- Calibrator exports a level with a lava river segment → valid `levels.json` parseable by the game
+
+**Edge Cases:**
+- Ship enters and exits lava within a single frame → damage applied for the overlapping interval, no more
+- riverWidth = 0 (misconfiguration) → no damage zone, never harms player
+- lavaDamagePerSecond = 0 → river is cosmetic, no damage
+- Ship sitting still on lava at hp = 1 → next tick → hp = 0 → dead
+- Lava river overlapping a boss level → scroll paused, river frozen with arena
+
+---
+
 ## ENEMY-2: Fast Enemy
 
 **Sprint:** 6 | **Domain:** ENEMY | **Dependencies:** EntityRegistry
@@ -452,6 +500,60 @@ Multi-layer background that scrolls at different speeds to create depth illusion
 **Edge Cases:**
 - Planet with 0 parallax layers → black background, no error
 - ScrollOffset wraps correctly for seamless loop
+
+---
+
+## CAMERA-1: Câmera reativa (parallax)
+
+**Sprint:** TBD | **Domain:** PARA | **Dependencies:** PARA-1, GL-2, IRenderer
+
+**Description:**
+Reactive camera by parallax (Sky Force style): when the player moves, the background layers slide with depth. Moving left/right makes the world slide horizontally; moving forward/back changes the perceived scroll speed (sense of acceleration). This is a **purely visual layer** on top of the existing parallax — it offsets the rendered background layers based on the player's position. It does NOT change world coordinates, collision, hitboxes, or enemy/asteroid spawning. Deeper (background) layers move less than foreground layers, reinforcing depth.
+
+**Prerequisite (honest):**
+Today the game does not yet render the parallax in play (MVP renderer draws rectangles). CAMERA-1 depends on PARA-1 being actually **rendered in the game** first. The reactive effect is an increment layered on top of a rendered parallax — it cannot be built before the parallax is visible in-game.
+
+**Details:**
+- Each parallax layer gets a horizontal render offset proportional to the player's X position relative to screen center
+- A per-layer **depth factor** scales the offset: background layers get a small factor, foreground layers a larger one (offset grows bg → fg)
+- Player vertical movement modulates the parallax scroll speed within a calibratable range (forward → faster, back → slower)
+- All movement is applied at **render time only** — game logic positions are untouched
+- The offset is smoothed/eased so the camera does not snap when the player flicks the joystick
+- Effect is configurable per planet (can be disabled → falls back to plain PARA-1 scrolling)
+- Boss level: parallax already pauses (PARA-1); reactive offset also freezes with the arena
+
+**Calibratable Parameters:**
+1. `horizontalOffsetIntensity` — max horizontal slide (px or screen fraction) applied to a reference layer at full player X displacement
+2. `depthFactorPerLayer` — multiplier curve from background (smallest) to foreground (largest) that scales the offset per layer
+3. `cameraEasing` — smoothing/lerp factor for how fast the offset chases the player position (0 = instant, higher = softer)
+4. `verticalSpeedRange` — min/max multiplier applied to the base parallax scroll speed based on player Y position
+
+**Acceptance Criteria:**
+- [ ] Each layer's horizontal offset is proportional to the player's X position
+- [ ] Depth factor increases from background to foreground layers (bg moves least, fg moves most)
+- [ ] Player vertical movement adjusts the parallax scroll speed within `verticalSpeedRange`
+- [ ] The effect does NOT alter hitboxes, collision, or spawn positions (purely visual)
+- [ ] Offset is eased/smoothed (no snapping on rapid joystick input)
+- [ ] Both renderers (Skia, Canvas) produce the same offsets for the same player position
+- [ ] Effect can be disabled per planet → renders exactly as PARA-1
+- [ ] Boss arena: reactive offset frozen along with the paused parallax
+
+**Test Cases:**
+- Player centered (X = screen center) → horizontal offset = 0 on all layers
+- Player at far left → all layers offset to the right; foreground offset > background offset
+- Player at far right → mirror of the above (opposite sign)
+- Foreground layer offset = backgroundLayerOffset × (its depthFactor / bg depthFactor)
+- Player moves up → scroll speed = base × verticalSpeedRange.max region; moves down → toward .min
+- Enemy/asteroid spawn X and collision results identical with camera enabled vs disabled (same seed)
+- `cameraEasing` > 0: offset lerps toward target across frames, does not jump in one frame
+- Both renderers given identical player X/Y produce identical layer offsets
+
+**Edge Cases:**
+- Player pinned at screen edge (max X) → offset clamps at `horizontalOffsetIntensity`, never overshoots/clips off-screen
+- `horizontalOffsetIntensity = 0` → reactive horizontal effect disabled, vertical speed still applies
+- Single-layer parallax → depth factor degenerates to one layer, offset still bounded, no error
+- Joystick released mid-slide → offset eases back to the resting position (no abrupt reset)
+- Player teleport/respawn → offset re-anchors via easing, not an instant jump
 
 ---
 
@@ -946,4 +1048,4 @@ Infinite procedural mode. Phases chain seamlessly with no pause. Reuses Contrato
 
 ---
 
-*Last updated: 2026-04-28*
+*Last updated: 2026-06-14*

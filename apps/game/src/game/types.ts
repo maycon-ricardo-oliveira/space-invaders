@@ -16,6 +16,14 @@ export interface DamagePickup {
   active: boolean
 }
 
+export type MovementPattern =
+  | 'oscillate-h'
+  | 'orbit'
+  | 'bob-v'
+  | 'drift-return'
+  | 'static'
+  | 'descend'
+
 export interface Enemy {
   x: number
   y: number
@@ -28,6 +36,15 @@ export interface Enemy {
   burstCount: number
   dropsPickup: 'damage' | null
   speedMultiplier: number
+  anchorX: number
+  anchorY: number
+  movementPattern: MovementPattern
+  amplitudeX: number
+  amplitudeY: number
+  frequency: number
+  phase: number
+  dirX: number
+  dirY: number
 }
 
 export type GameStatus = 'playing' | 'paused' | 'won' | 'lost' | 'fuelEmpty' | 'card_selection'

@@ -8,7 +8,7 @@ export const SEED_WORLD: PlainWorld = {
     status: 'published',
     levels: [{
       index: 0,
-      enemySpeed: 2.0, shotDelay: 1.5, fuelDrain: 8.0,
+      enemySpeed: 2.0, shotDelay: 1.5, fuelDrain: 0,
       enemyShotSpeed: 4.0, enemyAngerDelay: 15.0, enemySpawnDelay: 1.0, hasPowerUps: true,
       waves: [
         {

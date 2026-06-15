@@ -132,12 +132,12 @@ export function GameScreen({ selection, totalLevels, onBack }: Props) {
       const delta = lastTimeRef.current !== null ? timestamp - lastTimeRef.current : 16
       lastTimeRef.current = timestamp
 
-      // Translate joystick horizontal displacement to player movement
+      // Translate joystick 2D displacement to player movement
       const j = joystickRef.current
       if (j) {
         const dx = j.currentX - j.baseX
-        if (dx < -DEADZONE) loop.moveLeft(delta)
-        else if (dx > DEADZONE) loop.moveRight(delta)
+        const dy = j.currentY - j.baseY
+        if (Math.hypot(dx, dy) >= DEADZONE) loop.move(dx, dy, delta)
       }
 
       loop.update(delta)

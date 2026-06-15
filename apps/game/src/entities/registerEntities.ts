@@ -16,6 +16,10 @@ export function registerEntities(engine: EntityTypeRegistrar): void {
       burstCount: 1,
       xpValue: 1,
       dropsPickup: null,
+      movementPattern: 'oscillate-h',
+      amplitudeX: 10,
+      amplitudeY: 0,
+      frequency: 0.5,
     },
   })
   engine.registerEntityType({
@@ -29,6 +33,10 @@ export function registerEntities(engine: EntityTypeRegistrar): void {
       burstCount: 3,
       xpValue: 2,
       dropsPickup: null,
+      movementPattern: 'orbit',
+      amplitudeX: 12,
+      amplitudeY: 8,
+      frequency: 1.4,
     },
   })
   engine.registerEntityType({
@@ -42,6 +50,10 @@ export function registerEntities(engine: EntityTypeRegistrar): void {
       burstCount: 1,
       xpValue: 3,
       dropsPickup: null,
+      movementPattern: 'bob-v',
+      amplitudeX: 0,
+      amplitudeY: 6,
+      frequency: 0.25,
     },
   })
   engine.registerEntityType({
@@ -55,6 +67,10 @@ export function registerEntities(engine: EntityTypeRegistrar): void {
       burstCount: 0,
       xpValue: 1,
       dropsPickup: 'damage',
+      movementPattern: 'descend',
+      amplitudeX: 0,
+      amplitudeY: 0,
+      frequency: 0,
     },
   })
 }

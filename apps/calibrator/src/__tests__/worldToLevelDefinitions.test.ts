@@ -209,6 +209,57 @@ describe('worldToLevelDefinitions', () => {
     })
   })
 
+  // FUEL default = "não drena". The GameLoop only drains fuel when
+  // params.fuelDrainRate is PRESENT and > 0. validateLevels caps fuelDrainRate
+  // at [1,20], so "não drena" must be the field ABSENT — never 0. The export
+  // must OMIT fuelDrainRate when the level's fuelDrain <= 0, and emit the exact
+  // value when > 0. Hoje o worldToLevelDefinitions sempre emite fuelDrainRate
+  // (até quando é 0) → esse bloco vai VERMELHO.
+  describe('fuel drain emission contract', () => {
+    function levelWithFuelDrain(fuelDrain: number): PlainWorld {
+      return {
+        phases: [{
+          index: 0,
+          status: 'published',
+          levels: [{
+            index: 0, enemySpeed: 2, shotDelay: 1.5, fuelDrain,
+            enemyShotSpeed: 4, enemyAngerDelay: 15, enemySpawnDelay: 1, hasPowerUps: true,
+            waves: [{ order: 1, delay: 0, grid: [['basic-enemy']] }],
+          }],
+        }],
+      }
+    }
+
+    it('OMITS fuelDrainRate when the level does not drain (fuelDrain 0)', () => {
+      const [level] = worldToLevelDefinitions(levelWithFuelDrain(0))
+      // Absent, not 0 — the validator range [1,20] would reject a literal 0.
+      expect('fuelDrainRate' in level.params).toBe(false)
+      expect(level.params.fuelDrainRate).toBeUndefined()
+    })
+
+    it('emits the exact fuelDrainRate when the level drains (fuelDrain 10)', () => {
+      const [level] = worldToLevelDefinitions(levelWithFuelDrain(10))
+      expect('fuelDrainRate' in level.params).toBe(true)
+      expect(level.params.fuelDrainRate).toBe(10)
+    })
+
+    it('treats negative fuelDrain as "não drena" (omits the field)', () => {
+      const [level] = worldToLevelDefinitions(levelWithFuelDrain(-3))
+      expect('fuelDrainRate' in level.params).toBe(false)
+      expect(level.params.fuelDrainRate).toBeUndefined()
+    })
+
+    it('emits the lower bound fuelDrain 1 (boundary of the [1,20] fence)', () => {
+      const [level] = worldToLevelDefinitions(levelWithFuelDrain(1))
+      expect(level.params.fuelDrainRate).toBe(1)
+    })
+
+    it('emits the upper bound fuelDrain 20 (boundary of the [1,20] fence)', () => {
+      const [level] = worldToLevelDefinitions(levelWithFuelDrain(20))
+      expect(level.params.fuelDrainRate).toBe(20)
+    })
+  })
+
   // Publication gate: export only includes phases with status === 'published'.
   // A draft phase contributes nothing — no levels, no waves.
   describe('publication filter', () => {
