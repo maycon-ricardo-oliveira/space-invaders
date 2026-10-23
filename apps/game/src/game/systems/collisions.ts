@@ -34,7 +34,7 @@ export function resolveCollisions(ctx: CollisionContext): boolean {
         )
       ) {
         bullet.active = false
-        enemy.hp -= state.player.bulletDamage
+        enemy.hp -= bullet.damage
         if (enemy.hp <= 0) onEnemyKilled(enemy, ctx)
         break
       }
@@ -52,14 +52,14 @@ export function resolveCollisions(ctx: CollisionContext): boolean {
       )
     ) {
       bullet.active = false
-      p.hp = Math.max(0, p.hp - 1)
+      p.hp = Math.max(0, p.hp - bullet.damage)
       p.invincibilityTimer = invincibilityDuration
       hit = true
     }
   }
 
   // Body contact: any live enemy (including obstacles) overlapping the player
-  // deals 1 hp and triggers i-frames, mirroring the bullet-hit path.
+  // deals its own contactDamage and triggers i-frames, mirroring the bullet path.
   if (p.invincibilityTimer <= 0) {
     for (const enemy of state.enemies) {
       if (!enemy.alive) continue
@@ -69,7 +69,7 @@ export function resolveCollisions(ctx: CollisionContext): boolean {
           { x: p.x, y: p.y, w: entitySize, h: entitySize },
         )
       ) {
-        p.hp = Math.max(0, p.hp - 1)
+        p.hp = Math.max(0, p.hp - enemy.contactDamage)
         p.invincibilityTimer = invincibilityDuration
         hit = true
         break

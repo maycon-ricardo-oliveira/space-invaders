@@ -1,5 +1,11 @@
 import type { EntityPlacement } from '@si/level-engine'
 import type { Enemy, MovementPattern } from './types'
+import { DEFAULT_ENEMY_CONTACT_DAMAGE } from './damage'
+
+export interface EnemyDefaults {
+  /** Applied when the placement carries no `contactDamage` of its own. */
+  contactDamage: number
+}
 
 const SQRT2_2 = Math.SQRT1_2 // √2/2 = sin(45°) = cos(45°); unit diagonal component
 
@@ -71,7 +77,10 @@ export function patternOffset(
  * The procedural fallback supplies its grid-tuned overrides through `properties`
  * (amplitudeX, frequency, movementPattern), exactly like a placement would.
  */
-export function buildEnemy(placement: EntityPlacement): Enemy {
+export function buildEnemy(
+  placement: EntityPlacement,
+  defaults: EnemyDefaults = { contactDamage: DEFAULT_ENEMY_CONTACT_DAMAGE },
+): Enemy {
   const props = placement.properties ?? {}
   // Prefer an explicit movementPattern; otherwise fall back from the legacy
   // movementType ('vertical' → asteroid 'descend', else 'oscillate-h').
@@ -103,6 +112,7 @@ export function buildEnemy(placement: EntityPlacement): Enemy {
     movementType: ((props.movementType as string) ?? 'horizontal') as 'horizontal' | 'vertical',
     burstCount: (props.burstCount as number) ?? 1,
     dropsPickup: ((props.dropsPickup as string) ?? null) as 'damage' | null,
+    contactDamage: (props.contactDamage as number) ?? defaults.contactDamage,
     speedMultiplier: (props.speedMultiplier as number) ?? 1.0,
     anchorX: placement.x,
     anchorY: placement.y,
