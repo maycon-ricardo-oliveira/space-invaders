@@ -6,6 +6,8 @@ import { LevelEngine, CurveCalibratorStrategy } from '@si/level-engine'
 import { registerEntities } from '../entities/registerEntities'
 import { GameLoop, CANVAS_WIDTH, CANVAS_HEIGHT } from '../game/GameLoop'
 import { SkiaRenderer } from '../renderers/SkiaRenderer'
+import { useSpriteImages } from '../renderers/useSpriteImages'
+import { renderScene } from '../render/renderScene'
 import type { GameStatus } from '../game/types'
 import { getLevelSource } from '../levels/source'
 import type { LevelSelection } from './StoryModeScreen'
@@ -70,12 +72,20 @@ function buildLoop(selection: LevelSelection, totalLevels: number): GameLoop {
 export function GameScreen({ selection, totalLevels, onBack }: Props) {
   const [loop] = useState(() => buildLoop(selection, totalLevels))
   const [renderer] = useState(() => new SkiaRenderer(CANVAS_WIDTH, CANVAS_HEIGHT))
+  const spriteImages = useSpriteImages()
   const [status, setStatus] = useState<GameStatus>('playing')
   const [picture, setPicture] = useState<SkPicture | null>(null)
   const [hud, setHud] = useState({ hp: 500, maxHp: 500, fuel: 100, score: 0, xp: 0, xpToNext: 10, playerLevel: 1, currentWave: 1, totalWaves: 1 })
   const [joystick, setJoystick] = useState<JoystickState | null>(null)
   const [waveTransition, setWaveTransition] = useState<{ active: boolean; nextWave: number }>({ active: false, nextWave: 1 })
   const turboAnim = useRef(new Animated.Value(0)).current
+
+  // Publish the decoded sprites to the renderer as soon as they land. Declared
+  // before the game-loop effect so the first recorded frame already has them;
+  // until then SkiaRenderer falls back to rectangles.
+  useEffect(() => {
+    renderer.setImages(spriteImages)
+  }, [renderer, spriteImages])
 
   const statusRef = useRef<GameStatus>('playing')
   const isWaveTransitionRef = useRef(false)
@@ -159,7 +169,7 @@ export function GameScreen({ selection, totalLevels, onBack }: Props) {
       const rec = Skia.PictureRecorder()
       const skCanvas = rec.beginRecording(bounds)
       renderer.setCanvas(skCanvas)
-      loop.render(renderer, flashVisibleRef.current)
+      renderScene(renderer, state, flashVisibleRef.current)
       const pic = rec.finishRecordingAsPicture()
       setPicture(pic)
 
