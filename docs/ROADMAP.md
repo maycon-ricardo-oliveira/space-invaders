@@ -50,7 +50,7 @@ A PR is only valid if it ships something that can be tested end-to-end. Examples
 | 6A | Enemies (asteroid, fast, strong) | Game | ✅ Done (PR #13, #14) |
 | 6B | Wave System (GL-2) | Game | ✅ Done (PR #19) |
 | 7 | Dashboard Wave Editor | Calibrator | ✅ Done (PR #16) |
-| 8 | Card System (rarity layer — 40 cards) | Game | ⏳ Todo |
+| 8 | Card System (rarity layer — 40 cards) | Game | 🚧 In Progress (PR #22) |
 | 8B | Card Deck Wave 2 (shot mechanics — 17 cards) | Game | ⏳ Todo |
 | 9 | Parallax & Terrain | Game | ⏳ Todo |
 | 10 | Planet Structure | Game | ⏳ Todo |
@@ -196,7 +196,7 @@ One delivery = one closed spec = **one PR** (granularity lives in the commits).
 | # | Delivery | Code | Status | PR | Deliverable | Hand test — what changes on the phone |
 |---|----------|------|--------|-----|-------------|----------------------------------------|
 | 0 | Pre-sprint hygiene | S8-PRE | ⏳ Todo | — | CI green on PRs + test hygiene + ROADMAP commit | Not felt in game — infra gate before the card work starts |
-| 1 | Real damage numbers | DMG-1 | ⏳ Todo | — | `Bullet.damage` + `Enemy.contactDamage` from `LevelParams` | HP bar drops in visible chunks; dying takes ~30 hits instead of 500; tweak the number in `levels.json` and feel it |
+| 1 | Real damage numbers | DMG-1 | 🚧 In Progress (PR #22) | #22 | `Bullet.damage` + `Enemy.contactDamage` from `LevelParams` | HP bar drops in visible chunks; dying takes ~30 hits instead of 500; tweak the number in `levels.json` and feel it |
 | 2 | Ship stats become data | STATS-1 | ⏳ Todo | — | `PLAYER_SPEED`, `BULLET_SPEED`, `INVINCIBILITY_DURATION`, `AUTO_FIRE_INTERVAL` out of constants into run state, seeded from `LevelParams` | Change a value in `levels.json`, reload: ship moves faster, fires faster, bullets travel faster |
 | 3 | First real card | CARD-1 + CARD-3 + CARD-4 | ⏳ Todo | — | Two-stage draw engine + card screen with rarity colour/border + axes Damage and Fire rate (8 cards) | Level-up pauses, 3 coloured cards with names appear, pick one, enemies start dying faster. Take Damage 3x and watch it stop being offered |
 | 4 | The Life category stops being placebo | CARD-5 | ⏳ Todo | — | Axes Max HP, Heal, Invulnerability, Experience (12 cards) + level-5 life guarantee + **pickups rendered on screen** | Level 5 always offers a life card; Heal barely shows up at full HP and shows up twice as often under 35%; fuel/HP drops are finally visible on screen |
@@ -212,11 +212,15 @@ One delivery = one closed spec = **one PR** (granularity lives in the commits).
 - [ ] S8-PRE: commit the pending `docs/ROADMAP.md` change (Sprint 6B done + this rewrite)
 - [ ] S8-PRE: GitHub Actions workflow — `npm test` + `npm run build` on every PR
 - [ ] S8-PRE: test hygiene — act() warning in `Sidebar.tsx:80`, unused imports in `WorldService.test.ts:18` and `schemas.test.ts:11`
-- [ ] DMG-1: `Bullet.damage: number` — the enemy bullet carries its own damage
-- [ ] DMG-1: `Enemy.contactDamage: number` — body contact carries its own damage
-- [ ] DMG-1: both fed from `LevelParams` (calibratable per planet/phase); Planet 1 start: bullet 15, contact 25
-- [ ] DMG-1: replace the two hardcoded `p.hp - 1` in `collisions.ts:55` and `:72`
-- [ ] DMG-1: regression test — 500 HP with 1.5s i-frames survives ~33 hits, not 500
+- [x] DMG-1: `Bullet.damage: number` — every bullet carries its own damage (PR #22)
+- [x] DMG-1: `Enemy.contactDamage: number` — body contact carries its own damage (PR #22)
+- [x] DMG-1: both read from `LevelParams`; Planet 1 defaults bullet 15, contact 25 (PR #22)
+- [ ] DMG-1: **editing surface still missing** — the calibrator maps params field by field
+      (`worldToLevelDefinitions.ts:57`, `ExportService.ts:51`), so tuning the two numbers per
+      phase needs a Prisma column + slider + Zod. The game already honours a per-enemy
+      `properties.contactDamage` override, so levels can be hand-tuned meanwhile
+- [x] DMG-1: replace the two hardcoded `p.hp - 1` in `collisions.ts:55` and `:72` (PR #22)
+- [x] DMG-1: regression test — 500 HP dies in 20 contacts at damage 25, not 500 (PR #22)
 - [ ] STATS-1: new run-state type for mutable ship stats (moveSpeed, bulletSpeed, invincibilityMs, autoFireIntervalMs)
 - [ ] STATS-1: ⚠️ do **not** name it `PlayerStats` — that name is already taken in `@si/level-engine` (`types.ts:62`, calibration telemetry). Suggested: `ShipStats` or `RunStats`
 - [ ] STATS-1: `AutoFireSystem.intervalMs` stops being `readonly`
