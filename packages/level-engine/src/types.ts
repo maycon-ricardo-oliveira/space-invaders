@@ -40,6 +40,10 @@ export interface LevelParams {
   survivalDuration?: number
   spawnWaveInterval?: number
   fuelDrainRate?: number
+  /** Damage one enemy bullet deals to the player. Defaults per planet in the game. */
+  enemyBulletDamage?: number
+  /** Damage body contact with an enemy deals to the player. */
+  enemyContactDamage?: number
 }
 
 export interface Wave {
