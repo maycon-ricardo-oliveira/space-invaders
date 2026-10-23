@@ -209,7 +209,7 @@ One delivery = one closed spec = **one PR** (granularity lives in the commits).
 
 ### Todo List
 
-- [ ] S8-PRE: commit the pending `docs/ROADMAP.md` change (Sprint 6B done + this rewrite)
+- [x] S8-PRE: commit the pending `docs/ROADMAP.md` change (Sprint 6B done + this rewrite) (commit `7267c65`)
 - [ ] S8-PRE: GitHub Actions workflow — `npm test` + `npm run build` on every PR
 - [ ] S8-PRE: test hygiene — act() warning in `Sidebar.tsx:80`, unused imports in `WorldService.test.ts:18` and `schemas.test.ts:11`
 - [x] DMG-1: `Bullet.damage: number` — every bullet carries its own damage (PR #22)
