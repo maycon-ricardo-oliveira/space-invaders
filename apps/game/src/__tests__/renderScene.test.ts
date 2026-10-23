@@ -51,6 +51,7 @@ function makeEnemy(overrides: Partial<Enemy> = {}): Enemy {
     alive: true,
     killed: false,
     typeId: 'basic-enemy',
+    contactDamage: 25,
     hp: 100,
     xpValue: 1,
     movementType: 'horizontal',
@@ -167,13 +168,13 @@ describe('renderScene — enemies', () => {
 describe('renderScene — bullets', () => {
   it('draws active player bullets white', () => {
     const { renderer, calls } = makeRecorder()
-    renderScene(renderer, makeState({ playerBullets: [{ x: 10, y: 20, active: true }] }))
+    renderScene(renderer, makeState({ playerBullets: [{ x: 10, y: 20, active: true, damage: 20 }] }))
     expect(rects(calls).some(c => c.color === '#ffffff' && c.x === 10 && c.y === 20)).toBe(true)
   })
 
   it('draws active enemy bullets red', () => {
     const { renderer, calls } = makeRecorder()
-    renderScene(renderer, makeState({ enemyBullets: [{ x: 30, y: 40, active: true }] }))
+    renderScene(renderer, makeState({ enemyBullets: [{ x: 30, y: 40, active: true, damage: 15 }] }))
     expect(rects(calls).some(c => c.color === '#ff4444' && c.x === 30 && c.y === 40)).toBe(true)
   })
 
@@ -182,8 +183,8 @@ describe('renderScene — bullets', () => {
     renderScene(
       renderer,
       makeState({
-        playerBullets: [{ x: 10, y: 20, active: false }],
-        enemyBullets: [{ x: 30, y: 40, active: false }],
+        playerBullets: [{ x: 10, y: 20, active: false, damage: 20 }],
+        enemyBullets: [{ x: 30, y: 40, active: false, damage: 15 }],
       }),
     )
     expect(rects(calls)).toHaveLength(0)
