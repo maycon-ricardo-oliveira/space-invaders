@@ -197,7 +197,7 @@ One delivery = one closed spec = **one PR** (granularity lives in the commits).
 |---|----------|------|--------|-----|-------------|----------------------------------------|
 | 0 | Pre-sprint hygiene | S8-PRE | ⏳ Todo | — | CI green on PRs + test hygiene + ROADMAP commit | Not felt in game — infra gate before the card work starts |
 | 1 | Real damage numbers | DMG-1 | ✅ Done (PR #22) | #22 | `Bullet.damage` + `Enemy.contactDamage` from `LevelParams` | HP bar drops in visible chunks; dying takes ~30 hits instead of 500; tweak the number in `levels.json` and feel it |
-| 2 | Ship stats become data | STATS-1 | ⏳ Todo | — | `PLAYER_SPEED`, `BULLET_SPEED`, `INVINCIBILITY_DURATION`, `AUTO_FIRE_INTERVAL` out of constants into run state, seeded from `LevelParams` | Change a value in `levels.json`, reload: ship moves faster, fires faster, bullets travel faster |
+| 2 | Ship stats become data | STATS-1 | 🚧 In Progress (PR #25) | #25 | `PLAYER_SPEED`, `BULLET_SPEED`, `INVINCIBILITY_DURATION`, `AUTO_FIRE_INTERVAL` out of constants into run state, seeded from `LevelParams` | Change a value in `levels.json`, reload: ship moves faster, fires faster, bullets travel faster |
 | 3 | First real card | CARD-1 + CARD-3 + CARD-4 | ⏳ Todo | — | Two-stage draw engine + card screen with rarity colour/border + axes Damage and Fire rate (8 cards) | Level-up pauses, 3 coloured cards with names appear, pick one, enemies start dying faster. Take Damage 3x and watch it stop being offered |
 | 4 | The Life category stops being placebo | CARD-5 | ⏳ Todo | — | Axes Max HP, Heal, Invulnerability, Experience (12 cards) + level-5 life guarantee + **pickups rendered on screen** | Level 5 always offers a life card; Heal barely shows up at full HP and shows up twice as often under 35%; fuel/HP drops are finally visible on screen |
 | 5 | The ship changes handling | CARD-6 | ⏳ Todo | — | Axes Move speed, Bullet speed, Lifesteal (10 cards) | Ship visibly slides faster, bullets cross the screen quicker, killing enemies tops the HP bar back up |
@@ -308,7 +308,7 @@ just one more axis in the table).
 
 | # | Feature | Code | Status | PR | Deliverable |
 |---|---------|------|--------|-----|-------------|
-| 1 | Sprite loading + visible pickups | ART-1 | ✅ Done (PR #23) | #23 | `drawSprite` draws images with rect fallback; fuel/HP pickups finally rendered |
+| 1 | Sprite loading + visible pickups | ART-1 | ✅ Done (PR #24) | #24 | `drawSprite` draws images with rect fallback; fuel/HP pickups finally rendered |
 | 2 | Frame animation | ART-2 | ⏳ Todo | — | f0/f1 enemy frames, player thrust/hurt/death |
 | 3 | Bullet + explosion art | ART-3 | ⏳ Todo | — | `bullet-plasma-*`, `fx-explosion-*` |
 | 4 | Audio | SFX-1 | ⏳ Todo | — | `expo-av`, planet theme + shot/hit/level-up SFX |
@@ -322,9 +322,13 @@ just one more axis in the table).
 - [ ] ART-1: **not verified on a device** — scale, alpha and the first-frame fallback flash
       still need `npx expo start` and a human looking at the screen
 - [ ] ART-1: pickups are flat colour blocks — no pickup art exists among the 204 PNGs
-- [ ] ART-1: `GameLoop.render()` became dead code once `GameScreen` moved to `renderScene()`;
-      delete it with its tests after PR #22 and PR #23 both land
-- [ ] ART-1: `BULLET_WIDTH`/`BULLET_HEIGHT` duplicated in `renderScene.ts` — dedupe on merge
+- [x] ART-1: `GameLoop.render()` deleted with its 7 tests — it was dead once `GameScreen`
+      moved to `renderScene()`
+- [x] ART-1: `BULLET_WIDTH`/`BULLET_HEIGHT` now exported from `GameLoop` and imported by
+      `renderScene.ts` instead of duplicated
+
+> **Merge note:** PR #23 was opened stacked on the DMG-1 branch and got merged there before
+> GitHub re-pointed it at `master`. The same commits reached `master` through **PR #24**.
 - [ ] ART-1: `CanvasRenderer` (calibrator) still stubs `drawSprite`, so the browser does not
       show what the phone shows. `IRenderer` is unchanged, so they stay interchangeable
 
