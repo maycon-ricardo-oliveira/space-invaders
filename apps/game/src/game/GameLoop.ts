@@ -10,6 +10,7 @@ import { stepPickups } from './systems/pickups'
 import { resolveCollisions } from './systems/collisions'
 import { tickInvincibility } from './systems/invincibility'
 import { AutoFireSystem } from './systems/autoFire'
+import { DEFAULT_ENEMY_BULLET_DAMAGE, DEFAULT_ENEMY_CONTACT_DAMAGE } from './damage'
 
 type GameEvent = 'wave:cleared' | 'wave:started'
 
@@ -37,6 +38,10 @@ export class GameLoop {
   private readonly shooting: ShootingSystem
   private readonly autoFire = new AutoFireSystem(AUTO_FIRE_INTERVAL)
   private readonly params: LevelDefinition['params']
+  /** Damage of one enemy bullet this level — LevelParams, else the planet 1 default. */
+  private readonly enemyBulletDamage: number
+  /** Fallback contact damage for enemies whose placement sets none. */
+  private readonly enemyContactDamage: number
   private readonly levelIndex: number
   private readonly waves: Wave[]
   private currentWaveIndex = 0
@@ -45,6 +50,8 @@ export class GameLoop {
 
   constructor(level: LevelDefinition) {
     this.params = level.params
+    this.enemyBulletDamage = level.params.enemyBulletDamage ?? DEFAULT_ENEMY_BULLET_DAMAGE
+    this.enemyContactDamage = level.params.enemyContactDamage ?? DEFAULT_ENEMY_CONTACT_DAMAGE
     this.levelIndex = level.levelIndex ?? 0
     this.waves = level.waves ?? []
     this.shooting = new ShootingSystem(level.params.enemyShotDelay)
@@ -82,7 +89,7 @@ export class GameLoop {
   private mapPlacementsToEnemies(placements: EntityPlacement[]): Enemy[] {
     return placements
       .filter(e => e.entityTypeId !== 'fuel-pickup')
-      .map(buildEnemy)
+      .map(p => buildEnemy(p, { contactDamage: this.enemyContactDamage }))
   }
 
   private buildEnemies(level: LevelDefinition): Enemy[] {
@@ -116,7 +123,7 @@ export class GameLoop {
             amplitudeX: 10,
             frequency: 0.5,
           },
-        }))
+        }, { contactDamage: this.enemyContactDamage }))
         placed++
       }
     }
@@ -213,6 +220,7 @@ export class GameLoop {
       x: this.state.player.x + ENTITY_SIZE / 2 - BULLET_WIDTH / 2,
       y: this.state.player.y,
       active: true,
+      damage: this.state.player.bulletDamage,
     })
   }
 
@@ -279,7 +287,11 @@ export class GameLoop {
       state: this.state,
       dt,
       enemyShotDelay: this.params.enemyShotDelay,
-      ctx: { entitySize: ENTITY_SIZE, bulletWidth: BULLET_WIDTH },
+      ctx: {
+        entitySize: ENTITY_SIZE,
+        bulletWidth: BULLET_WIDTH,
+        bulletDamage: this.enemyBulletDamage,
+      },
     })
   }
 

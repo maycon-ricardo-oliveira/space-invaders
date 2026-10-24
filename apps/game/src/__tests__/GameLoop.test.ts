@@ -37,6 +37,11 @@ const mockRenderer: IRenderer = {
 // bullet-hit tests already assume this window; body-contact i-frames reuse it.
 const INVINCIBILITY_DURATION_MS = 1500
 
+// Mirrors the DMG-1 planet 1 defaults in game/damage.ts. Before DMG-1 both paths
+// dealt a flat 1, which is why these numbers used to be 499.
+const BULLET_DAMAGE = 15
+const CONTACT_DAMAGE = 25
+
 describe('GameLoop', () => {
   beforeEach(() => jest.clearAllMocks())
 
@@ -935,15 +940,15 @@ describe('GameLoop', () => {
 
     it('invincibility prevents consecutive damage', () => {
       const loop = new GameLoop({ ...mockLevel, params: hitParams })
-      // Run until first hit (hp drops from 500 to 499)
+      // Run until first hit (hp drops from 500 by one bullet's damage)
       for (let i = 0; i < 200; i++) {
         loop.update(16)
         if (loop.getState().player.hp < 500) break
       }
-      expect(loop.getState().player.hp).toBe(499)
+      expect(loop.getState().player.hp).toBe(500 - BULLET_DAMAGE)
       // Immediately after: many bullets in flight, but invincibility blocks them
       loop.update(16)
-      expect(loop.getState().player.hp).toBe(499)
+      expect(loop.getState().player.hp).toBe(500 - BULLET_DAMAGE)
     })
 
     it('invincibilityTimer decrements to 0 after 1500ms', () => {
@@ -968,10 +973,10 @@ describe('GameLoop', () => {
         loop.update(16)
         if (loop.getState().player.hp < 500) break
       }
-      expect(loop.getState().player.hp).toBe(499)
+      expect(loop.getState().player.hp).toBe(500 - BULLET_DAMAGE)
       // Wait out invincibility + travel time for next bullet (~200 more frames)
       for (let i = 0; i < 200; i++) loop.update(16)
-      expect(loop.getState().player.hp).toBeLessThan(499)
+      expect(loop.getState().player.hp).toBeLessThan(500 - BULLET_DAMAGE)
     })
   })
 
@@ -1015,13 +1020,13 @@ describe('GameLoop', () => {
       expect(new GameLoop(mockLevel).getState().player.maxHp).toBe(500)
     })
 
-    it('enemy bullet hit reduces hp by 1', () => {
+    it('enemy bullet hit reduces hp by the bullet damage, not a flat 1', () => {
       const loop = new GameLoop({ ...mockLevel, params: hitParams })
       for (let i = 0; i < 150; i++) {
         loop.update(16)
         if (loop.getState().player.hp < 500) break
       }
-      expect(loop.getState().player.hp).toBe(499)
+      expect(loop.getState().player.hp).toBe(500 - BULLET_DAMAGE)
     })
 
     it('hp reduced to 0 → status is lost', () => {
@@ -1036,9 +1041,9 @@ describe('GameLoop', () => {
         loop.update(16)
         if (loop.getState().player.hp < 500) break
       }
-      expect(loop.getState().player.hp).toBe(499)
+      expect(loop.getState().player.hp).toBe(500 - BULLET_DAMAGE)
       loop.update(16)
-      expect(loop.getState().player.hp).toBe(499)
+      expect(loop.getState().player.hp).toBe(500 - BULLET_DAMAGE)
     })
 
     it('hp never goes below 0', () => {
@@ -1936,11 +1941,11 @@ describe('GameLoop', () => {
       }
     }
 
-    it('an enemy overlapping the player reduces hp by 1 on contact', () => {
+    it('an enemy overlapping the player applies its contact damage', () => {
       const loop = new GameLoop(enemyOnPlayerLevel())
       expect(loop.getState().player.hp).toBe(500)
       loop.update(16) // contact this tick
-      expect(loop.getState().player.hp).toBe(499)
+      expect(loop.getState().player.hp).toBe(500 - CONTACT_DAMAGE)
     })
 
     it('body contact activates i-frames (invincibilityTimer set to 1500)', () => {
@@ -1952,21 +1957,21 @@ describe('GameLoop', () => {
 
     it('continuous contact does NOT re-apply damage while i-frames are active', () => {
       const loop = new GameLoop(enemyOnPlayerLevel())
-      loop.update(16)             // first contact → hp 499, i-frames on
-      expect(loop.getState().player.hp).toBe(499)
+      loop.update(16)             // first contact → one hit taken, i-frames on
+      expect(loop.getState().player.hp).toBe(500 - CONTACT_DAMAGE)
       // Several more ticks of overlap, all within the 1500ms window
       for (let i = 0; i < 10; i++) loop.update(16) // ~160ms total, < 1500
-      expect(loop.getState().player.hp).toBe(499) // no extra damage
+      expect(loop.getState().player.hp).toBe(500 - CONTACT_DAMAGE) // no extra damage
     })
 
     it('sustained contact damages again after i-frames expire', () => {
       const loop = new GameLoop(enemyOnPlayerLevel())
-      loop.update(16) // hp 499, i-frames on
-      expect(loop.getState().player.hp).toBe(499)
+      loop.update(16) // first hit, i-frames on
+      expect(loop.getState().player.hp).toBe(500 - CONTACT_DAMAGE)
       // Drain the i-frames fully, then one more contact tick applies damage again.
       loop.update(1500) // checkCollisions sees i-frames active, then timer → 0
       loop.update(16)   // i-frames now 0 → contact damages
-      expect(loop.getState().player.hp).toBe(498)
+      expect(loop.getState().player.hp).toBe(500 - CONTACT_DAMAGE * 2)
     })
 
     it('a non-overlapping enemy deals no contact damage', () => {
@@ -1990,7 +1995,7 @@ describe('GameLoop', () => {
         entities: [{ entityTypeId: 'asteroid', x: playerX, y: playerY, properties: { hp: 9999, movementType: 'vertical', speedMultiplier: 0 } }],
       })
       loop.update(16)
-      expect(loop.getState().player.hp).toBe(499)
+      expect(loop.getState().player.hp).toBe(500 - CONTACT_DAMAGE)
       expect(loop.getState().player.invincibilityTimer).toBe(INVINCIBILITY_DURATION_MS)
     })
   })

@@ -152,9 +152,9 @@ Rules:
 - Max 72 characters in subject line
 - Body optional for "why", not "what"
 
-## Git Workflow — Small PRs, Granular Commits
+## Git Workflow — One Spec per PR, Granular Commits
 
-**Max ~15 files per PR. One concern per commit. Never mix sprints or packages.**
+**One closed spec = one PR. One concern per commit. Never mix sprints or packages.**
 
 ### PR Split per Sprint
 
@@ -229,7 +229,7 @@ Every PR **must** have a description in this format:
 - [ ] No `console.log` or commented-out code
 - [ ] No secrets in code
 - [ ] `docs/ROADMAP.md` updated to `🚧 In Progress (PR #N)`
-- [ ] Single-concern PR (~15 files max)
+- [ ] Single-concern PR — one closed spec, granularity in the commits
 
 ### Packages (`packages/*`)
 - [ ] Zero native dependencies — pure TypeScript only
@@ -285,7 +285,7 @@ Calibrator: localhost:3001 (dev tool — never published)
 5. The calibrator is a dev tool, not a product — optimize for developer speed, not polish
 6. Use `FreeMonetization` in dev and tests — never mock AdMob or RevenueCat flows directly
 7. Use `NullAnalytics` in dev and tests — Firebase events should only fire in production
-8. Small PRs — max ~15 files, one concept per commit, never mix packages or sprints
+8. One closed spec = one PR — granularity in atomic commits; split only if the diff is too big to review in one sitting, if parts must merge/revert independently, or if agreed upfront
 9. Never push directly to `main`
 10. `levels.json` is the contract between the calibrator and the game — treat it as an API
 11. Survival mode generates levels at runtime — it must never block the game loop (keep generation fast)

@@ -29,8 +29,10 @@ A PR is only valid if it ships something that can be tested end-to-end. Examples
 - ❌ "Added files, tests pending" — not a deliverable
 
 ### PR size rules
-- Max ~15 files per PR
+- One closed spec = one PR. Granularity lives in atomic commits, not in extra PRs
 - One concern per commit — never mix domains
+- Split into multiple PRs only if the diff is too big to review in one sitting, if the
+  parts must merge/revert independently, or if agreed upfront
 - Never push directly to `main`
 
 ---
@@ -48,7 +50,8 @@ A PR is only valid if it ships something that can be tested end-to-end. Examples
 | 6A | Enemies (asteroid, fast, strong) | Game | ✅ Done (PR #13, #14) |
 | 6B | Wave System (GL-2) | Game | ✅ Done (PR #19) |
 | 7 | Dashboard Wave Editor | Calibrator | ✅ Done (PR #16) |
-| 8 | Card System | Game | ⏳ Todo |
+| 8 | Card System (rarity layer — 40 cards) | Game | 🚧 In Progress (PR #22) |
+| 8B | Card Deck Wave 2 (shot mechanics — 17 cards) | Game | ⏳ Todo |
 | 9 | Parallax & Terrain | Game | ⏳ Todo |
 | 10 | Planet Structure | Game | ⏳ Todo |
 | 11 | Boss System | Game | ⏳ Todo |
@@ -115,13 +118,13 @@ A PR is only valid if it ships something that can be tested end-to-end. Examples
 
 ---
 
-## Sprint 6 — Enemies & Waves (6A ✅ Done · 6B ⏳ Todo)
+## Sprint 6 — Enemies & Waves (6A ✅ Done · 6B ✅ Done)
 
 **Goal:** Add enemy variety (asteroids, fast, strong) and wave system.
 **Deliverable:** 3 enemy types playable with configurable wave patterns per level.
 
-> **➡️ Sprint 6B (Wave System / GL-2) is the NEXT gameplay step.**
-> Plan ready since 2026-04-30: `docs/superpowers/plans/2026-04-30-s6b-waves.md`
+> Sprint 6B (Wave System / GL-2) delivered in PR #19 (pipeline ponta a ponta).
+> Implementation plan: `docs/superpowers/plans/2026-04-30-s6b-waves.md`
 
 | # | Feature | Code | Status | PR | Deliverable |
 |---|---------|------|--------|-----|-------------|
@@ -129,7 +132,7 @@ A PR is only valid if it ships something that can be tested end-to-end. Examples
 | 1 | Asteroids | ENEMY-1 | ✅ Done (PR #14) | #14 | Vertical movement, damage pickup drop |
 | 2 | Fast Enemy | ENEMY-2 | ✅ Done (PR #14) | #14 | Burst fire (3 shots), high speed, low HP |
 | 3 | Strong Enemy | ENEMY-3 | ✅ Done (PR #14) | #14 | High HP (200), low speed, registry-driven |
-| 4 | Wave System | GL-2 | ⏳ Todo (Sprint 6B) | — | Level has wave list; all waves cleared to advance |
+| 4 | Wave System | GL-2 | ✅ Done (PR #19) | #19 | Level has wave list; all waves cleared to advance |
 
 ### Todo List
 
@@ -141,10 +144,10 @@ A PR is only valid if it ships something that can be tested end-to-end. Examples
 - [x] ENEMY-2: Registered in EntityRegistry with xpValue = 2
 - [x] ENEMY-3: Strong enemy entity: low speed, high HP (multi-hit), heavy shot
 - [x] ENEMY-3: Registered in EntityRegistry with xpValue = 3
-- [ ] GL-2: `LevelDefinition.waves: Wave[]` — ordered list of spawn patterns
-- [ ] GL-2: Wave advances only when all enemies in wave are dead
-- [ ] GL-2: Level complete only when all waves are cleared
-- [ ] GL-2: Wave pattern types: line, V, diamond, flanks, spiral
+- [x] GL-2: `LevelDefinition.waves: Wave[]` — ordered list of spawn patterns (PR #19)
+- [x] GL-2: Wave advances only when all enemies in wave are dead (PR #19)
+- [x] GL-2: Level complete only when all waves are cleared (PR #19)
+- [ ] GL-2: Wave pattern types: line, V, diamond, flanks, spiral — padrões avançados ficam pendentes (hoje só grade livre)
 - [x] GL-2: Pattern editor in calibrator (visual grid) — delivered in Sprint 7 (PR #16)
 
 ---
@@ -162,37 +165,136 @@ A PR is only valid if it ships something that can be tested end-to-end. Examples
 | 4 | Wave Grid Editor | S7-GRID | ✅ Done (PR #16) | #16 | Interactive grid with spawn zones, entity toolbox, pattern picker |
 | 5 | Export to levels.json | S7-EXPORT | ✅ Done (PR #16) | #16 | DB → LevelDefinition[] → JSON with proper mapping |
 
-> **Pending decision:** local branch `wip/s7-pattern-picker-ux` holds an unmerged UX
-> refactor of the PatternPicker (dropdown). Decide: open PR, rebase, or discard.
+> **Resolved 2026-08-26:** local branch `wip/s7-pattern-picker-ux` deleted. It held the
+> whole Sprint 7 work already re-delivered squashed as PR #16; merging it would have
+> reverted PRs #19/#20/#21. Archived as tag `archive/s7-pattern-picker-ux` (pushed to
+> origin). The only unique content — the PatternPicker dropdown UX (`8da629c`) — is
+> saved as a patch at `Documentations/Space-Invaders/s7-pattern-picker-dropdown.patch`.
 
 ---
 
-## Sprint 8 — Card System
+## Sprint 8 — Card System (rarity layer)
 
 > Moved from the original Sprint 7 slot when Dashboard Wave Editor took priority.
+> **Scope rewritten 2026-08-26** against
+> `docs/superpowers/specs/2026-08-26-card-system-design.md` (rarity ladder:
+> 12 axes x rarity tiers = 40 cards, built only from state fields that already exist).
+> The 6 mechanic-heavy cards of the old CARD-2 deck are **not dropped** — they are
+> planned as **Sprint 8B** below, already designed with rarity tiers applied.
 
-**Goal:** Implement card selection screen triggered by XP level-up.
-**Deliverable:** Player levels up mid-run → pause → pick 1 of 3 cards → effect applied.
+**Goal:** Close the roguelite loop — level-up pauses the run, player picks 1 of 3
+rarity-tiered cards, the build grows measurably across a phase (x1.8 to x2.7 power).
+**Deliverable:** 40 cards over 12 effect axes, no new bullet mechanic.
 
-| # | Feature | Code | Status | PR | Deliverable |
-|---|---------|------|--------|-----|-------------|
-| 1 | Card Selection Screen | CARD-1 | ⏳ Todo | — | Pause on level-up, show 3 cards, player picks 1 |
-| 2 | Card Deck MVP | CARD-2 | ⏳ Todo | — | 14 cards for Planet 1 with full effects |
+### Slicing rule for this sprint
+
+Every delivery below is **hand-testable on the phone** — Maycon must be able to
+open the build and *feel* the difference from the previous delivery. A slice that
+cannot be felt while playing is a badly cut slice and gets merged into its neighbour.
+One delivery = one closed spec = **one PR** (granularity lives in the commits).
+
+| # | Delivery | Code | Status | PR | Deliverable | Hand test — what changes on the phone |
+|---|----------|------|--------|-----|-------------|----------------------------------------|
+| 0 | Pre-sprint hygiene | S8-PRE | ⏳ Todo | — | CI green on PRs + test hygiene + ROADMAP commit | Not felt in game — infra gate before the card work starts |
+| 1 | Real damage numbers | DMG-1 | ✅ Done (PR #22) | #22 | `Bullet.damage` + `Enemy.contactDamage` from `LevelParams` | HP bar drops in visible chunks; dying takes ~30 hits instead of 500; tweak the number in `levels.json` and feel it |
+| 2 | Ship stats become data | STATS-1 | ⏳ Todo | — | `PLAYER_SPEED`, `BULLET_SPEED`, `INVINCIBILITY_DURATION`, `AUTO_FIRE_INTERVAL` out of constants into run state, seeded from `LevelParams` | Change a value in `levels.json`, reload: ship moves faster, fires faster, bullets travel faster |
+| 3 | First real card | CARD-1 + CARD-3 + CARD-4 | ⏳ Todo | — | Two-stage draw engine + card screen with rarity colour/border + axes Damage and Fire rate (8 cards) | Level-up pauses, 3 coloured cards with names appear, pick one, enemies start dying faster. Take Damage 3x and watch it stop being offered |
+| 4 | The Life category stops being placebo | CARD-5 | ⏳ Todo | — | Axes Max HP, Heal, Invulnerability, Experience (12 cards) + level-5 life guarantee + **pickups rendered on screen** | Level 5 always offers a life card; Heal barely shows up at full HP and shows up twice as often under 35%; fuel/HP drops are finally visible on screen |
+| 5 | The ship changes handling | CARD-6 | ⏳ Todo | — | Axes Move speed, Bullet speed, Lifesteal (10 cards) | Ship visibly slides faster, bullets cross the screen quicker, killing enemies tops the HP bar back up |
+| 6 | Crits and armour | CARD-7 | ⏳ Todo | — | Axes Crit, Flat armour (7 cards) + yellow crit number feedback | Yellow numbers pop on crits; with armour, weak enemy bullets scratch instead of hurting |
+| 7 | Shield + build HUD | CARD-8 | ⏳ Todo | — | Axis Shield (3 cards, own timer state) + accumulated-build summary on the card screen | A hit is absorbed with no HP loss and the shield recharges; the card screen shows the current build ("+140% damage") |
+| 8 | Optional extras | CARD-9 | ⏳ Todo | — | Catador (4 cards, section 8.6 option A) + Bomba (3 cards, needs `Enemy.grantsXp`) | Enemies drop pickups noticeably more often; the Bomba card wipes the screen — and does **not** chain level-ups |
+
+**Card count:** 8 (delivery 3) → 20 (4) → 30 (5) → 37 (6) → **40 (7)** → 47 with the optionals.
 
 ### Todo List
 
-- [ ] CARD-1: `CardDefinition` type: id, name, description, effect, weight
-- [ ] CARD-1: Card deck per planet loaded from level config
-- [ ] CARD-1: On level-up → game pauses → 3 random cards drawn from deck
-- [ ] CARD-1: Cards already held have reduced weight (diminishing returns)
-- [ ] CARD-1: Player selects card → effect applied to GameState → game resumes
-- [ ] CARD-1: Cards accumulate in `GameState.activeCards[]`
-- [ ] CARD-1: All cards lost on death
-- [ ] CARD-1: Level 10 boss kill → no card screen (phase ends)
-- [ ] CARD-1: Level 5 card pool always includes ≥1 life/HP option
-- [ ] CARD-2: Implement 14 cards: double shot, rear shot, ricochet, missile, +speed, faster bullet, shield, invincibility extend, screen bomb, pierce ray, vampire, gold on kill, HP restore, HP max up
-- [ ] CARD-2: Each card has `stackable: boolean` and `effect: CardEffect`
-- [ ] CARD-2: Tests for each card effect applied to player stats
+- [x] S8-PRE: commit the pending `docs/ROADMAP.md` change (Sprint 6B done + this rewrite) (commit `7267c65`)
+- [ ] S8-PRE: GitHub Actions workflow — `npm test` + `npm run build` on every PR
+- [ ] S8-PRE: test hygiene — act() warning in `Sidebar.tsx:80`, unused imports in `WorldService.test.ts:18` and `schemas.test.ts:11`
+- [x] DMG-1: `Bullet.damage: number` — every bullet carries its own damage (PR #22)
+- [x] DMG-1: `Enemy.contactDamage: number` — body contact carries its own damage (PR #22)
+- [x] DMG-1: both read from `LevelParams`; Planet 1 defaults bullet 15, contact 25 (PR #22)
+- [ ] DMG-1: **editing surface still missing** — the calibrator maps params field by field
+      (`worldToLevelDefinitions.ts:57`, `ExportService.ts:51`), so tuning the two numbers per
+      phase needs a Prisma column + slider + Zod. The game already honours a per-enemy
+      `properties.contactDamage` override, so levels can be hand-tuned meanwhile
+- [x] DMG-1: replace the two hardcoded `p.hp - 1` in `collisions.ts:55` and `:72` (PR #22)
+- [x] DMG-1: regression test — 500 HP dies in 20 contacts at damage 25, not 500 (PR #22)
+- [ ] STATS-1: new run-state type for mutable ship stats (moveSpeed, bulletSpeed, invincibilityMs, autoFireIntervalMs)
+- [ ] STATS-1: ⚠️ do **not** name it `PlayerStats` — that name is already taken in `@si/level-engine` (`types.ts:62`, calibration telemetry). Suggested: `ShipStats` or `RunStats`
+- [ ] STATS-1: `AutoFireSystem.intervalMs` stops being `readonly`
+- [ ] STATS-1: initial values seeded from `LevelParams`, defaults preserve current behaviour
+- [ ] CARD-3: rarity ladder (1 / 1.6 / 2.5 / 4 / 6.5) + effect x rarity matrix as data
+- [ ] CARD-3: two-stage draw — rarity first, then axis (so new cards never shift rarity odds)
+- [ ] CARD-3: rarity weights per bracket (levels 1-3 / 4-6 / 7+) and per-planet escalation
+- [ ] CARD-3: diminishing returns `weight x 0.55 ^ stacks`
+- [ ] CARD-3: axis at stack cap leaves eligibility (weight 0)
+- [ ] CARD-3: never two cards of the same axis in one screen of 3
+- [ ] CARD-3: fewer than 3 eligible axes → show what there is (CARD-1 edge case)
+- [ ] CARD-3: pure module, zero renderer dependency, TDD — reused as-is by Sprint 8B
+- [ ] CARD-1: replace the "Cards coming in Sprint 7" placeholder in `GameScreen.tsx:405`
+- [ ] CARD-1: 3 cards with axis icon, rarity colour and rarity border (1px / 2px / 2px+glow / 3px+glow / 3px+anim)
+- [ ] CARD-1: pick a card → effect applied to run state → game resumes (plumbing already exists: `resumeFromCardSelection`)
+- [ ] CARD-1: cards accumulate in `GameState.activeCards[]`, all lost on death
+- [ ] CARD-1: level 10 boss kill → no card screen
+- [ ] CARD-4: axis Damage (4 cards) — `bulletDamage`, additive over base, cap 5 stacks
+- [ ] CARD-4: axis Fire rate (4 cards) — rate-based, `interval = 400 / (1 + sum)`, cap +150%
+- [ ] CARD-5: axis Max HP (4 cards) — adds to `maxHp` **and** to `hp`
+- [ ] CARD-5: axis Heal (3 cards) — instant, no stack, never leaves eligibility
+- [ ] CARD-5: axis Invulnerability (3 cards) — cap +1200ms
+- [ ] CARD-5: axis Experience (2 cards) — multiplier on `onEnemyKilled`
+- [ ] CARD-5: level 5 → slot 1 drawn from the Life group only (rarity still random)
+- [ ] CARD-5: context modifiers — Heal x0.2 above 90% HP, Heal x2.0 and Lifesteal x1.5 below 35%
+- [ ] CARD-5: **render fuel and HP pickups** — they have collision today but are never drawn (blocks Heal/Catador feedback)
+- [ ] CARD-5: XP resets to 0 at phase start (open item inherited from Sprint 5b)
+- [ ] CARD-6: axis Move speed (3 cards) — cap +100%
+- [ ] CARD-6: axis Bullet speed (3 cards) — cap +200% (physical cap: AABB per frame vs 32px enemy)
+- [ ] CARD-6: axis Lifesteal (4 cards) — heal on kill via the existing `onEnemyKilled` hook
+- [ ] CARD-7: axis Crit (4 cards) — `critChance` + `critMult`, cap 60%
+- [ ] CARD-7: axis Flat armour (3 cards) — subtract flat damage, floor of 1 (only meaningful after DMG-1)
+- [ ] CARD-7: crit visual feedback — yellow damage number
+- [ ] CARD-8: axis Shield (3 cards) — `shieldCharges` + `shieldRechargeMs`, consumed before HP
+- [ ] CARD-8: accumulated-build panel next to the 3 options
+- [ ] CARD-9 (optional): Catador (4 cards) — extra pickup drop chance on kill
+- [ ] CARD-9 (optional): Bomba (3 cards) — needs `Enemy.grantsXp: boolean`; bomb kills grant **score, not XP** (otherwise level-ups chain)
+
+---
+
+## Sprint 8B — Card Deck Wave 2 (shot mechanics)
+
+**Planned sprint with closed scope — not a parking lot.** The 17 cards are fully
+designed in section 8.3 of `2026-08-26-card-system-design.md`, with values and
+rarity ranges settled. Wave 2 is what turns the build from "a spreadsheet that grows"
+into "a ship that does new things" — the MVP is deliberately number-heavy and this
+is the sprint that fixes it.
+
+**Goal:** Give the deck personality — shot patterns, piercing, bouncing, homing.
+**Deliverable:** 17 cards over 6 axes; total catalogue 57 cards / 18 axes.
+**Depends on:** Sprint 8 (the draw engine is reused unchanged — a mechanic card is
+just one more axis in the table).
+
+| # | Delivery | Code | Status | PR | Deliverable | Hand test — what changes on the phone |
+|---|----------|------|--------|-----|-------------|----------------------------------------|
+| 1 | Bomba | CARD-10 | ⏳ Todo | — | 3 cards + `Enemy.grantsXp` flag (skip if it already shipped in Sprint 8) | Pick the card, the screen clears, and no level-up avalanche follows |
+| 2 | Player shot patterns | CARD-11 | ⏳ Todo | — | `PLAYER_SHOT_PATTERNS` mirroring the enemy-side Strategy map from PR #21 | No card of its own — ships together with Multi-shot below |
+| 3 | Multi-shot | CARD-12 | ⏳ Todo | — | 4 cards — extra bullets + spread angle + damage per extra bullet | **The most visible change in the whole catalogue**: the ship fires 3 then 5 bullets in a fan |
+| 4 | Rear shot | CARD-13 | ⏳ Todo | — | 3 cards, no stack — rarity is the progression | Bullets come out the back of the ship; the Epic adds the two sides |
+| 5 | Pierce | CARD-14 | ⏳ Todo | — | 3 cards — `Bullet.pierceRemaining` + damage falloff per target | One bullet drops a whole column of enemies; combos with Multi-shot |
+| 6 | Ricochet | CARD-15 | ⏳ Todo | — | 2 cards (+1 Legendary reserved) — wall collision + direction vector on the bullet | Bullets bounce off the side walls and still kill |
+| 7 | Homing | CARD-16 | ⏳ Todo | — | 2 cards (+1 Legendary reserved) — nearest-target search + per-frame steering | A missile curves in the air and chases the enemy — the most expensive one, last on purpose |
+
+### Todo List
+
+- [ ] CARD-10: `Enemy.grantsXp: boolean`; bomb kills give score, not XP
+- [ ] CARD-10: rarity scales **area**, not power (bottom half → whole screen → whole screen + 3s invuln)
+- [ ] CARD-11: `PLAYER_SHOT_PATTERNS: Record<PlayerShotKind, ShotFn>` mirroring `shooting.ts`
+- [ ] CARD-11: `PlayerShotKind` union starts at `'single'`; every new pattern = one entry + one union member
+- [ ] CARD-12: Multi-shot — 2 levers per tier (bullet count and damage per extra bullet), cap 2 stacks, stacks widen the fan 8° → 14° → 20°
+- [ ] CARD-13: Rear shot — Uncommon 50% damage, Rare 85%, Epic adds 90° sides at 70%
+- [ ] CARD-14: Pierce — falloff per target hit is what keeps it balanced; bullet stops dying on first hit
+- [ ] CARD-15: Ricochet — bullet gains its own direction vector; starts at Rare (a Common bounce would be invisible)
+- [ ] CARD-16: Homing — turn rate is the balance lever, not damage (90°/s vs 180°/s); cap 2 stacks, floor of 1 cycle
 
 ---
 
@@ -297,6 +399,7 @@ A PR is only valid if it ships something that can be tested end-to-end. Examples
 - [ ] META-1: Upgrade costs: 200→400→800→1600→3200 (L1–5), L6–10 locked
 - [ ] META-1: Each upgrade applies stat modifier to PlayerStats at run start
 - [ ] META-1: Gold deducted from player wallet on purchase
+- [ ] META-1: once the wallet exists, re-evaluate CARD-GOLD (Gold Rush with per-phase cap) — only if Catador (CARD-9) proved insufficient
 - [ ] META-2: HangarScreen with bottom-sheet (expandable top/bottom panels)
 - [ ] META-2: Top panel: ship render + equipped items
 - [ ] META-2: Bottom panel: inventory grid (all collected items)
@@ -490,14 +593,24 @@ Sprint 6B, before new gameplay features.
 | ✅ Done (PR #19) | Dashboard hardening | revalidate + clean error handling, error boundary, reorderWaves IDOR guard, export publication fence, phase draft status + publish, client state re-sync |
 | ✅ Done (PR #20) | Game feel | 2D joystick (GL-1), enemy micro-movement per type + multidirectional asteroid, contact damage, win ignores asteroids, conditional fuel drain |
 | ✅ Done (PR #21) | GameLoop refactor | God Object → conductor + pure systems (aabb/buildEnemy/movement/shooting/bullets/fuel/pickups/collisions/invincibility/autoFire); movement & shooting as Strategy maps; explicit resolveStatus; enables pluggable shot/movement types, no behavior change |
-| 🟠 High | No CI | Add GitHub Actions workflow: `npm test` + `npm run build` on every PR |
+| 🟠 High | No CI | Add GitHub Actions workflow: `npm test` + `npm run build` on every PR — **scheduled as Sprint 8 delivery 0 (S8-PRE)** |
 | 🟡 Medium | Release infra missing | `eas.json`, bundle id / Android package name, privacy policy, UMP consent |
-| 🟢 Low | Test hygiene | `Sidebar` test triggers act() warning (`Sidebar.tsx:80`); unused imports in `WorldService.test.ts:18` and `schemas.test.ts:11` |
+| 🟢 Low | Test hygiene | `Sidebar` test triggers act() warning (`Sidebar.tsx:80`); unused imports in `WorldService.test.ts:18` and `schemas.test.ts:11` — **scheduled as Sprint 8 delivery 0 (S8-PRE)** |
+| 🟠 High | Pickups are invisible | Fuel and HP pickups have collision but are never drawn — no reference to them in `GameScreen.tsx`. Blocks Heal/Catador feedback. **Scheduled inside CARD-5 (Sprint 8 delivery 4)** |
+| 🟠 High | No sprites, no audio | `SkiaRenderer.drawSprite()` still draws a white rectangle (`SkiaRenderer.ts:32`, "Sprint 3 MVP"); `apps/game/assets/` only has icon/splash; zero audio deps. 204 PNGs and 4 music themes are ready in `Documentations/Space-Invaders/assets-preview/` but **nothing is wired into the game**. Track B, runs in parallel with Sprint 8 |
+| 🟡 Medium | Fast enemy feels weak | Reported 2026-06-14. **Deferred on purpose**: DMG-1 gives the fast enemy real contact damage, which may fix the feel by itself. Re-evaluate by hand after Sprint 8 delivery 1 before touching the movement code |
 
 ### Pending decisions
 
-- [ ] Branch `wip/s7-pattern-picker-ux` (local, unmerged): PatternPicker UX refactor
-      (dropdown). Decide whether to open a PR, rebase onto current master, or discard.
+- [x] Branch `wip/s7-pattern-picker-ux` — **resolved 2026-08-26 (Maycon approved).**
+      Archived as tag `archive/s7-pattern-picker-ux` (pushed to origin) and deleted
+      locally; it never existed on the remote. The dropdown UX from commit `8da629c`
+      (3 files: `PatternPicker.tsx`, `SpawnZoneGrid.tsx`, `tsconfig.json`) is saved at
+      `Documentations/Space-Invaders/s7-pattern-picker-dropdown.patch` — evaluate it
+      during S8-PRE; the `tsconfig.json` hunk is ~2 months stale, review before applying.
+- [x] PR size rule — **resolved 2026-08-26 (Maycon approved).** The "~15 files per PR"
+      rule was abolished 2026-06-12; `ROADMAP.md` and `CLAUDE.md` now state: one closed
+      spec = one PR, granularity in atomic commits.
 
 ---
 
@@ -513,6 +626,8 @@ Sprint 6B, before new gameplay features.
 | TelemetryCalibratorStrategy | ENGINE-2 | v3 calibration |
 | Second planet | PLANET-4 | Assets + data in Supabase, no rebuild |
 | Boss enrage at 50% HP | BOSS-5 | `enrageThreshold` field reserved in BossConfig |
+| Card Deck Wave 3 — Legendaries | CARD-L3 | 4 trade-off cards (section 9 of the card design doc) + 2 that come free from Sprint 8B (infinite Ricochet, double Homing). Weight 0 on Planets 1–2; only makes sense once Planet 3 exists |
+| Gold Rush with per-phase cap | CARD-GOLD | Section 8.6 option B. Blocked twice: `gold` does not exist in code (Sprint 12) and the raw version breaks the anti-farm rule. The Catador variant (option A) ships in Sprint 8 as CARD-9 and may make this unnecessary |
 
 ---
 

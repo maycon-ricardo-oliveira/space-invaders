@@ -6,6 +6,8 @@ export type ShotKind = 'straight'
 export interface ShotContext {
   entitySize: number
   bulletWidth: number
+  /** Damage stamped on every bullet of the volley. */
+  bulletDamage: number
 }
 
 /** Strategy via map: a shot kind turns a shooter into the bullets it emits this volley step. */
@@ -16,6 +18,7 @@ const straightDown: ShotFn = (shooter, _state, ctx) => [
     x: shooter.x + ctx.entitySize / 2 - ctx.bulletWidth / 2,
     y: shooter.y + ctx.entitySize,
     active: true,
+    damage: ctx.bulletDamage,
   },
 ]
 

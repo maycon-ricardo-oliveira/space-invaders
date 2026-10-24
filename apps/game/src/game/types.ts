@@ -2,6 +2,8 @@ export interface Bullet {
   x: number
   y: number
   active: boolean
+  /** Damage dealt on hit, snapshot when the bullet is fired. */
+  damage: number
 }
 
 export interface FuelPickup {
@@ -35,6 +37,8 @@ export interface Enemy {
   movementType: 'horizontal' | 'vertical'
   burstCount: number
   dropsPickup: 'damage' | null
+  /** Damage this enemy deals to the player on body contact. */
+  contactDamage: number
   speedMultiplier: number
   anchorX: number
   anchorY: number

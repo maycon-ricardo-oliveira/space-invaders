@@ -416,6 +416,14 @@ On player level-up, the game pauses and shows 3 random cards from the planet's d
 
 **Sprint:** 7 | **Domain:** CARD | **Dependencies:** CARD-1
 
+**Status:** Deferred to wave 2 — see `2026-08-26-card-system-design.md`.
+The rarity layer (Sprint 8) ships first: 12 effect axes x rarity tiers = 40 cards,
+built only from state fields that already exist. 11 of the 14 cards below were
+absorbed into those axes; the mechanic-heavy ones (Disparo Duplo, Tiro Traseiro,
+Ricochete, Missil Teleguiado, Raio, Bomba) are **deferred to wave 2**, already
+designed with rarity tiers applied in section 8.3 of that doc. Nothing here is
+dropped — the two decks are complementary.
+
 **Description:**
 14 cards for Planet 1 deck covering all categories: combat, defense, speed, specials, passives, and life.
 
