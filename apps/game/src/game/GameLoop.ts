@@ -1,4 +1,4 @@
-import type { EntityPlacement, IRenderer, LevelDefinition, Wave } from '@si/level-engine'
+import type { EntityPlacement, LevelDefinition, Wave } from '@si/level-engine'
 import type { Bullet, DamagePickup, Enemy, FuelPickup, GameState } from './types'
 import { buildEnemy } from './buildEnemy'
 import { resolveStatus } from './resolveStatus'
@@ -21,8 +21,8 @@ export const TOTAL_STORY_LEVELS = 20
 
 const PLAYER_SPEED = 300           // px/s
 const BULLET_SPEED = 500           // px/s
-const BULLET_WIDTH = 4
-const BULLET_HEIGHT = 8
+export const BULLET_WIDTH = 4
+export const BULLET_HEIGHT = 8
 const ENEMY_SPEED_SCALE = 40       // px/s per unit of LevelParams.enemySpeed
 const ENEMY_SHOT_SPEED_SCALE = 50  // px/s per unit of LevelParams.enemyShotSpeed
 const AUTO_FIRE_INTERVAL = 400     // ms between auto-fire shots
@@ -312,31 +312,6 @@ export class GameLoop {
     }
     if (decision.kind === 'status') {
       this.state.status = decision.status
-    }
-  }
-
-  render(renderer: IRenderer, showPlayer = true): void {
-    renderer.clear()
-    if (showPlayer) {
-      renderer.drawRect(
-        this.state.player.x,
-        this.state.player.y,
-        ENTITY_SIZE,
-        ENTITY_SIZE,
-        '#00ff00',
-      )
-    }
-    for (const enemy of this.state.enemies) {
-      if (!enemy.alive) continue
-      renderer.drawRect(enemy.x, enemy.y, ENTITY_SIZE, ENTITY_SIZE, '#ff0000')
-    }
-    for (const b of this.state.playerBullets) {
-      if (!b.active) continue
-      renderer.drawRect(b.x, b.y, BULLET_WIDTH, BULLET_HEIGHT, '#ffffff')
-    }
-    for (const b of this.state.enemyBullets) {
-      if (!b.active) continue
-      renderer.drawRect(b.x, b.y, BULLET_WIDTH, BULLET_HEIGHT, '#ff4444')
     }
   }
 }

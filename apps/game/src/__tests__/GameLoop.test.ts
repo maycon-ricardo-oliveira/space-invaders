@@ -5,7 +5,7 @@ import {
   ENTITY_SIZE,
   TOTAL_STORY_LEVELS,
 } from '../game/GameLoop'
-import type { LevelDefinition, IRenderer } from '@si/level-engine'
+import type { LevelDefinition } from '@si/level-engine'
 
 const BASE_PARAMS = {
   numberOfEnemies: 3,
@@ -27,11 +27,6 @@ const mockLevel: LevelDefinition = {
   params: BASE_PARAMS,
 }
 
-const mockRenderer: IRenderer = {
-  clear: jest.fn(),
-  drawSprite: jest.fn(),
-  drawRect: jest.fn(),
-}
 
 // Mirrors the private INVINCIBILITY_DURATION (1500ms) in GameLoop. The existing
 // bullet-hit tests already assume this window; body-contact i-frames reuse it.
@@ -798,40 +793,6 @@ describe('GameLoop', () => {
     })
   })
 
-  describe('render', () => {
-    it('render calls renderer.clear() once', () => {
-      new GameLoop(mockLevel).render(mockRenderer)
-      expect(mockRenderer.clear).toHaveBeenCalledTimes(1)
-    })
-
-    it('render draws the player rect', () => {
-      new GameLoop(mockLevel).render(mockRenderer)
-      expect(mockRenderer.drawRect).toHaveBeenCalledWith(
-        expect.any(Number),
-        expect.any(Number),
-        ENTITY_SIZE,
-        ENTITY_SIZE,
-        expect.any(String),
-      )
-    })
-
-    it('render draws one rect per alive enemy', () => {
-      const loop = new GameLoop(mockLevel) // 3 alive enemies
-      loop.render(mockRenderer)
-      // player (1) + 3 enemies = at least 4 drawRect calls
-      expect((mockRenderer.drawRect as jest.Mock).mock.calls.length).toBeGreaterThanOrEqual(4)
-    })
-
-    it('render does not draw dead enemies', () => {
-      const loop = new GameLoop(oneHitLevel())
-      fireAndTick(loop, 1) // kill the enemy
-      jest.clearAllMocks()
-      loop.render(mockRenderer)
-      // Only player drawn (enemy dead, bullet inactive, status=won)
-      expect((mockRenderer.drawRect as jest.Mock).mock.calls.length).toBe(1)
-    })
-  })
-
   describe('auto-fire', () => {
     it('setFiring(true) fires a bullet on first update', () => {
       const loop = new GameLoop(mockLevel)
@@ -977,29 +938,6 @@ describe('GameLoop', () => {
       // Wait out invincibility + travel time for next bullet (~200 more frames)
       for (let i = 0; i < 200; i++) loop.update(16)
       expect(loop.getState().player.hp).toBeLessThan(500 - BULLET_DAMAGE)
-    })
-  })
-
-  describe('render showPlayer', () => {
-    it('does not draw player when showPlayer is false', () => {
-      const loop = new GameLoop({ ...mockLevel, params: { ...BASE_PARAMS, numberOfEnemies: 0 } })
-      jest.clearAllMocks()
-      loop.render(mockRenderer, false)
-      expect(mockRenderer.drawRect).not.toHaveBeenCalled()
-    })
-
-    it('draws player when showPlayer defaults to true', () => {
-      const loop = new GameLoop({ ...mockLevel, params: { ...BASE_PARAMS, numberOfEnemies: 0 } })
-      jest.clearAllMocks()
-      loop.render(mockRenderer)
-      expect(mockRenderer.drawRect).toHaveBeenCalledTimes(1)
-    })
-
-    it('draws player when showPlayer is explicitly true', () => {
-      const loop = new GameLoop({ ...mockLevel, params: { ...BASE_PARAMS, numberOfEnemies: 0 } })
-      jest.clearAllMocks()
-      loop.render(mockRenderer, true)
-      expect(mockRenderer.drawRect).toHaveBeenCalledTimes(1)
     })
   })
 
