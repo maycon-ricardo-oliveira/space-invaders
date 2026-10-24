@@ -1,4 +1,4 @@
-import type { EntityPlacement, IRenderer, LevelDefinition, Wave } from '@si/level-engine'
+import type { EntityPlacement, LevelDefinition, Wave } from '@si/level-engine'
 import type { Bullet, DamagePickup, Enemy, FuelPickup, GameState } from './types'
 import { buildEnemy } from './buildEnemy'
 import { resolveStatus } from './resolveStatus'
@@ -11,6 +11,7 @@ import { resolveCollisions } from './systems/collisions'
 import { tickInvincibility } from './systems/invincibility'
 import { AutoFireSystem } from './systems/autoFire'
 import { DEFAULT_ENEMY_BULLET_DAMAGE, DEFAULT_ENEMY_CONTACT_DAMAGE } from './damage'
+import { shipStatsFrom } from './shipStats'
 
 type GameEvent = 'wave:cleared' | 'wave:started'
 
@@ -19,14 +20,10 @@ export const CANVAS_HEIGHT = 844
 export const ENTITY_SIZE = 32
 export const TOTAL_STORY_LEVELS = 20
 
-const PLAYER_SPEED = 300           // px/s
-const BULLET_SPEED = 500           // px/s
-const BULLET_WIDTH = 4
-const BULLET_HEIGHT = 8
+export const BULLET_WIDTH = 4
+export const BULLET_HEIGHT = 8
 const ENEMY_SPEED_SCALE = 40       // px/s per unit of LevelParams.enemySpeed
 const ENEMY_SHOT_SPEED_SCALE = 50  // px/s per unit of LevelParams.enemyShotSpeed
-const AUTO_FIRE_INTERVAL = 400     // ms between auto-fire shots
-const INVINCIBILITY_DURATION = 1500 // ms of player invincibility after a hit
 const PLAYER_INITIAL_HP = 500
 const PLAYER_INITIAL_FUEL = 100
 const ASTEROID_FUEL_DROP_CHANCE = 0.3
@@ -36,7 +33,7 @@ export class GameLoop {
   private state: GameState
   private movementTime = 0 // seconds accumulated, drives the micro-movement sines
   private readonly shooting: ShootingSystem
-  private readonly autoFire = new AutoFireSystem(AUTO_FIRE_INTERVAL)
+  private readonly autoFire: AutoFireSystem
   private readonly params: LevelDefinition['params']
   /** Damage of one enemy bullet this level — LevelParams, else the planet 1 default. */
   private readonly enemyBulletDamage: number
@@ -55,7 +52,10 @@ export class GameLoop {
     this.levelIndex = level.levelIndex ?? 0
     this.waves = level.waves ?? []
     this.shooting = new ShootingSystem(level.params.enemyShotDelay)
+    const ship = shipStatsFrom(level.params)
+    this.autoFire = new AutoFireSystem(ship.autoFireIntervalMs)
     this.state = {
+      ship,
       player: {
         x: CANVAS_WIDTH / 2 - ENTITY_SIZE / 2,
         y: CANVAS_HEIGHT - ENTITY_SIZE - 20,
@@ -167,6 +167,7 @@ export class GameLoop {
   getState(): GameState {
     return {
       player: { ...this.state.player },
+      ship: { ...this.state.ship },
       enemies: this.state.enemies.map(e => ({ ...e })),
       playerBullets: this.state.playerBullets.map(b => ({ ...b })),
       enemyBullets: this.state.enemyBullets.map(b => ({ ...b })),
@@ -188,7 +189,7 @@ export class GameLoop {
     if (this.state.status !== 'playing') return
     const magnitude = Math.hypot(dirX, dirY)
     if (magnitude === 0) return
-    const distance = (PLAYER_SPEED * deltaMs) / 1000
+    const distance = (this.state.ship.moveSpeed * deltaMs) / 1000
     const nx = dirX / magnitude
     const ny = dirY / magnitude
     this.state.player.x = Math.max(
@@ -239,7 +240,7 @@ export class GameLoop {
     stepBullets({
       state: this.state,
       dt,
-      playerBulletSpeed: BULLET_SPEED,
+      playerBulletSpeed: this.state.ship.bulletSpeed,
       playerBulletHeight: BULLET_HEIGHT,
       enemyBulletSpeed: this.params.enemyShotSpeed * ENEMY_SHOT_SPEED_SCALE,
       canvasHeight: CANVAS_HEIGHT,
@@ -253,7 +254,7 @@ export class GameLoop {
       entitySize: ENTITY_SIZE,
       bulletWidth: BULLET_WIDTH,
       bulletHeight: BULLET_HEIGHT,
-      invincibilityDuration: INVINCIBILITY_DURATION,
+      invincibilityDuration: this.state.ship.invincibilityMs,
       levelIndex: this.levelIndex,
       asteroidFuelDropMinLevel: ASTEROID_FUEL_DROP_MIN_LEVEL,
       asteroidFuelDropChance: ASTEROID_FUEL_DROP_CHANCE,
@@ -312,31 +313,6 @@ export class GameLoop {
     }
     if (decision.kind === 'status') {
       this.state.status = decision.status
-    }
-  }
-
-  render(renderer: IRenderer, showPlayer = true): void {
-    renderer.clear()
-    if (showPlayer) {
-      renderer.drawRect(
-        this.state.player.x,
-        this.state.player.y,
-        ENTITY_SIZE,
-        ENTITY_SIZE,
-        '#00ff00',
-      )
-    }
-    for (const enemy of this.state.enemies) {
-      if (!enemy.alive) continue
-      renderer.drawRect(enemy.x, enemy.y, ENTITY_SIZE, ENTITY_SIZE, '#ff0000')
-    }
-    for (const b of this.state.playerBullets) {
-      if (!b.active) continue
-      renderer.drawRect(b.x, b.y, BULLET_WIDTH, BULLET_HEIGHT, '#ffffff')
-    }
-    for (const b of this.state.enemyBullets) {
-      if (!b.active) continue
-      renderer.drawRect(b.x, b.y, BULLET_WIDTH, BULLET_HEIGHT, '#ff4444')
     }
   }
 }

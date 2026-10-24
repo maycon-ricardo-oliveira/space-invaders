@@ -1,11 +1,7 @@
 import type { IRenderer } from '@si/level-engine'
-import { ENTITY_SIZE } from '../game/GameLoop'
+import { BULLET_HEIGHT, BULLET_WIDTH, ENTITY_SIZE } from '../game/GameLoop'
 import type { GameState } from '../game/types'
 import { SPRITES, enemySpriteKey, fitSprite } from './sprites'
-
-// Bullet size mirrors the GameLoop's private BULLET_WIDTH/BULLET_HEIGHT.
-const BULLET_WIDTH = 4
-const BULLET_HEIGHT = 8
 
 const ENEMY_FALLBACK_COLOR = '#ff0000'
 const PLAYER_BULLET_COLOR = '#ffffff'
