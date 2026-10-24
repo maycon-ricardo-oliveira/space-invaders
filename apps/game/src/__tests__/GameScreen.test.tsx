@@ -1,12 +1,17 @@
+// Shared across the Skia mock so tests can inspect what the frame drew.
+const mockSkImage = { width: () => 96, height: () => 120 }
+const mockSkCanvas = { clear: jest.fn(), drawRect: jest.fn(), drawImageRect: jest.fn() }
+
 jest.mock('@shopify/react-native-skia', () => ({
   Canvas: 'Canvas',
   Picture: 'Picture',
+  useImage: jest.fn(() => mockSkImage),
   Skia: {
     Color: jest.fn(c => c),
     Paint: jest.fn(() => ({ setColor: jest.fn() })),
-    XYWHRect: jest.fn(() => ({})),
+    XYWHRect: jest.fn((x: number, y: number, w: number, h: number) => ({ x, y, w, h })),
     PictureRecorder: jest.fn(() => ({
-      beginRecording: jest.fn(() => ({ clear: jest.fn(), drawRect: jest.fn() })),
+      beginRecording: jest.fn(() => mockSkCanvas),
       finishRecordingAsPicture: jest.fn(() => ({})),
     })),
   },
@@ -14,6 +19,8 @@ jest.mock('@shopify/react-native-skia', () => ({
 
 // Mutable status used by the GameLoop mock — override per test as needed.
 let mockGameStatus = 'playing'
+// Mutable pickup list used by the GameLoop mock — override per test as needed.
+let mockFuelPickups: { x: number; y: number; active: boolean }[] = []
 
 jest.mock('../game/GameLoop', () => ({
   GameLoop: jest.fn().mockImplementation(() => ({
@@ -34,7 +41,8 @@ jest.mock('../game/GameLoop', () => ({
       enemies: [],
       playerBullets: [],
       enemyBullets: [],
-      fuelPickups: [],
+      fuelPickups: mockFuelPickups,
+      damagePickups: [],
       score: 0,
       currentWave: 1,
       totalWaves: 1,
@@ -42,6 +50,7 @@ jest.mock('../game/GameLoop', () => ({
   })),
   CANVAS_WIDTH: 390,
   CANVAS_HEIGHT: 844,
+  ENTITY_SIZE: 32,
   TOTAL_STORY_LEVELS: 20,
 }))
 
@@ -254,5 +263,58 @@ describe('GameScreen — authored level path', () => {
       />,
     )
     expect(getByText('500')).toBeTruthy()
+  })
+})
+
+describe('GameScreen — sprite frame', () => {
+  beforeEach(() => {
+    mockGameStatus = 'playing'
+    mockSkCanvas.clear.mockClear()
+    mockSkCanvas.drawRect.mockClear()
+    mockSkCanvas.drawImageRect.mockClear()
+    // Fire a single tick synchronously so exactly one frame is recorded (the
+    // loop stays 'playing', so letting it re-schedule would recurse forever).
+    let ticked = false
+    jest.spyOn(global, 'requestAnimationFrame').mockImplementation((cb: FrameRequestCallback) => {
+      if (!ticked) {
+        ticked = true
+        cb(0)
+      }
+      return 0
+    })
+  })
+
+  afterEach(() => {
+    mockFuelPickups = []
+  })
+
+  it('draws the player with the loaded image instead of a rectangle', () => {
+    render(
+      <GameScreen selection={{ kind: 'procedural', levelIndex: 0 }} totalLevels={20} onBack={jest.fn()} />,
+    )
+    expect(mockSkCanvas.drawImageRect).toHaveBeenCalled()
+    expect(mockSkCanvas.drawImageRect.mock.calls[0][0]).toBe(mockSkImage)
+  })
+
+  it('draws fuel pickups that the game loop reports as active', () => {
+    mockFuelPickups = [{ x: 40, y: 50, active: true }]
+    render(
+      <GameScreen selection={{ kind: 'procedural', levelIndex: 0 }} totalLevels={20} onBack={jest.fn()} />,
+    )
+    const drewPickup = mockSkCanvas.drawRect.mock.calls.some(
+      ([rect]) => rect.x === 40 && rect.y === 50,
+    )
+    expect(drewPickup).toBe(true)
+  })
+
+  it('does not draw a collected fuel pickup', () => {
+    mockFuelPickups = [{ x: 40, y: 50, active: false }]
+    render(
+      <GameScreen selection={{ kind: 'procedural', levelIndex: 0 }} totalLevels={20} onBack={jest.fn()} />,
+    )
+    const drewPickup = mockSkCanvas.drawRect.mock.calls.some(
+      ([rect]) => rect.x === 40 && rect.y === 50,
+    )
+    expect(drewPickup).toBe(false)
   })
 })

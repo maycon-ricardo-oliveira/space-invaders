@@ -298,6 +298,47 @@ just one more axis in the table).
 
 ---
 
+## Trilha B — Art in the game (runs parallel to the card sprints)
+
+**Goal:** Stop rendering white rectangles — load the real sprites that already exist.
+**Deliverable:** Player, the 3 enemies and both pickups drawn as art on the phone.
+
+> Runs in parallel with the Sprint 8 deliveries: it only touches the render path
+> (`renderers/`, `render/`, `GameScreen`), never the game systems.
+
+| # | Feature | Code | Status | PR | Deliverable |
+|---|---------|------|--------|-----|-------------|
+| 1 | Sprite loading + visible pickups | ART-1 | ✅ Done (PR #23) | #23 | `drawSprite` draws images with rect fallback; fuel/HP pickups finally rendered |
+| 2 | Frame animation | ART-2 | ⏳ Todo | — | f0/f1 enemy frames, player thrust/hurt/death |
+| 3 | Bullet + explosion art | ART-3 | ⏳ Todo | — | `bullet-plasma-*`, `fx-explosion-*` |
+| 4 | Audio | SFX-1 | ⏳ Todo | — | `expo-av`, planet theme + shot/hit/level-up SFX |
+
+### Todo List
+
+- [x] ART-1: `SkiaRenderer.drawSprite` renders a real image, falling back to the rect (PR #23)
+- [x] ART-1: sprite atlas preloaded via `useImage` before the loop starts (PR #23)
+- [x] ART-1: aspect-fit so wide sprites are not stretched into the square box (PR #23)
+- [x] ART-1: fuel and damage pickups are drawn — they had collision but no render (PR #23)
+- [ ] ART-1: **not verified on a device** — scale, alpha and the first-frame fallback flash
+      still need `npx expo start` and a human looking at the screen
+- [ ] ART-1: pickups are flat colour blocks — no pickup art exists among the 204 PNGs
+- [ ] ART-1: `GameLoop.render()` became dead code once `GameScreen` moved to `renderScene()`;
+      delete it with its tests after PR #22 and PR #23 both land
+- [ ] ART-1: `BULLET_WIDTH`/`BULLET_HEIGHT` duplicated in `renderScene.ts` — dedupe on merge
+- [ ] ART-1: `CanvasRenderer` (calibrator) still stubs `drawSprite`, so the browser does not
+      show what the phone shows. `IRenderer` is unchanged, so they stay interchangeable
+
+### Background and parallax — on hold
+
+Maycon rejected the current parallax art (2026-10-23). The existing layers are scattered
+convex blobs over a flat field: no ground surface, no value structure separating the layers,
+no single light direction — a limit of the procedural canvas scripts, not a tuning problem.
+**Nothing background-related ships until the art direction is re-decided** (pixel art 96px
+vs illustrated, per the Archero reference) and a parallax spec exists: layer count, scroll
+speed, contents, tile height, value range per layer, light direction.
+
+---
+
 ## Sprint 9 — Parallax & Terrain
 
 **Goal:** Multi-layer parallax scrolling and terrain-scrolling system.
