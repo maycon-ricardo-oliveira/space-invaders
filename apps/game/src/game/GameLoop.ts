@@ -12,6 +12,8 @@ import { tickInvincibility } from './systems/invincibility'
 import { AutoFireSystem } from './systems/autoFire'
 import { DEFAULT_ENEMY_BULLET_DAMAGE, DEFAULT_ENEMY_CONTACT_DAMAGE } from './damage'
 import { shipStatsFrom } from './shipStats'
+import { drawCards } from '../cards/draw'
+import { BASELINE_FROM_SHIP, applyCards, type RunBaseline } from '../cards/apply'
 
 type GameEvent = 'wave:cleared' | 'wave:started'
 
@@ -25,6 +27,7 @@ export const BULLET_HEIGHT = 8
 const ENEMY_SPEED_SCALE = 40       // px/s per unit of LevelParams.enemySpeed
 const ENEMY_SHOT_SPEED_SCALE = 50  // px/s per unit of LevelParams.enemyShotSpeed
 const PLAYER_INITIAL_HP = 500
+const PLAYER_INITIAL_BULLET_DAMAGE = 20
 const PLAYER_INITIAL_FUEL = 100
 const ASTEROID_FUEL_DROP_CHANCE = 0.3
 const ASTEROID_FUEL_DROP_MIN_LEVEL = 5
@@ -34,6 +37,10 @@ export class GameLoop {
   private movementTime = 0 // seconds accumulated, drives the micro-movement sines
   private readonly shooting: ShootingSystem
   private readonly autoFire: AutoFireSystem
+  /** The run's un-carded numbers; every card is a percentage of these. */
+  private readonly baseline: RunBaseline
+  /** Injected so a run can be replayed exactly. Defaults to Math.random. */
+  private readonly rng: () => number
   private readonly params: LevelDefinition['params']
   /** Damage of one enemy bullet this level — LevelParams, else the planet 1 default. */
   private readonly enemyBulletDamage: number
@@ -45,7 +52,7 @@ export class GameLoop {
   private waitingForWaveAdvance = false
   private readonly listeners: Map<GameEvent, Array<() => void>> = new Map()
 
-  constructor(level: LevelDefinition) {
+  constructor(level: LevelDefinition, rng: () => number = Math.random) {
     this.params = level.params
     this.enemyBulletDamage = level.params.enemyBulletDamage ?? DEFAULT_ENEMY_BULLET_DAMAGE
     this.enemyContactDamage = level.params.enemyContactDamage ?? DEFAULT_ENEMY_CONTACT_DAMAGE
@@ -54,6 +61,8 @@ export class GameLoop {
     this.shooting = new ShootingSystem(level.params.enemyShotDelay)
     const ship = shipStatsFrom(level.params)
     this.autoFire = new AutoFireSystem(ship.autoFireIntervalMs)
+    this.rng = rng
+    this.baseline = BASELINE_FROM_SHIP(ship, PLAYER_INITIAL_BULLET_DAMAGE)
     this.state = {
       ship,
       player: {
@@ -66,8 +75,10 @@ export class GameLoop {
         xp: 0,
         xpToNext: 10,
         playerLevel: 1,
-        bulletDamage: 20,
+        bulletDamage: PLAYER_INITIAL_BULLET_DAMAGE,
       },
+      activeCards: [],
+      cardOffer: [],
       enemies: this.buildEnemies(level),
       playerBullets: [],
       enemyBullets: [],
@@ -168,6 +179,8 @@ export class GameLoop {
     return {
       player: { ...this.state.player },
       ship: { ...this.state.ship },
+      activeCards: this.state.activeCards.map(c => ({ ...c })),
+      cardOffer: this.state.cardOffer.map(c => ({ ...c })),
       enemies: this.state.enemies.map(e => ({ ...e })),
       playerBullets: this.state.playerBullets.map(b => ({ ...b })),
       enemyBullets: this.state.enemyBullets.map(b => ({ ...b })),
@@ -262,11 +275,49 @@ export class GameLoop {
 
     stepPickups({ state: this.state, entitySize: ENTITY_SIZE, maxFuel: PLAYER_INITIAL_FUEL })
     tickInvincibility(this.state, deltaMs, hitThisTick)
+    this.offerCardsIfLevelledUp()
     this.autoFire.tick(deltaMs, () => this.fire())
     this.applyStatus(fuelEmptied)
   }
 
+  /**
+   * A level-up parked the run on 'card_selection'; fill the screen once.
+   * Planet is pinned to 1 until Sprint 10 gives levels a planet index.
+   */
+  private offerCardsIfLevelledUp(): void {
+    if (this.state.status !== 'card_selection') return
+    if (this.state.cardOffer.length > 0) return
+    this.state.cardOffer = drawCards({
+      playerLevel: this.state.player.playerLevel,
+      planet: 1,
+      activeCards: this.state.activeCards,
+      rng: this.rng,
+    })
+  }
+
+  /** Recomputes the run's numbers from the baseline and the cards held. */
+  private applyBuild(): void {
+    const { bulletDamage, autoFireIntervalMs } = applyCards(this.baseline, this.state.activeCards)
+    this.state.player.bulletDamage = bulletDamage
+    this.state.ship.autoFireIntervalMs = autoFireIntervalMs
+    this.autoFire.setInterval(autoFireIntervalMs)
+  }
+
+  /** Takes one card off the current screen. An id not on screen is ignored. */
+  selectCard(cardId: string): void {
+    const chosen = this.state.cardOffer.find(c => c.id === cardId)
+    if (!chosen) return
+    this.state.activeCards.push({
+      id: chosen.id, axis: chosen.axis, rarity: chosen.rarity, value: chosen.value,
+    })
+    this.applyBuild()
+    this.state.cardOffer = []
+    this.resumeFromCardSelection()
+  }
+
+  /** Resumes without taking anything — the offer is discarded. */
   resumeFromCardSelection(): void {
+    this.state.cardOffer = []
     if (this.state.status === 'card_selection') {
       this.state.status = 'playing'
     }
