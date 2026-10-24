@@ -50,7 +50,7 @@ A PR is only valid if it ships something that can be tested end-to-end. Examples
 | 6A | Enemies (asteroid, fast, strong) | Game | ✅ Done (PR #13, #14) |
 | 6B | Wave System (GL-2) | Game | ✅ Done (PR #19) |
 | 7 | Dashboard Wave Editor | Calibrator | ✅ Done (PR #16) |
-| 8 | Card System (rarity layer — 40 cards) | Game | 🚧 In Progress (2 de 8: DMG-1, STATS-1) |
+| 8 | Card System (rarity layer — 40 cards) | Game | 🚧 In Progress (3 de 8 · 8 das 40 cartas) |
 | 8B | Card Deck Wave 2 (shot mechanics — 17 cards) | Game | ⏳ Todo |
 | 9 | Parallax & Terrain | Game | ⏳ Todo |
 | 10 | Planet Structure | Game | ⏳ Todo |
@@ -198,7 +198,7 @@ One delivery = one closed spec = **one PR** (granularity lives in the commits).
 | 0 | Pre-sprint hygiene | S8-PRE | ⏳ Todo | — | CI green on PRs + test hygiene + ROADMAP commit | Not felt in game — infra gate before the card work starts |
 | 1 | Real damage numbers | DMG-1 | ✅ Done (PR #22) | #22 | `Bullet.damage` + `Enemy.contactDamage` from `LevelParams` | HP bar drops in visible chunks; dying takes ~30 hits instead of 500; tweak the number in `levels.json` and feel it |
 | 2 | Ship stats become data | STATS-1 | ✅ Done (PR #25) | #25 | `PLAYER_SPEED`, `BULLET_SPEED`, `INVINCIBILITY_DURATION`, `AUTO_FIRE_INTERVAL` out of constants into run state, seeded from `LevelParams` | Change a value in `levels.json`, reload: ship moves faster, fires faster, bullets travel faster |
-| 3 | First real card | CARD-1 + CARD-3 + CARD-4 | ⏳ Todo | — | Two-stage draw engine + card screen with rarity colour/border + axes Damage and Fire rate (8 cards) | Level-up pauses, 3 coloured cards with names appear, pick one, enemies start dying faster. Take Damage 3x and watch it stop being offered |
+| 3 | First real card | CARD-1 + CARD-3 + CARD-4 | ✅ Done (PR #26) | #26 | Two-stage draw engine + card screen with rarity colour/border + axes Damage and Fire rate (8 cards) | Level-up pauses, 3 coloured cards with names appear, pick one, enemies start dying faster. Take Damage 3x and watch it stop being offered |
 | 4 | The Life category stops being placebo | CARD-5 | ⏳ Todo | — | Axes Max HP, Heal, Invulnerability, Experience (12 cards) + level-5 life guarantee + **pickups rendered on screen** | Level 5 always offers a life card; Heal barely shows up at full HP and shows up twice as often under 35%; fuel/HP drops are finally visible on screen |
 | 5 | The ship changes handling | CARD-6 | ⏳ Todo | — | Axes Move speed, Bullet speed, Lifesteal (10 cards) | Ship visibly slides faster, bullets cross the screen quicker, killing enemies tops the HP bar back up |
 | 6 | Crits and armour | CARD-7 | ⏳ Todo | — | Axes Crit, Flat armour (7 cards) + yellow crit number feedback | Yellow numbers pop on crits; with armour, weak enemy bullets scratch instead of hurting |
@@ -230,21 +230,30 @@ One delivery = one closed spec = **one PR** (granularity lives in the commits).
       `playerInvincibilityMs`, `playerFireIntervalMs`); defaults keep every existing level
       playing identically (PR #25)
 - [ ] STATS-1: like DMG-1, the calibrator still has no editing surface for these four
-- [ ] CARD-3: rarity ladder (1 / 1.6 / 2.5 / 4 / 6.5) + effect x rarity matrix as data
-- [ ] CARD-3: two-stage draw — rarity first, then axis (so new cards never shift rarity odds)
-- [ ] CARD-3: rarity weights per bracket (levels 1-3 / 4-6 / 7+) and per-planet escalation
-- [ ] CARD-3: diminishing returns `weight x 0.55 ^ stacks`
-- [ ] CARD-3: axis at stack cap leaves eligibility (weight 0)
-- [ ] CARD-3: never two cards of the same axis in one screen of 3
-- [ ] CARD-3: fewer than 3 eligible axes → show what there is (CARD-1 edge case)
-- [ ] CARD-3: pure module, zero renderer dependency, TDD — reused as-is by Sprint 8B
-- [ ] CARD-1: replace the "Cards coming in Sprint 7" placeholder in `GameScreen.tsx:405`
-- [ ] CARD-1: 3 cards with axis icon, rarity colour and rarity border (1px / 2px / 2px+glow / 3px+glow / 3px+anim)
-- [ ] CARD-1: pick a card → effect applied to run state → game resumes (plumbing already exists: `resumeFromCardSelection`)
-- [ ] CARD-1: cards accumulate in `GameState.activeCards[]`, all lost on death
-- [ ] CARD-1: level 10 boss kill → no card screen
-- [ ] CARD-4: axis Damage (4 cards) — `bulletDamage`, additive over base, cap 5 stacks
-- [ ] CARD-4: axis Fire rate (4 cards) — rate-based, `interval = 400 / (1 + sum)`, cap +150%
+- [x] CARD-3: rarity ladder + effect × rarity matrix as data in `cards/catalogue.ts` (PR #26)
+- [x] CARD-3: two-stage draw — rarity first, then axis (PR #26)
+- [x] CARD-3: bracket weights + per-planet escalation (PR #26). ⚠️ planet is pinned to 1
+      in `GameLoop` until Sprint 10 gives a level its planet index
+- [x] CARD-3: diminishing returns `weight × 0.55 ^ stacks` (PR #26)
+- [x] CARD-3: axis at stack cap leaves eligibility (PR #26)
+- [x] CARD-3: never two cards of the same axis in one screen (PR #26)
+- [x] CARD-3: fewer than 3 eligible axes → show what there is (PR #26)
+- [x] CARD-3: a drawn rarity with no card in that axis steps DOWN to the best one the
+      axis has — needed by every axis that stops before Epic (PR #26)
+- [x] CARD-3: pure module, RNG injected, zero renderer dependency (PR #26)
+- [x] CARD-1: the Sprint 7 placeholder is gone (PR #26)
+- [x] CARD-1: cards carry rarity colour and rarity border width (PR #26)
+- [ ] CARD-1: axis icon, and the glow/animation tiers of the border, still missing
+- [x] CARD-1: pick → effect applied → game resumes (PR #26)
+- [x] CARD-1: **bug found by the new test** — the overlay carried `pointerEvents="box-only"`,
+      which makes the View the only touch target and would have left every button on the
+      card screen dead on the phone (PR #26)
+- [x] CARD-1: cards accumulate in `GameState.activeCards[]`, lost on death with the run (PR #26)
+- [ ] CARD-1: level 10 boss kill → no card screen — **not implementable until Sprint 11**
+      adds bosses. A level-up on the tick that clears the level already shows the card
+      first and resolves the win right after, which is the wanted order
+- [x] CARD-4: axis Damage (4 cards) — additive over base, cap 5 stacks (PR #26)
+- [x] CARD-4: axis Fire rate (4 cards) — rate-based, cap +150% (PR #26)
 - [ ] CARD-5: axis Max HP (4 cards) — adds to `maxHp` **and** to `hp`
 - [ ] CARD-5: axis Heal (3 cards) — instant, no stack, never leaves eligibility
 - [ ] CARD-5: axis Invulnerability (3 cards) — cap +1200ms
