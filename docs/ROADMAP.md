@@ -50,7 +50,7 @@ A PR is only valid if it ships something that can be tested end-to-end. Examples
 | 6A | Enemies (asteroid, fast, strong) | Game | ✅ Done (PR #13, #14) |
 | 6B | Wave System (GL-2) | Game | ✅ Done (PR #19) |
 | 7 | Dashboard Wave Editor | Calibrator | ✅ Done (PR #16) |
-| 8 | Card System (rarity layer — 40 cards) | Game | 🚧 In Progress (PR #22) |
+| 8 | Card System (rarity layer — 40 cards) | Game | 🚧 In Progress (DMG-1 done, STATS-1 in branch) |
 | 8B | Card Deck Wave 2 (shot mechanics — 17 cards) | Game | ⏳ Todo |
 | 9 | Parallax & Terrain | Game | ⏳ Todo |
 | 10 | Planet Structure | Game | ⏳ Todo |
@@ -197,7 +197,7 @@ One delivery = one closed spec = **one PR** (granularity lives in the commits).
 |---|----------|------|--------|-----|-------------|----------------------------------------|
 | 0 | Pre-sprint hygiene | S8-PRE | ⏳ Todo | — | CI green on PRs + test hygiene + ROADMAP commit | Not felt in game — infra gate before the card work starts |
 | 1 | Real damage numbers | DMG-1 | ✅ Done (PR #22) | #22 | `Bullet.damage` + `Enemy.contactDamage` from `LevelParams` | HP bar drops in visible chunks; dying takes ~30 hits instead of 500; tweak the number in `levels.json` and feel it |
-| 2 | Ship stats become data | STATS-1 | 🚧 In Progress (PR #25) | #25 | `PLAYER_SPEED`, `BULLET_SPEED`, `INVINCIBILITY_DURATION`, `AUTO_FIRE_INTERVAL` out of constants into run state, seeded from `LevelParams` | Change a value in `levels.json`, reload: ship moves faster, fires faster, bullets travel faster |
+| 2 | Ship stats become data | STATS-1 | 🚧 In Progress (branch local `feat/s8-e2-ship-stats`, sem PR) | — | `PLAYER_SPEED`, `BULLET_SPEED`, `INVINCIBILITY_DURATION`, `AUTO_FIRE_INTERVAL` out of constants into run state, seeded from `LevelParams` | Change a value in `levels.json`, reload: ship moves faster, fires faster, bullets travel faster |
 | 3 | First real card | CARD-1 + CARD-3 + CARD-4 | ⏳ Todo | — | Two-stage draw engine + card screen with rarity colour/border + axes Damage and Fire rate (8 cards) | Level-up pauses, 3 coloured cards with names appear, pick one, enemies start dying faster. Take Damage 3x and watch it stop being offered |
 | 4 | The Life category stops being placebo | CARD-5 | ⏳ Todo | — | Axes Max HP, Heal, Invulnerability, Experience (12 cards) + level-5 life guarantee + **pickups rendered on screen** | Level 5 always offers a life card; Heal barely shows up at full HP and shows up twice as often under 35%; fuel/HP drops are finally visible on screen |
 | 5 | The ship changes handling | CARD-6 | ⏳ Todo | — | Axes Move speed, Bullet speed, Lifesteal (10 cards) | Ship visibly slides faster, bullets cross the screen quicker, killing enemies tops the HP bar back up |
