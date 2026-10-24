@@ -44,6 +44,14 @@ export interface LevelParams {
   enemyBulletDamage?: number
   /** Damage body contact with an enemy deals to the player. */
   enemyContactDamage?: number
+  /** Player movement speed in px/s. */
+  playerSpeed?: number
+  /** Player bullet travel speed in px/s. */
+  playerBulletSpeed?: number
+  /** How long the player stays invincible after a hit, in ms. */
+  playerInvincibilityMs?: number
+  /** Auto-fire cadence in ms between shots. */
+  playerFireIntervalMs?: number
 }
 
 export interface Wave {
