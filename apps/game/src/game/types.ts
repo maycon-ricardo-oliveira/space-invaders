@@ -66,8 +66,20 @@ export interface PlayerState {
   bulletDamage: number
 }
 
+/**
+ * Mutable ship handling for one run. Seeded from `LevelParams`, then changed by
+ * cards mid-run. NOT `PlayerStats` — that name is taken in `@si/level-engine`.
+ */
+export interface ShipStats {
+  moveSpeed: number
+  bulletSpeed: number
+  invincibilityMs: number
+  autoFireIntervalMs: number
+}
+
 export interface GameState {
   player: PlayerState
+  ship: ShipStats
   enemies: Enemy[]
   playerBullets: Bullet[]
   enemyBullets: Bullet[]
