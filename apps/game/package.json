@@ -8,20 +8,20 @@
     "ios": "expo start --ios"
   },
   "dependencies": {
-    "@shopify/react-native-skia": "2.2.12",
+    "@shopify/react-native-skia": "2.6.2",
     "@si/analytics-plugin": "*",
     "@si/level-engine": "*",
     "@si/monetization-plugin": "*",
-    "expo": "~54.0.33",
-    "expo-status-bar": "~3.0.9",
-    "react": "19.1.0",
-    "react-native": "0.81.5"
+    "expo": "~57.0.31",
+    "expo-status-bar": "~57.0.1",
+    "react": "19.2.3",
+    "react-native": "0.86.3"
   },
   "devDependencies": {
-    "@testing-library/react-native": "^12.7.2",
-    "@types/react": "~19.1.0",
-    "jest-expo": "~54.0.0",
-    "typescript": "~5.9.2"
+    "@testing-library/react-native": "^14.1.0",
+    "@types/react": "~19.2.4",
+    "jest-expo": "~57.0.6",
+    "typescript": "~6.0.3"
   },
   "private": true
 }
