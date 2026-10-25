@@ -32,7 +32,7 @@ jest.mock('../game/GameLoop', () => ({
     on: jest.fn(),
     off: jest.fn(),
     advanceWave: jest.fn(),
-    getNextWaveDelay: jest.fn(() => 0),
+    getNextWaveDelayMs: jest.fn(() => 0),
     getState: jest.fn().mockImplementation(() => ({
       status: 'card_selection',
       player: { x: 0, y: 0, hp: 500, maxHp: 500, fuel: 100, invincibilityTimer: 0, xp: 0, xpToNext: 10, playerLevel: 3, bulletDamage: 20 },
@@ -74,13 +74,13 @@ const OFFER = [
   { id: 'fireRate-rare', axis: 'fireRate', rarity: 'rare', value: 0.38, name: 'Canhão Rotativo', description: '+38% de cadência' },
 ]
 
-function renderScreen() {
-  const api = render(
+async function renderScreen() {
+  const api = await render(
     <GameScreen selection={{ kind: 'procedural', levelIndex: 0 }} totalLevels={20} onBack={jest.fn()} />,
   )
   // The screen's frame loop runs on requestAnimationFrame; one frame has to land
   // before the loop publishes 'card_selection' and the drawn offer.
-  act(() => { jest.advanceTimersByTime(32) })
+  await act(async () => { jest.advanceTimersByTime(32) })
   return api
 }
 
@@ -94,25 +94,25 @@ describe('CARD-1 — the card screen', () => {
 
   afterEach(() => { jest.useRealTimers() })
 
-  it('shows one card per offered option, by name', () => {
-    const { getByText } = renderScreen()
+  it('shows one card per offered option, by name', async () => {
+    const { getByText } = await renderScreen()
     expect(getByText('Munição Pesada')).toBeTruthy()
     expect(getByText('Canhão Rotativo')).toBeTruthy()
   })
 
-  it('shows what each card actually does', () => {
-    const { getByText } = renderScreen()
+  it('shows what each card actually does', async () => {
+    const { getByText } = await renderScreen()
     expect(getByText('+20% de dano')).toBeTruthy()
     expect(getByText('+38% de cadência')).toBeTruthy()
   })
 
-  it('no longer shows the Sprint 7 placeholder', () => {
-    const { queryByText } = renderScreen()
+  it('no longer shows the Sprint 7 placeholder', async () => {
+    const { queryByText } = await renderScreen()
     expect(queryByText('Cards coming in Sprint 7')).toBeNull()
   })
 
-  it('colours each card name by its rarity', () => {
-    const { getByText } = renderScreen()
+  it('colours each card name by its rarity', async () => {
+    const { getByText } = await renderScreen()
     expect(getByText('Munição Pesada').props.style).toEqual(
       expect.arrayContaining([expect.objectContaining({ color: RARITY_COLOR.common })]),
     )
@@ -121,8 +121,8 @@ describe('CARD-1 — the card screen', () => {
     )
   })
 
-  it('gives a rarer card a thicker border, so colour is never the only signal', () => {
-    const { getByTestId } = renderScreen()
+  it('gives a rarer card a thicker border, so colour is never the only signal', async () => {
+    const { getByTestId } = await renderScreen()
     const common = getByTestId('card-damage-common').props.style
     const rare = getByTestId('card-fireRate-rare').props.style
     const widthOf = (style: unknown) =>
@@ -133,24 +133,24 @@ describe('CARD-1 — the card screen', () => {
     expect(widthOf(rare)).toBeGreaterThan(widthOf(common))
   })
 
-  it('hands the chosen card to the loop', () => {
-    const { getByTestId } = renderScreen()
-    act(() => { fireEvent.press(getByTestId('card-fireRate-rare')) })
+  it('hands the chosen card to the loop', async () => {
+    const { getByTestId } = await renderScreen()
+    await act(async () => { await fireEvent.press(getByTestId('card-fireRate-rare')) })
     expect(mockSelectCard).toHaveBeenCalledWith('fireRate-rare')
   })
 
-  it('lets the player walk away without picking', () => {
-    const { getByTestId } = renderScreen()
-    act(() => { fireEvent.press(getByTestId('card-skip')) })
+  it('lets the player walk away without picking', async () => {
+    const { getByTestId } = await renderScreen()
+    await act(async () => { await fireEvent.press(getByTestId('card-skip')) })
     expect(mockResume).toHaveBeenCalled()
     expect(mockSelectCard).not.toHaveBeenCalled()
   })
 
-  it('falls back to a plain continue when the draw came back empty', () => {
+  it('falls back to a plain continue when the draw came back empty', async () => {
     mockCardOffer = []
-    const { getByTestId, queryByTestId } = renderScreen()
+    const { getByTestId, queryByTestId } = await renderScreen()
     expect(queryByTestId('card-damage-common')).toBeNull()
-    act(() => { fireEvent.press(getByTestId('card-skip')) })
+    await act(async () => { await fireEvent.press(getByTestId('card-skip')) })
     expect(mockResume).toHaveBeenCalled()
   })
 })

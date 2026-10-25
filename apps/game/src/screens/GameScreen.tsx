@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Animated, Easing, Platform, PanResponder, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
 import { Canvas, Picture, Skia } from '@shopify/react-native-skia'
 import type { SkPicture } from '@shopify/react-native-skia'
@@ -72,7 +72,13 @@ function buildLoop(selection: LevelSelection, totalLevels: number): GameLoop {
 }
 
 export function GameScreen({ selection, totalLevels, onBack }: Props) {
-  const [loop] = useState(() => buildLoop(selection, totalLevels))
+  // Bumping runKey rebuilds the loop, which is what "play again" means: a new
+  // run, with hp, score and the whole card build starting from zero.
+  const [runKey, setRunKey] = useState(0)
+  const loop = useMemo(
+    () => buildLoop(selection, totalLevels),
+    [selection, totalLevels, runKey],
+  )
   const [renderer] = useState(() => new SkiaRenderer(CANVAS_WIDTH, CANVAS_HEIGHT))
   const spriteImages = useSpriteImages()
   const [status, setStatus] = useState<GameStatus>('playing')
@@ -236,11 +242,11 @@ export function GameScreen({ selection, totalLevels, onBack }: Props) {
 
   // Wave transition: turbo "boost" animation between waves. The GameLoop suspends
   // its own update() after wave:cleared (waitingForWaveAdvance), so the field stays
-  // frozen while the ship boosts forward. We drive the overlay for getNextWaveDelay()
+  // frozen while the ship boosts forward. We drive the overlay for getNextWaveDelayMs()
   // ms, then advanceWave() spawns the next wave and the loop resumes.
   useEffect(() => {
     const handleWaveCleared = () => {
-      const delayMs = Math.max(600, loop.getNextWaveDelay())
+      const delayMs = Math.max(600, loop.getNextWaveDelayMs())
       const nextWave = loop.getState().currentWave + 1
 
       isWaveTransitionRef.current = true
@@ -275,6 +281,22 @@ export function GameScreen({ selection, totalLevels, onBack }: Props) {
   const fuelPct = Math.max(0, Math.min(100, hud.fuel))
   const isGameOver = status === 'won' || status === 'lost' || status === 'fuelEmpty'
   const isCardSelection = status === 'card_selection'
+
+  /**
+   * Replays the same level from scratch. The loop is rebuilt through runKey; the
+   * screen state it left behind (status, offer, turbo banner) has to be cleared
+   * here, since none of it belongs to the new run.
+   */
+  const restartRun = () => {
+    statusRef.current = 'playing'
+    setStatus('playing')
+    setCardOffer([])
+    isWaveTransitionRef.current = false
+    setWaveTransition({ active: false, nextWave: 1 })
+    setJoystick(null)
+    joystickRef.current = null
+    setRunKey(k => k + 1)
+  }
 
   /** Closes the card screen: run the choice, then restart the frame loop. */
   const resumeWith = (choose: () => void) => {
@@ -424,7 +446,7 @@ export function GameScreen({ selection, totalLevels, onBack }: Props) {
 
       {/* Card selection overlay */}
       {isCardSelection && (
-        <View style={styles.cardOverlay}>
+        <View testID="card-overlay" style={styles.cardOverlay}>
           <Text style={styles.cardTitle}>{`Level ${hud.playerLevel}!`}</Text>
           <Text style={styles.cardSubtitle}>Escolha uma melhoria</Text>
 
@@ -464,16 +486,32 @@ export function GameScreen({ selection, totalLevels, onBack }: Props) {
 
       {/* Game over / win overlay */}
       {isGameOver && (
-        <View style={styles.overlay}>
+        <View testID="game-over-overlay" style={styles.overlay}>
           <Text style={styles.resultText}>{status === 'won' ? 'You Win!' : 'Game Over'}</Text>
-          <TouchableOpacity onPress={onBack} style={styles.button}>
-            <Text style={styles.buttonText}>Back to Levels</Text>
+          <TouchableOpacity onPress={restartRun} style={styles.button}>
+            <Text style={styles.buttonText}>Jogar de novo</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={onBack} style={styles.buttonGhost}>
+            <Text style={styles.buttonGhostText}>Back to Levels</Text>
           </TouchableOpacity>
         </View>
       )}
     </View>
   )
 }
+
+/**
+ * RN 0.86 removed `StyleSheet.absoluteFillObject`. Spreading the missing export
+ * was silent — the overlays came out with no position and no offsets, so they
+ * mounted invisibly and the player had no way out of a finished run.
+ */
+const ABSOLUTE_FILL = {
+  position: 'absolute',
+  top: 0,
+  left: 0,
+  right: 0,
+  bottom: 0,
+} as const
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#000', alignItems: 'center' },
@@ -490,7 +528,7 @@ const styles = StyleSheet.create({
   hudText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
   hudWaveText: { color: '#00e5ff', fontSize: 13, fontWeight: 'bold', marginTop: 4, textAlign: 'right' },
   turboOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...ABSOLUTE_FILL,
     backgroundColor: 'rgba(0,0,8,0.55)',
     alignItems: 'center',
     justifyContent: 'center',
@@ -575,7 +613,7 @@ const styles = StyleSheet.create({
   // pointerEvents="box-only", which makes the View the ONLY touch target and
   // silently kills every button inside it.
   cardOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...ABSOLUTE_FILL,
     backgroundColor: 'rgba(0,0,0,0.85)',
     alignItems: 'center',
     justifyContent: 'center',
@@ -596,8 +634,10 @@ const styles = StyleSheet.create({
   cardEffect: { color: '#cfd3e0', fontSize: 12, textAlign: 'center' },
   cardButton: { backgroundColor: '#3498db', paddingHorizontal: 32, paddingVertical: 12, borderRadius: 8 },
   cardButtonText: { color: '#fff', fontSize: 18, fontWeight: 'bold' },
+  buttonGhost: { marginTop: 12, paddingHorizontal: 32, paddingVertical: 10 },
+  buttonGhostText: { color: '#9AA5B1', fontSize: 15, fontWeight: '600' },
   overlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...ABSOLUTE_FILL,
     backgroundColor: 'rgba(0,0,0,0.7)',
     alignItems: 'center',
     justifyContent: 'center',

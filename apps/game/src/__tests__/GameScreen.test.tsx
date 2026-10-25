@@ -35,7 +35,7 @@ jest.mock('../game/GameLoop', () => ({
     on: jest.fn(),
     off: jest.fn(),
     advanceWave: jest.fn(),
-    getNextWaveDelay: jest.fn(() => 0),
+    getNextWaveDelayMs: jest.fn(() => 0),
     getState: jest.fn().mockImplementation(() => ({
       status: mockGameStatus,
       player: { x: 0, y: 0, hp: 500, maxHp: 500, fuel: 100, invincibilityTimer: 0, xp: 0, xpToNext: 10, playerLevel: 1, bulletDamage: 20 },
@@ -71,7 +71,7 @@ function lastLoopInstance() {
   return results[results.length - 1].value as {
     on: jest.Mock
     advanceWave: jest.Mock
-    getNextWaveDelay: jest.Mock
+    getNextWaveDelayMs: jest.Mock
   }
 }
 
@@ -93,10 +93,10 @@ describe('GameScreen — renders without crashing', () => {
     mockGameStatus = 'playing'
   })
 
-  it('renders without crashing (procedural)', () => {
-    expect(() =>
+  it('renders without crashing (procedural)', async () => {
+    await expect(
       render(<GameScreen selection={{ kind: 'procedural', levelIndex: 0 }} totalLevels={20} onBack={jest.fn()} />),
-    ).not.toThrow()
+    ).resolves.toBeDefined()
   })
 })
 
@@ -105,30 +105,30 @@ describe('GameScreen — HUD', () => {
     mockGameStatus = 'playing'
   })
 
-  it('renders hp value in HUD', () => {
-    const { getByText } = render(
+  it('renders hp value in HUD', async () => {
+    const { getByText } = await render(
       <GameScreen selection={{ kind: 'procedural', levelIndex: 0 }} totalLevels={20} onBack={jest.fn()} />,
     )
     expect(getByText('500')).toBeTruthy()
   })
 
-  it('renders fuel value in HUD', () => {
-    const { getByText } = render(
+  it('renders fuel value in HUD', async () => {
+    const { getByText } = await render(
       <GameScreen selection={{ kind: 'procedural', levelIndex: 0 }} totalLevels={20} onBack={jest.fn()} />,
     )
     expect(getByText('100')).toBeTruthy()
   })
 
-  it('renders score matching the game state', () => {
-    const { getAllByText } = render(
+  it('renders score matching the game state', async () => {
+    const { getAllByText } = await render(
       <GameScreen selection={{ kind: 'procedural', levelIndex: 0 }} totalLevels={20} onBack={jest.fn()} />,
     )
     // Score and XP both start at 0; verify at least one "0" is rendered
     expect(getAllByText('0').length).toBeGreaterThanOrEqual(1)
   })
 
-  it('does not render heart emoji HUD', () => {
-    const { queryByText } = render(
+  it('does not render heart emoji HUD', async () => {
+    const { queryByText } = await render(
       <GameScreen selection={{ kind: 'procedural', levelIndex: 0 }} totalLevels={20} onBack={jest.fn()} />,
     )
     expect(queryByText('❤️❤️❤️')).toBeNull()
@@ -149,43 +149,43 @@ describe('GameScreen — game-over overlay', () => {
     mockGameStatus = 'playing'
   })
 
-  it('shows "You Win!" overlay when game is won', () => {
+  it('shows "You Win!" overlay when game is won', async () => {
     mockGameStatus = 'won'
-    const { queryByText } = render(
+    const { queryByText } = await render(
       <GameScreen selection={{ kind: 'procedural', levelIndex: 0 }} totalLevels={20} onBack={jest.fn()} />,
     )
     expect(queryByText('You Win!')).toBeTruthy()
   })
 
-  it('shows "Game Over" overlay when game is lost', () => {
+  it('shows "Game Over" overlay when game is lost', async () => {
     mockGameStatus = 'lost'
-    const { queryByText } = render(
+    const { queryByText } = await render(
       <GameScreen selection={{ kind: 'procedural', levelIndex: 0 }} totalLevels={20} onBack={jest.fn()} />,
     )
     expect(queryByText('Game Over')).toBeTruthy()
   })
 
-  it('shows "Game Over" overlay when fuel is empty', () => {
+  it('shows "Game Over" overlay when fuel is empty', async () => {
     mockGameStatus = 'fuelEmpty'
-    const { queryByText } = render(
+    const { queryByText } = await render(
       <GameScreen selection={{ kind: 'procedural', levelIndex: 0 }} totalLevels={20} onBack={jest.fn()} />,
     )
     expect(queryByText('Game Over')).toBeTruthy()
   })
 
-  it('calls onBack when "Back to Levels" is pressed', () => {
+  it('calls onBack when "Back to Levels" is pressed', async () => {
     mockGameStatus = 'won'
     const onBack = jest.fn()
-    const { getByText } = render(
+    const { getByText } = await render(
       <GameScreen selection={{ kind: 'procedural', levelIndex: 0 }} totalLevels={20} onBack={onBack} />,
     )
-    fireEvent.press(getByText('Back to Levels'))
+    await fireEvent.press(getByText('Back to Levels'))
     expect(onBack).toHaveBeenCalledTimes(1)
   })
 
-  it('shows card selection overlay when status is card_selection', () => {
+  it('shows card selection overlay when status is card_selection', async () => {
     mockGameStatus = 'card_selection'
-    const { queryByText } = render(
+    const { queryByText } = await render(
       <GameScreen selection={{ kind: 'procedural', levelIndex: 0 }} totalLevels={20} onBack={jest.fn()} />,
     )
     expect(queryByText('Level 1!')).toBeTruthy()
@@ -201,37 +201,37 @@ describe('GameScreen — wave transition contract', () => {
     ;(GameLoop as unknown as jest.Mock).mockClear()
   })
 
-  it('subscribes to wave:cleared on mount and unsubscribes on unmount', () => {
-    const { unmount } = render(
+  it('subscribes to wave:cleared on mount and unsubscribes on unmount', async () => {
+    const { unmount } = await render(
       <GameScreen selection={{ kind: 'procedural', levelIndex: 0 }} totalLevels={20} onBack={jest.fn()} />,
     )
     const loop = lastLoopInstance() as unknown as { on: jest.Mock; off: jest.Mock }
     expect(loop.on).toHaveBeenCalledWith('wave:cleared', expect.any(Function))
     const [, handler] = loop.on.mock.calls.find(([evt]: [string]) => evt === 'wave:cleared')!
-    unmount()
+    await unmount()
     expect(loop.off).toHaveBeenCalledWith('wave:cleared', handler)
   })
 
-  it('drives the turbo transition then calls advanceWave() exactly once when a wave clears', () => {
+  it('drives the turbo transition then calls advanceWave() exactly once when a wave clears', async () => {
     jest.useFakeTimers()
     try {
-      render(
+      await render(
         <GameScreen selection={{ kind: 'procedural', levelIndex: 0 }} totalLevels={20} onBack={jest.fn()} />,
       )
       const loop = lastLoopInstance()
-      // getNextWaveDelay drives the transition duration; default mock returns 0
+      // getNextWaveDelayMs drives the transition duration; default mock returns 0
       // so GameScreen clamps to its 600ms floor.
       const [, handler] = loop.on.mock.calls.find(([evt]: [string]) => evt === 'wave:cleared')!
 
       // wave:cleared fired by the loop → GameScreen begins the boost, defers advance.
-      act(() => {
+      await act(async () => {
         handler()
       })
       expect(loop.advanceWave).not.toHaveBeenCalled()
 
       // After the transition window elapses, the Animated.timing completion
       // callback runs advanceWave() to spawn the next wave.
-      act(() => {
+      await act(async () => {
         jest.advanceTimersByTime(700)
       })
       expect(loop.advanceWave).toHaveBeenCalledTimes(1)
@@ -248,7 +248,7 @@ describe('GameScreen — authored level path', () => {
 
   it('renders without crashing when loading an authored level', async () => {
     await initLevelSource()
-    expect(() =>
+    await expect(
       render(
         <GameScreen
           selection={{ kind: 'authored', levelId: 'story-1-1' }}
@@ -256,12 +256,12 @@ describe('GameScreen — authored level path', () => {
           onBack={jest.fn()}
         />,
       ),
-    ).not.toThrow()
+    ).resolves.toBeDefined()
   })
 
   it('renders HUD when loading an authored level', async () => {
     await initLevelSource()
-    const { getByText } = render(
+    const { getByText } = await render(
       <GameScreen
         selection={{ kind: 'authored', levelId: 'story-1-1' }}
         totalLevels={20}
@@ -294,17 +294,17 @@ describe('GameScreen — sprite frame', () => {
     mockFuelPickups = []
   })
 
-  it('draws the player with the loaded image instead of a rectangle', () => {
-    render(
+  it('draws the player with the loaded image instead of a rectangle', async () => {
+    await render(
       <GameScreen selection={{ kind: 'procedural', levelIndex: 0 }} totalLevels={20} onBack={jest.fn()} />,
     )
     expect(mockSkCanvas.drawImageRect).toHaveBeenCalled()
     expect(mockSkCanvas.drawImageRect.mock.calls[0][0]).toBe(mockSkImage)
   })
 
-  it('draws fuel pickups that the game loop reports as active', () => {
+  it('draws fuel pickups that the game loop reports as active', async () => {
     mockFuelPickups = [{ x: 40, y: 50, active: true }]
-    render(
+    await render(
       <GameScreen selection={{ kind: 'procedural', levelIndex: 0 }} totalLevels={20} onBack={jest.fn()} />,
     )
     const drewPickup = mockSkCanvas.drawRect.mock.calls.some(
@@ -313,9 +313,9 @@ describe('GameScreen — sprite frame', () => {
     expect(drewPickup).toBe(true)
   })
 
-  it('does not draw a collected fuel pickup', () => {
+  it('does not draw a collected fuel pickup', async () => {
     mockFuelPickups = [{ x: 40, y: 50, active: false }]
-    render(
+    await render(
       <GameScreen selection={{ kind: 'procedural', levelIndex: 0 }} totalLevels={20} onBack={jest.fn()} />,
     )
     const drewPickup = mockSkCanvas.drawRect.mock.calls.some(

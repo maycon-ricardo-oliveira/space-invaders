@@ -312,6 +312,48 @@ just one more axis in the table).
 
 ---
 
+## Platform — Expo SDK 57
+
+**Goal:** Run on the Expo Go the phone actually has, and keep it running.
+**Deliverable:** The game bundles and plays on SDK 57; the suite stays green.
+
+| # | Item | Code | Status | PR | Deliverable |
+|---|------|------|--------|-----|-------------|
+| 1 | SDK 54 → 57 | SDK-1 | ✅ Done (PR #27) | #27 | expo 57, RN 0.86, React 19.2.3, Skia 2.6, TS 6 |
+| 2 | Overlay regression | SDK-2 | ✅ Done (PR #27) | #27 | `StyleSheet.absoluteFillObject` removed in RN 0.86 |
+| 3 | Replay button | UX-1 | ✅ Done (PR #27) | #27 | A finished run restarts without leaving the level |
+| 4 | Wave delay unit | GL-4 | ✅ Done (PR #27) | #27 | `Wave.delay` is seconds; the loop exposes ms |
+
+### Todo List
+
+- [x] SDK-1: expo 54.0.33 → 57.0.31, react-native 0.81.5 → 0.86.3, Skia 2.2.12 → 2.6.2 (PR #27)
+- [x] SDK-1: **one React copy** — the root `package.json` was still pinned to SDK 54, so the
+      root resolved 19.1.0 while `apps/game` nested 19.2.3. Two copies meant the test renderer
+      dispatched hooks into a different React than the components lived in (PR #27)
+- [x] SDK-1: `@testing-library/react-native` 12 → 14. RTL 12 cannot parse RN 0.86 specs and
+      RTL 13 needs `react-test-renderer`, which RN 0.86 dropped — 14 is the only option (PR #27)
+- [x] SDK-1: RTL 14 made `render`, `renderHook`, `fireEvent` and `act` **async** — 34 tests
+      across 4 suites migrated to await them (PR #27)
+- [x] SDK-1: `types: ["jest","node"]` added to `apps/game/tsconfig.json` — TS 6 stopped pulling
+      `@types/*` from the workspace root automatically (PR #27)
+- [x] SDK-1: `expo-status-bar` registered as a config plugin, required by SDK 57 (PR #27)
+- [x] SDK-2: **RN 0.86 removed `StyleSheet.absoluteFillObject`.** All three overlays — wave
+      turbo, card screen and game over — spread it. Spreading `undefined` is silent, so they
+      mounted with no position and no offsets: invisible. With the frame loop stopping at the
+      end of a run, the phone showed a frozen frame and no way out of the level (PR #27)
+- [x] SDK-2: regression battery asserts the geometry of each overlay — the part that vanished
+      without any error (PR #27)
+- [x] UX-1: "Jogar de novo" on the end-of-run panel rebuilds the loop, so hp, score, xp and the
+      card build all start over without going back to the level list (PR #27)
+- [x] GL-4: `Wave.delay` documented as SECONDS in `@si/level-engine` — the calibrator prints
+      "Delay: 3.0s" and caps it at 30, matching every other delay in `LevelParams` (PR #27)
+- [x] GL-4: `getNextWaveDelay()` → `getNextWaveDelayMs()`, converting once at the boundary
+      instead of letting each caller guess the unit (PR #27)
+- [ ] SDK-1: **not verified** — EAS Build has never run on SDK 57; only Expo Go via tunnel
+- [ ] SDK-1: `newArchEnabled: true` with RN 0.86 is untested beyond this one level
+
+---
+
 ## Trilha B — Art in the game (runs parallel to the card sprints)
 
 **Goal:** Stop rendering white rectangles — load the real sprites that already exist.
