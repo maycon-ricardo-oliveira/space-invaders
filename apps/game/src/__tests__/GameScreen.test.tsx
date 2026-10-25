@@ -31,13 +31,17 @@ jest.mock('../game/GameLoop', () => ({
     moveLeft: jest.fn(),
     moveRight: jest.fn(),
     resumeFromCardSelection: jest.fn(),
+    selectCard: jest.fn(),
     on: jest.fn(),
     off: jest.fn(),
     advanceWave: jest.fn(),
     getNextWaveDelay: jest.fn(() => 0),
     getState: jest.fn().mockImplementation(() => ({
       status: mockGameStatus,
-      player: { x: 0, y: 0, hp: 500, maxHp: 500, fuel: 100, invincibilityTimer: 0, xp: 0, xpToNext: 10, playerLevel: 1 },
+      player: { x: 0, y: 0, hp: 500, maxHp: 500, fuel: 100, invincibilityTimer: 0, xp: 0, xpToNext: 10, playerLevel: 1, bulletDamage: 20 },
+      ship: { moveSpeed: 300, bulletSpeed: 500, invincibilityMs: 1500, autoFireIntervalMs: 400 },
+      activeCards: [],
+      cardOffer: [],
       enemies: [],
       playerBullets: [],
       enemyBullets: [],
@@ -185,7 +189,9 @@ describe('GameScreen — game-over overlay', () => {
       <GameScreen selection={{ kind: 'procedural', levelIndex: 0 }} totalLevels={20} onBack={jest.fn()} />,
     )
     expect(queryByText('Level 1!')).toBeTruthy()
-    expect(queryByText('Cards coming in Sprint 7')).toBeTruthy()
+    // The Sprint 7 placeholder is gone; the real screen asks for a pick.
+    // Card rendering itself is covered in cardScreen.test.tsx.
+    expect(queryByText('Escolha uma melhoria')).toBeTruthy()
   })
 })
 

@@ -1,3 +1,5 @@
+import type { ActiveCard, CardDefinition } from '../cards/types'
+
 export interface Bullet {
   x: number
   y: number
@@ -80,6 +82,10 @@ export interface ShipStats {
 export interface GameState {
   player: PlayerState
   ship: ShipStats
+  /** Cards picked this run. All of them are lost on death — a run owns its build. */
+  activeCards: ActiveCard[]
+  /** The up-to-three cards currently on the level-up screen. Empty while playing. */
+  cardOffer: CardDefinition[]
   enemies: Enemy[]
   playerBullets: Bullet[]
   enemyBullets: Bullet[]

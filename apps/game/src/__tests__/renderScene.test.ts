@@ -74,6 +74,8 @@ function makeEnemy(overrides: Partial<Enemy> = {}): Enemy {
 function makeState(overrides: Partial<GameState> = {}): GameState {
   return {
     ship: { moveSpeed: 300, bulletSpeed: 500, invincibilityMs: 1500, autoFireIntervalMs: 400 },
+    activeCards: [],
+    cardOffer: [],
     player: {
       x: 100,
       y: 700,

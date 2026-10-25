@@ -8,6 +8,8 @@ import { GameLoop, CANVAS_WIDTH, CANVAS_HEIGHT } from '../game/GameLoop'
 import { SkiaRenderer } from '../renderers/SkiaRenderer'
 import { useSpriteImages } from '../renderers/useSpriteImages'
 import { renderScene } from '../render/renderScene'
+import { RARITY_BORDER_WIDTH, RARITY_COLOR } from '../cards/catalogue'
+import type { CardDefinition } from '../cards/types'
 import type { GameStatus } from '../game/types'
 import { getLevelSource } from '../levels/source'
 import type { LevelSelection } from './StoryModeScreen'
@@ -76,6 +78,7 @@ export function GameScreen({ selection, totalLevels, onBack }: Props) {
   const [status, setStatus] = useState<GameStatus>('playing')
   const [picture, setPicture] = useState<SkPicture | null>(null)
   const [hud, setHud] = useState({ hp: 500, maxHp: 500, fuel: 100, score: 0, xp: 0, xpToNext: 10, playerLevel: 1, currentWave: 1, totalWaves: 1 })
+  const [cardOffer, setCardOffer] = useState<CardDefinition[]>([])
   const [joystick, setJoystick] = useState<JoystickState | null>(null)
   const [waveTransition, setWaveTransition] = useState<{ active: boolean; nextWave: number }>({ active: false, nextWave: 1 })
   const turboAnim = useRef(new Animated.Value(0)).current
@@ -177,6 +180,9 @@ export function GameScreen({ selection, totalLevels, onBack }: Props) {
       if (s !== statusRef.current) {
         statusRef.current = s
         setStatus(s)
+        // The loop stops ticking on card_selection, so publish the screen's
+        // cards once, here, instead of reading mutable loop state on render.
+        if (s === 'card_selection') setCardOffer(state.cardOffer)
       }
 
       const nextHud = {
@@ -269,6 +275,14 @@ export function GameScreen({ selection, totalLevels, onBack }: Props) {
   const fuelPct = Math.max(0, Math.min(100, hud.fuel))
   const isGameOver = status === 'won' || status === 'lost' || status === 'fuelEmpty'
   const isCardSelection = status === 'card_selection'
+
+  /** Closes the card screen: run the choice, then restart the frame loop. */
+  const resumeWith = (choose: () => void) => {
+    choose()
+    setCardOffer([])
+    lastTimeRef.current = null // first resumed tick uses the default delta
+    rafRef.current = requestAnimationFrame(tick)
+  }
 
   const xpFillWidth = hud.xpToNext > 0
     ? Math.min(XP_BAR_WIDTH, (hud.xp / hud.xpToNext) * XP_BAR_WIDTH)
@@ -410,18 +424,40 @@ export function GameScreen({ selection, totalLevels, onBack }: Props) {
 
       {/* Card selection overlay */}
       {isCardSelection && (
-        <View style={styles.cardOverlay} pointerEvents="box-only">
+        <View style={styles.cardOverlay}>
           <Text style={styles.cardTitle}>{`Level ${hud.playerLevel}!`}</Text>
-          <Text style={styles.cardSubtitle}>Cards coming in Sprint 7</Text>
+          <Text style={styles.cardSubtitle}>Escolha uma melhoria</Text>
+
+          <View style={styles.cardRow}>
+            {cardOffer.map((card) => (
+              <TouchableOpacity
+                key={card.id}
+                testID={`card-${card.id}`}
+                onPress={() => resumeWith(() => loop.selectCard(card.id))}
+                style={[
+                  styles.cardOption,
+                  {
+                    borderColor: RARITY_COLOR[card.rarity],
+                    borderWidth: RARITY_BORDER_WIDTH[card.rarity],
+                  },
+                ]}
+              >
+                <Text style={[styles.cardName, { color: RARITY_COLOR[card.rarity] }]}>
+                  {card.name}
+                </Text>
+                <Text style={styles.cardEffect}>{card.description}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
           <TouchableOpacity
-            onPress={() => {
-              loop.resumeFromCardSelection()
-              lastTimeRef.current = null  // reset so first resumed tick uses default delta
-              rafRef.current = requestAnimationFrame(tick)
-            }}
+            testID="card-skip"
+            onPress={() => resumeWith(() => loop.resumeFromCardSelection())}
             style={styles.cardButton}
           >
-            <Text style={styles.cardButtonText}>Continue</Text>
+            <Text style={styles.cardButtonText}>
+              {cardOffer.length > 0 ? 'Pular' : 'Continuar'}
+            </Text>
           </TouchableOpacity>
         </View>
       )}
@@ -534,6 +570,10 @@ const styles = StyleSheet.create({
     borderRadius: KNOB_RADIUS,
     backgroundColor: 'rgba(255,255,255,0.5)',
   },
+  // Default pointerEvents ('auto'): the overlay swallows touches meant for the
+  // game underneath while its own buttons stay pressable. It used to carry
+  // pointerEvents="box-only", which makes the View the ONLY touch target and
+  // silently kills every button inside it.
   cardOverlay: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(0,0,0,0.85)',
@@ -542,6 +582,18 @@ const styles = StyleSheet.create({
   },
   cardTitle: { color: '#fff', fontSize: 28, fontWeight: 'bold', marginBottom: 8 },
   cardSubtitle: { color: '#aaa', fontSize: 16, marginBottom: 24 },
+  cardRow: { flexDirection: 'row', justifyContent: 'center', gap: 10, marginBottom: 28 },
+  cardOption: {
+    width: 104,
+    minHeight: 132,
+    borderRadius: 10,
+    backgroundColor: '#15161f',
+    paddingHorizontal: 10,
+    paddingVertical: 14,
+    justifyContent: 'center',
+  },
+  cardName: { fontSize: 14, fontWeight: 'bold', textAlign: 'center', marginBottom: 8 },
+  cardEffect: { color: '#cfd3e0', fontSize: 12, textAlign: 'center' },
   cardButton: { backgroundColor: '#3498db', paddingHorizontal: 32, paddingVertical: 12, borderRadius: 8 },
   cardButtonText: { color: '#fff', fontSize: 18, fontWeight: 'bold' },
   overlay: {
