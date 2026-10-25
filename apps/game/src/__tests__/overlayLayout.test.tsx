@@ -30,7 +30,7 @@ jest.mock('../game/GameLoop', () => ({
     on: jest.fn(),
     off: jest.fn(),
     advanceWave: jest.fn(),
-    getNextWaveDelay: jest.fn(() => 0),
+    getNextWaveDelayMs: jest.fn(() => 0),
     getState: jest.fn().mockImplementation(() => ({
       status: mockGameStatus,
       player: { x: 0, y: 0, hp: 0, maxHp: 500, fuel: 100, invincibilityTimer: 0, xp: 0, xpToNext: 10, playerLevel: 1, bulletDamage: 20 },
@@ -54,8 +54,9 @@ jest.mock('../game/GameLoop', () => ({
 }))
 
 import React from 'react'
-import { render, act } from '@testing-library/react-native'
+import { render, act, fireEvent } from '@testing-library/react-native'
 import { GameScreen } from '../screens/GameScreen'
+import { GameLoop } from '../game/GameLoop'
 
 /**
  * Regression — RN 0.86 removed `StyleSheet.absoluteFillObject`.
@@ -113,5 +114,42 @@ describe('overlays cover the screen', () => {
   it('keeps the game over panel reachable — it has a way back', async () => {
     const { getByText } = await renderAt('lost')
     expect(getByText('Back to Levels')).toBeTruthy()
+  })
+})
+
+describe('a finished run can be played again without leaving the level', () => {
+  beforeEach(() => {
+    jest.useFakeTimers()
+    ;(GameLoop as unknown as jest.Mock).mockClear()
+  })
+  afterEach(() => { jest.useRealTimers() })
+
+  it('offers a replay button on defeat', async () => {
+    const { getByText } = await renderAt('lost')
+    expect(getByText('Jogar de novo')).toBeTruthy()
+  })
+
+  it('offers a replay button on victory too', async () => {
+    const { getByText } = await renderAt('won')
+    expect(getByText('Jogar de novo')).toBeTruthy()
+  })
+
+  it('builds a fresh run when replay is pressed', async () => {
+    const { getByText } = await renderAt('lost')
+    const buildsBefore = (GameLoop as unknown as jest.Mock).mock.calls.length
+    await act(async () => { await fireEvent.press(getByText('Jogar de novo')) })
+    // A new GameLoop means a new run: cards, hp and score all start over.
+    expect((GameLoop as unknown as jest.Mock).mock.calls.length).toBe(buildsBefore + 1)
+  })
+
+  it('still lets the player leave for the level list', async () => {
+    const onBack = jest.fn()
+    mockGameStatus = 'lost'
+    const { getByText } = await render(
+      <GameScreen selection={{ kind: 'procedural', levelIndex: 0 }} totalLevels={20} onBack={onBack} />,
+    )
+    await act(async () => { jest.advanceTimersByTime(32) })
+    await act(async () => { await fireEvent.press(getByText('Back to Levels')) })
+    expect(onBack).toHaveBeenCalled()
   })
 })

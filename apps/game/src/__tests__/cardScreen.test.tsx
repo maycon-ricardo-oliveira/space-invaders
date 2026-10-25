@@ -32,7 +32,7 @@ jest.mock('../game/GameLoop', () => ({
     on: jest.fn(),
     off: jest.fn(),
     advanceWave: jest.fn(),
-    getNextWaveDelay: jest.fn(() => 0),
+    getNextWaveDelayMs: jest.fn(() => 0),
     getState: jest.fn().mockImplementation(() => ({
       status: 'card_selection',
       player: { x: 0, y: 0, hp: 500, maxHp: 500, fuel: 100, invincibilityTimer: 0, xp: 0, xpToNext: 10, playerLevel: 3, bulletDamage: 20 },

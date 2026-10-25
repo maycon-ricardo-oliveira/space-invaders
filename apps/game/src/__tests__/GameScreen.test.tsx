@@ -35,7 +35,7 @@ jest.mock('../game/GameLoop', () => ({
     on: jest.fn(),
     off: jest.fn(),
     advanceWave: jest.fn(),
-    getNextWaveDelay: jest.fn(() => 0),
+    getNextWaveDelayMs: jest.fn(() => 0),
     getState: jest.fn().mockImplementation(() => ({
       status: mockGameStatus,
       player: { x: 0, y: 0, hp: 500, maxHp: 500, fuel: 100, invincibilityTimer: 0, xp: 0, xpToNext: 10, playerLevel: 1, bulletDamage: 20 },
@@ -71,7 +71,7 @@ function lastLoopInstance() {
   return results[results.length - 1].value as {
     on: jest.Mock
     advanceWave: jest.Mock
-    getNextWaveDelay: jest.Mock
+    getNextWaveDelayMs: jest.Mock
   }
 }
 
@@ -219,7 +219,7 @@ describe('GameScreen — wave transition contract', () => {
         <GameScreen selection={{ kind: 'procedural', levelIndex: 0 }} totalLevels={20} onBack={jest.fn()} />,
       )
       const loop = lastLoopInstance()
-      // getNextWaveDelay drives the transition duration; default mock returns 0
+      // getNextWaveDelayMs drives the transition duration; default mock returns 0
       // so GameScreen clamps to its 600ms floor.
       const [, handler] = loop.on.mock.calls.find(([evt]: [string]) => evt === 'wave:cleared')!
 
