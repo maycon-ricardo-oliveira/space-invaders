@@ -424,7 +424,7 @@ export function GameScreen({ selection, totalLevels, onBack }: Props) {
 
       {/* Card selection overlay */}
       {isCardSelection && (
-        <View style={styles.cardOverlay}>
+        <View testID="card-overlay" style={styles.cardOverlay}>
           <Text style={styles.cardTitle}>{`Level ${hud.playerLevel}!`}</Text>
           <Text style={styles.cardSubtitle}>Escolha uma melhoria</Text>
 
@@ -464,7 +464,7 @@ export function GameScreen({ selection, totalLevels, onBack }: Props) {
 
       {/* Game over / win overlay */}
       {isGameOver && (
-        <View style={styles.overlay}>
+        <View testID="game-over-overlay" style={styles.overlay}>
           <Text style={styles.resultText}>{status === 'won' ? 'You Win!' : 'Game Over'}</Text>
           <TouchableOpacity onPress={onBack} style={styles.button}>
             <Text style={styles.buttonText}>Back to Levels</Text>
@@ -474,6 +474,19 @@ export function GameScreen({ selection, totalLevels, onBack }: Props) {
     </View>
   )
 }
+
+/**
+ * RN 0.86 removed `StyleSheet.absoluteFillObject`. Spreading the missing export
+ * was silent — the overlays came out with no position and no offsets, so they
+ * mounted invisibly and the player had no way out of a finished run.
+ */
+const ABSOLUTE_FILL = {
+  position: 'absolute',
+  top: 0,
+  left: 0,
+  right: 0,
+  bottom: 0,
+} as const
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#000', alignItems: 'center' },
@@ -490,7 +503,7 @@ const styles = StyleSheet.create({
   hudText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
   hudWaveText: { color: '#00e5ff', fontSize: 13, fontWeight: 'bold', marginTop: 4, textAlign: 'right' },
   turboOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...ABSOLUTE_FILL,
     backgroundColor: 'rgba(0,0,8,0.55)',
     alignItems: 'center',
     justifyContent: 'center',
@@ -575,7 +588,7 @@ const styles = StyleSheet.create({
   // pointerEvents="box-only", which makes the View the ONLY touch target and
   // silently kills every button inside it.
   cardOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...ABSOLUTE_FILL,
     backgroundColor: 'rgba(0,0,0,0.85)',
     alignItems: 'center',
     justifyContent: 'center',
@@ -597,7 +610,7 @@ const styles = StyleSheet.create({
   cardButton: { backgroundColor: '#3498db', paddingHorizontal: 32, paddingVertical: 12, borderRadius: 8 },
   cardButtonText: { color: '#fff', fontSize: 18, fontWeight: 'bold' },
   overlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...ABSOLUTE_FILL,
     backgroundColor: 'rgba(0,0,0,0.7)',
     alignItems: 'center',
     justifyContent: 'center',
