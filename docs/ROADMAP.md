@@ -319,10 +319,10 @@ just one more axis in the table).
 
 | # | Item | Code | Status | PR | Deliverable |
 |---|------|------|--------|-----|-------------|
-| 1 | SDK 54 → 57 | SDK-1 | 🚧 In Progress (PR #27) | #27 | expo 57, RN 0.86, React 19.2.3, Skia 2.6, TS 6 |
-| 2 | Overlay regression | SDK-2 | 🚧 In Progress (PR #27) | #27 | `StyleSheet.absoluteFillObject` removed in RN 0.86 |
-| 3 | Replay button | UX-1 | 🚧 In Progress (PR #27) | #27 | A finished run restarts without leaving the level |
-| 4 | Wave delay unit | GL-4 | 🚧 In Progress (PR #27) | #27 | `Wave.delay` is seconds; the loop exposes ms |
+| 1 | SDK 54 → 57 | SDK-1 | ✅ Done (PR #27) | #27 | expo 57, RN 0.86, React 19.2.3, Skia 2.6, TS 6 |
+| 2 | Overlay regression | SDK-2 | ✅ Done (PR #27) | #27 | `StyleSheet.absoluteFillObject` removed in RN 0.86 |
+| 3 | Replay button | UX-1 | ✅ Done (PR #27) | #27 | A finished run restarts without leaving the level |
+| 4 | Wave delay unit | GL-4 | ✅ Done (PR #27) | #27 | `Wave.delay` is seconds; the loop exposes ms |
 
 ### Todo List
 
