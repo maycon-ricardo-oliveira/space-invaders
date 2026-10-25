@@ -56,6 +56,7 @@ export interface LevelParams {
 
 export interface Wave {
   order: number
+  /** Pause before this wave spawns, in SECONDS (the calibrator edits it as such). */
   delay: number
   entities: EntityPlacement[]
 }

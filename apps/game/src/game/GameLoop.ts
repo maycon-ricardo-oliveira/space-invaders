@@ -161,9 +161,17 @@ export class GameLoop {
   }
 
   /** Delay (ms) of the wave that advanceWave() would spawn next. 0 if none. */
-  getNextWaveDelay(): number {
+  /**
+   * Pause before the next wave, in **milliseconds**.
+   *
+   * `Wave.delay` is authored in seconds — the calibrator's panel prints it as
+   * "Delay: 3.0s" and its Zod rule caps it at 30, matching every other delay in
+   * `LevelParams`. The screen needs ms, so the conversion happens here once
+   * instead of being re-guessed by each caller.
+   */
+  getNextWaveDelayMs(): number {
     const next = this.waves[this.currentWaveIndex + 1]
-    return next ? next.delay : 0
+    return next ? next.delay * 1000 : 0
   }
 
   /** Spawns the next wave's enemies and resumes update(). Emits 'wave:started'. */

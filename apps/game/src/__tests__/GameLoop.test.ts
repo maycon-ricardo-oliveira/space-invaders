@@ -1968,7 +1968,7 @@ describe('GameLoop', () => {
         entities: [],
         waves: [
           { order: 1, delay: 0, entities: [enemyAt(60)] },
-          { order: 2, delay: 1500, entities: [enemyAt(120)] },
+          { order: 2, delay: 1.5, entities: [enemyAt(120)] }, // 1.5s, as the calibrator writes it
         ],
       }
     }
@@ -2036,10 +2036,19 @@ describe('GameLoop', () => {
       expect(loop.getState().score).toBe(scoreBefore)
     })
 
-    it('getNextWaveDelay() returns the delay of the upcoming wave after a clear', () => {
+    // Wave.delay is authored in SECONDS — the calibrator's own panel prints it as
+    // "Delay: 3.0s" and its Zod rule caps it at 30, matching every other delay in
+    // LevelParams. The screen needs milliseconds, so the conversion lives here,
+    // at the boundary, instead of being guessed by each caller.
+    it('getNextWaveDelayMs() converts the upcoming wave delay from seconds to ms', () => {
       const loop = new GameLoop(twoWaveLevel())
-      fireAndTick(loop, 1) // clear wave 1 → next is wave 2 (delay 1500)
-      expect(loop.getNextWaveDelay()).toBe(1500)
+      fireAndTick(loop, 1) // clear wave 1 → next is wave 2 (delay 1.5s)
+      expect(loop.getNextWaveDelayMs()).toBe(1500)
+    })
+
+    it('getNextWaveDelayMs() returns 0 when there is no wave after this one', () => {
+      const loop = new GameLoop(mockLevel)
+      expect(loop.getNextWaveDelayMs()).toBe(0)
     })
 
     it('advanceWave() spawns the next wave enemies and resumes (currentWave=2)', () => {
